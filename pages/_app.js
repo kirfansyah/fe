@@ -1,63 +1,88 @@
-import React from "react";
-import ReactDOM from "react-dom";
-import App from "next/app";
 import Head from "next/head";
-import Router from "next/router";
+import App from "next/app";
 
-import PageChange from "components/PageChange/PageChange.js";
+import React from "react";
+import AOS from "aos";
+import "aos/dist/aos.css";
+import "../styles/index.css";
+import "../styles/tailwind.css";
+import { useEffect, useState } from "react";
+import AuthContextProvider from "../contexts/AuthContext";
+import LanguageContextProvider from "../contexts/LanguageContext";
+import LoadingPages from "../components/LoadingPage"; 
+import moment from "moment";
+import idLocal from "moment/locale/id";
+import { useRouter } from "next/router";
+import { ParallaxProvider } from "react-scroll-parallax";
 
-import "@fortawesome/fontawesome-free/css/all.min.css";
-import "styles/tailwind.css";
+function Loading() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    const handleStart = (url) => {
+      url !== router.asPath && setLoading(true);
+    };
+    const handleComplete = (url) => {
+      url === router.asPath &&
+        setTimeout(() => {
+          setLoading(false);
+        }, 1500);
+    };
 
-Router.events.on("routeChangeStart", (url) => {
-  console.log(`Loading: ${url}`);
-  document.body.classList.add("body-page-transition");
-  ReactDOM.render(
-    <PageChange path={url} />,
-    document.getElementById("page-transition")
-  );
-});
-Router.events.on("routeChangeComplete", () => {
-  ReactDOM.unmountComponentAtNode(document.getElementById("page-transition"));
-  document.body.classList.remove("body-page-transition");
-});
-Router.events.on("routeChangeError", () => {
-  ReactDOM.unmountComponentAtNode(document.getElementById("page-transition"));
-  document.body.classList.remove("body-page-transition");
-});
+    router.events.on("routeChangeStart", handleStart);
+    router.events.on("routeChangeComplete", handleComplete);
+    router.events.on("routeChangeError", handleComplete);
 
-export default class MyApp extends App {
-  componentDidMount() {
-    let comment = document.createComment(``);
-    document.insertBefore(comment, document.documentElement);
-  }
-  static async getInitialProps({ Component, router, ctx }) {
-    let pageProps = {};
+    return () => {
+      router.events.off("routeChangeStart", handleStart);
+      router.events.off("routeChangeComplete", handleComplete);
+      router.events.off("routeChangeError", handleComplete);
+    };
+  });
+  return loading && <LoadingPages />;
+}
 
-    if (Component.getInitialProps) {
-      pageProps = await Component.getInitialProps(ctx);
-    }
-
-    return { pageProps };
-  }
-  render() {
-    const { Component, pageProps } = this.props;
-
-    const Layout = Component.layout || (({ children }) => <>{children}</>);
-
-    return (
+function MyApp({ Component, pageProps }) {
+  moment.locale("id", idLocal);
+  useEffect(() => {
+    AOS.init({
+      easing: "ease-out-cubic",
+      once: false,
+      offset: 50,
+      delay: 100,
+      duration: 1000,
+    });
+  }, []); 
+ const Layout = Component.layout || (({ children }) => <>{children}</>)
+  return (
+    <>
       <React.Fragment>
+
         <Head>
+          <meta charSet='utf-8' />
+          <meta httpEquiv='X-UA-Compatible' content='IE=edge' />
           <meta
-            name="viewport"
-            content="width=device-width, initial-scale=1, shrink-to-fit=no"
+            name='viewport'
+            content='width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no'
           />
-          <title>Learning Management System</title> 
+          <title>Learning Management System</title>
+
         </Head>
-        <Layout>
-          <Component {...pageProps} />
+        <Layout> 
+          <ParallaxProvider>
+            <AuthContextProvider>
+              <LanguageContextProvider>
+
+                <Loading />
+                <Component {...pageProps} />
+              </LanguageContextProvider>
+
+            </AuthContextProvider>
+          </ParallaxProvider>
         </Layout>
       </React.Fragment>
-    );
-  }
+    </>
+  );
 }
+
+export default MyApp;

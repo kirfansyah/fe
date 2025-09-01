@@ -2886,17 +2886,20 @@ select {
 }
 
 .glass {
-  background: rgba(255, 255, 255, 0.2); 
-  backdrop-filter: blur(10px);          
-  -webkit-backdrop-filter: blur(10px);  
+  background: rgba(255, 255, 255, 0.35); 
+  backdrop-filter: blur(13px);          
+  -webkit-backdrop-filter: blur(13px);  
   border-radius: 1rem;                 
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
   border: 1px solid rgba(102, 102, 102, 0.15); 
   padding: 2rem;                        
   color: white;                          
   text-align: center;                   
 }
 
+.opacity-30 {
+  opacity: 0.3;
+}
 .opacity-40 {
   opacity: 0.4;
 }
@@ -3201,6 +3204,20 @@ select {
   padding-right: 3rem;
 }
 
+.pb-12 {
+  padding-bottom: 3rem;
+}
+.pt-14 {
+  padding-top: 3.5rem;
+}
+
+.pr-14 {
+  padding-right: 3.5rem;
+}
+
+.pb-14 {
+  padding-bottom: 3.5rem;
+}
 .pt-16 {
   padding-top: 4rem;
 }

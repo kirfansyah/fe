@@ -1,7 +1,7 @@
 import React from "react";
 
 import Navbar from "components/Navbars/AuthNavbar.js";
-import FooterSmall from "components/Footers/FooterSmall.js";
+import Footer from "components/Footers/Footer.js";
 import Image from "next/image";
 
 export default function Auth({ children }) {
@@ -9,26 +9,40 @@ export default function Auth({ children }) {
     <>
   <Navbar transparent />
   <main>
-    <section className="relative w-full h-full min-h-screen py-20">
-      {/* Background image */}
+  <section className="relative w-full h-full min-h-screen flex flex-col items-center justify-center py-20"> 
+    {/* Background image (di belakang children) */}
+    <div className="absolute top-1/2 left-0 right-0 flex justify-center z-0 -translate-y-1/2">
       <Image
         src="/img/background.jpg"
         alt="Background"
-        width={1920}
-        height={100}
+        width={1080}
+        height={720}
         priority
-        className="absolute inset-0 w-full h-[100vh] object-cover object-center opacity-50"
+        className="opacity-30"
       />
+    </div>
 
-      {/* Konten di atas background */}
-      <div className="relative flex z-10 items-center justify-center pb-20">
-        <h1 className="text-3xl font-bold ">SAMBU GROUP</h1>
+    {/* Konten */}
+    <div className="relative z-10 w-full flex flex-col items-center">
+      <div className="flex items-center justify-center pb-12">
+        <Image
+          src="/img/logo.png"
+          alt="Sambu Group"
+          width={250}
+          height={250}
+          className="mr-1"
+        />
       </div>
 
       {children}
-      <FooterSmall absolute />
-    </section>
-  </main>
+    </div>
+
+    <Footer absolute />
+  </section>
+</main>
+
+
+
 </>
 
 

@@ -1,25 +1,17 @@
-import React from "react";
-
-// components
-
-import AdminNavbar from "components/Navbars/AdminNavbar.js";
-import Sidebar from "components/Sidebar/Sidebar.js";
-import HeaderStats from "components/Headers/HeaderStats.js";
-import FooterAdmin from "components/Footers/FooterAdmin.js";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function Admin({ children }) {
+  const { user, logout } = useAuth();
+
   return (
-    <>
-      <Sidebar />
-      <div className="relative md:ml-64 bg-blueGray-100">
-        <AdminNavbar />
-        {/* Header */}
-        <HeaderStats />
-        <div className="px-4 md:px-10 mx-auto w-full -m-24">
-          {children}
-          <FooterAdmin />
-        </div>
-      </div>
-    </>
+    <div className="min-h-screen flex flex-col">
+      <header className="bg-blue-600 text-white p-4 flex justify-between">
+        <h1 className="text-lg font-bold">Welcome {user?.name}</h1>
+        <button onClick={logout} className="bg-red-500 px-3 py-1 rounded">
+          Logout
+        </button>
+      </header>
+      <main className="flex-1 p-6">{children}</main>
+    </div>
   );
 }
