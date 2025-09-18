@@ -1,24 +1,13 @@
 /* eslint-disable react/jsx-no-target-blank */
+import { useRef } from "react";
 import React from "react"; 
-import Footer from "components/Footers/Footer";
-import Header from "components/Headers/Header";
+import WebLayout from "layouts/WebLayout";
 
-export default function Index() {
+const Homepage = () => {
+  const contentRef = useRef(null);
   return (
-    <>  
-    <Header />
-      <section className="pb-16 relative pt-32">
-        <div
-          className="-mt-20 top-0 bottom-auto left-0"
-          style={{ transform: "translateZ(0)" }}
-        >
-           <h1 className="text-center">
-            Selamat Datang di Learning Management System (LMS) SAMBU GROUP
-           </h1>
-        </div>
- 
-      </section>
-       <Footer />
-    </>
+      <WebLayout contentRef={contentRef}>
+      </WebLayout> 
   );
 }
+export default Homepage;

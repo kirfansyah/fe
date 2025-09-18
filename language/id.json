@@ -3,6 +3,8 @@
   "moto_by_hrd": "Semangat Sambu Group sebagai pelopor industri kelapa di Indonesia, khususnya dalam mengelola sumber daya manusia akan terus bertransformasi menjadi industri yang adaptif dalam berbagai situasi. Transformasi tersebut telah berjalan selama lebih dari 50 tahun dan akan terus berjalan hingga saat ini. Pada era digitalisasi ini, kami mewujudkan hal tersebut dengan membangun infrastruktur digital dalam berbagai fungsi pengelolaan sumber daya manusia, menciptakan lingkungan kerja yang aman dan nyaman di wilayah perkantoran, pabrik maupun perkebunan, serta tak lupa, kami juga menyediakan wadah bagi karyawan untuk berkegiatan sosial dan bergabung dengan berbagai komunitas yang aktif dan beraneka ragam.",
   "sign_in": "Masuk",
   "sign_in_subtitle": "Silahkan masukan alamat username dan password anda. ",
+  "logout": "Keluar",
+  "password_setting": "Pengaturan Kata Sandi",
   "email_address": "Alamat Email",
   "email_address_placeholder": "Silahkan masukan alamat email anda.",
   "username": "Nama Pengguna",
@@ -11,5 +13,10 @@
   "password_placeholder": "Silahkan masukan password anda.",
   "remember_me": "Ingat saya",
   "dont_have_account": "Tidak punya akun?",
-  "register_here": "Daftar disini!" 
+  "register_here": "Daftar disini!" ,
+  "home": "Beranda",
+  "about_us": "Tentang Kami",
+  "contact_us": "Hubungi Kami",
+  "courses": "Kursus",
+  "blog": "Blog"
 }
