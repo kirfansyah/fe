@@ -32,7 +32,7 @@ export default function Enroll({courses}) {
                 Labor List
             </button>
         </div>
-        {/* Add more tabs as needed */}
+        
         <div className="bg-white mt-2 p-4 rounded-lg shadow">
             {activeEnrollmentTab === 'courses-list-sub' && <ListCourses courses={courses}/>}
             {activeEnrollmentTab === 'employee-list' && <ListEmployees />}
