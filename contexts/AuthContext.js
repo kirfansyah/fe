@@ -162,7 +162,7 @@ const AuthContextProvider = (props) => {
       });
 
       dispatch({
-        type: "loginFailed",
+        type: "loginSuccess",
         data: { message: 'Username atau password anda tidak sesuai', status: false },
       });
       console.log(err.response);

@@ -8,7 +8,7 @@ export function middleware(req) {
 
   // Jika belum login & bukan di halaman Login → redirect ke Login
   if (!isValidToken && pathname !== "/Login") {
-    return NextResponse.redirect(new URL("/Login", req.url));
+    return NextResponse.redirect(new URL("/", req.url));
   }
 
   // Jika sudah login & mencoba akses Login → redirect ke Home
@@ -20,5 +20,5 @@ export function middleware(req) {
 }
 
 export const config = {
-  matcher: ["/", "/Admin/:path*", "/Login"],
+  matcher: [],
 };
