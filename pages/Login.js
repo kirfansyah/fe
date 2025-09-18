@@ -6,7 +6,7 @@ import Link from "next/link";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { LanguageContext } from "../contexts/LanguageContext";
 
-export default function Login() {
+const Login = () => {
   const { stateAuth, Login } = useContext(AuthContext);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -28,13 +28,13 @@ export default function Login() {
   }
 
   return (
-    <>
+    <Auth>
       <div className="container mx-auto px-4 h-full w-full">
         <div className="flex content-center items-center justify-center h-full">
           <div className="w-full xl:w-4/12 lg:w-5/12 md:w-6/12 px-4">
             <div className="relative border-1 flex flex-col min-w-0 break-words w-full mb-6 shadow-lg rounded-lg bg-slate-200 glass">
 
-              <div className="flex-auto px-4 lg:px-10 py-10 pt-0  mt-5">
+              <div className="flex-auto px-4 pt-0  mt-5">
                 <div className="text-blueGray-400 mb-3 font-bold">
                 </div>
                 <div className='flex flex-col mb-2 py-2'>
@@ -42,7 +42,7 @@ export default function Login() {
                     {listLanguage.username}*
                   </label>
                   <input
-                    className='px-3 py-3 placeholder-slate-400 text-black border border-gray-300 bg-white rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full ease-linear transition-all duration-150'
+                    className='px-3 py-2 placeholder-slate-400 text-black border border-gray-300 bg-white rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full ease-linear transition-all duration-150'
                     name='username'
                     type='username'
                     placeholder={listLanguage.username_placeholder}
@@ -50,13 +50,13 @@ export default function Login() {
                     onChange={(e) => setUsername(e.target.value)}
                   />
                 </div>
-                <div className='flex flex-col mb-2 py-2'>
+                <div className='flex flex-col mb-2 py-2 px-0'>
                   <label className='text-gray-600 text-left text-base font-normal mb-0'>
                     {listLanguage.password}*
                   </label>
                   <div className='relative flex justify-end items-center w-full'>
                     <input
-                      className='px-3 py-3 placeholder-slate-400 text-black border border-gray-300 bg-white rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full ease-linear transition-all duration-150'
+                      className='px-3 py-2 placeholder-slate-400 text-black border border-gray-300 bg-white rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full ease-linear transition-all duration-150'
                       type={showPassword ? "text" : "password"}
                       name='password'
                       value={password}
@@ -96,8 +96,7 @@ export default function Login() {
           </div>
         </div>
       </div>
-    </>
+      </Auth>
   );
 }
-
-Login.layout = Auth;
+export default Login;

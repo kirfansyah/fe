@@ -6,6 +6,7 @@ import AOS from "aos";
 import "aos/dist/aos.css";
 import "../styles/index.css";
 import "../styles/tailwind.css";
+import "../styles/toggle.scss";
 import { useEffect, useState } from "react";
 import AuthContextProvider from "../contexts/AuthContext";
 import LanguageContextProvider from "../contexts/LanguageContext";
@@ -14,6 +15,8 @@ import moment from "moment";
 import idLocal from "moment/locale/id";
 import { useRouter } from "next/router";
 import { ParallaxProvider } from "react-scroll-parallax";
+import ProfileContextProvider from "contexts/profile/ProfileContext";
+import SeekingContextProvider from "contexts/SeekingContext";
 
 function Loading() {
   const router = useRouter();
@@ -69,16 +72,19 @@ function MyApp({ Component, pageProps }) {
 
         </Head>
         <Layout> 
-          <ParallaxProvider>
-            <AuthContextProvider>
-              <LanguageContextProvider>
+         <ParallaxProvider>
+            <SeekingContextProvider>
+              <AuthContextProvider>
+                <LanguageContextProvider>
+                  <ProfileContextProvider>
+                      <Loading />
+                      <Component {...pageProps} />
+                  </ProfileContextProvider>
+                </LanguageContextProvider>
+              </AuthContextProvider>
+            </SeekingContextProvider>
+        </ParallaxProvider>
 
-                <Loading />
-                <Component {...pageProps} />
-              </LanguageContextProvider>
-
-            </AuthContextProvider>
-          </ParallaxProvider>
         </Layout>
       </React.Fragment>
     </>
