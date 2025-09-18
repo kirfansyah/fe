@@ -12,6 +12,7 @@ const withPWA = require("next-pwa")({
 module.exports = withPWA({
   env: {
     appName: "LMS SAMBU GROUP",
+    API_URL: "http://192.168.12.73:5000/api",
   },
   async rewrites() {
     //konfigurasi Router
@@ -22,7 +23,7 @@ module.exports = withPWA({
       }, 
       {
         source: "/api/v1/:path*", // route untuk api backend agar tidak kena cors
-        destination: `${process.env.API_URL}/:path*`, // server api backend asal
+        destination: "http://192.168.12.73:5000/api/:path*", // server api backend asal
       },  
     ];
   },
