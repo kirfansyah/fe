@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback  } from "react";
-import API from '/services/managementService';
+import API from '../services/ManagementService';
 
 export function useCourses(){
     const [courses, setCourses] = useState([]);
