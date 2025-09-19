@@ -1,6 +1,6 @@
 import { useContext } from "react"; 
 import Header from "../components/Header"; 
-import Footer from "../components/Footer";
+import Footer from "../components/Footers/Footer";
 import { SeekingContext } from "../contexts/SeekingContext";
 
 const WebLayout = ({ children, contentRef }) => {

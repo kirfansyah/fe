@@ -9,7 +9,6 @@ export function middleware(req) {
   // Jika belum login & bukan di halaman Login → redirect ke Login
   if (!isValidToken && pathname !== "/login") {
     return NextResponse.redirect(new URL("/login", req.url));
-
   }
 
   // Jika sudah login & mencoba akses Login → redirect ke Dashboard

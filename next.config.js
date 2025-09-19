@@ -23,7 +23,7 @@ module.exports = withPWA({
       }, 
       {
         source: "/api/v1/:path*", // route untuk api backend agar tidak kena cors
-        destination: "http://192.168.12.73:5000/api/:path*", // server api backend asal
+        destination: `${process.env.API_URL}/:path*`, // server api backend asal
       },  
     ];
   },

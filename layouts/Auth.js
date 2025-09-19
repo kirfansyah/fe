@@ -1,6 +1,6 @@
 import React from "react";
 
-import Footer from "components/Footer.js";
+import Footer from "components/Footers/Footer.js";
 import Image from "next/image";
 
 export default function Auth({ children }) {
