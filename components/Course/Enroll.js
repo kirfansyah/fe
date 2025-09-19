@@ -1,8 +1,7 @@
-import { useState } from "react";
 import ListCourses from "components/Course/ListCourse";
 import ListEmployees from "components/Course/ListEmployee";
-export default function Enroll({courses}) {
-    const [activeEnrollmentTab, setActiveEnrollmentTab] = useState('course-list-sub');
+export default function Enroll({courses, activeEnrollmentTab, setActiveEnrollmentTab}) {
+    
 
     return (
        <>

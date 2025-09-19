@@ -9,7 +9,7 @@ export default function Management() {
     const [currentPage, setCurrentPage] = useState('main');
     const [selectedCourseId, setSelectedCourseId]= useState('');
     const { courses, contentTypes, addCourse } = useCourses();
-    
+    const [activeEnrollmentTab, setActiveEnrollmentTab] = useState('course-list-sub');
     
     const handleAddContent = (courseId) => {
         setSelectedCourseId(courseId);
@@ -46,7 +46,7 @@ export default function Management() {
                 onAddContent={handleAddContent} 
                 onSave={addCourse}
                 />}
-                {activeTab === 'enrollment' && <EnrollmentView courses={courses}/>}
+                {activeTab === 'enrollment' && <EnrollmentView courses={courses} activeEnrollmentTab={activeEnrollmentTab} setActiveEnrollmentTab={setActiveEnrollmentTab}/>}
             </div>
         </div>
     );
