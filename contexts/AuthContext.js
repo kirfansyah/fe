@@ -117,7 +117,7 @@ const AuthContextProvider = (props) => {
     dispatch({ type: "loading" }); // loading
     try {
       const response = await API.post("/auth/get_token", { username, password });
-     const { status, message, data } = response.data;
+      const { status, message, data } = response.data;
  
       if (status === 200 && data.length > 0) {
       const user = data[0]; 
@@ -146,7 +146,7 @@ const AuthContextProvider = (props) => {
         confirmButtonColor: "#1e3a8a",
       });
 
-      router.push("/");
+      router.push("/dashboard");
     } else {
       throw new Error("Login gagal");
     }
@@ -169,7 +169,7 @@ const AuthContextProvider = (props) => {
     }
   };
 
-  function getSession(n) {
+  function getSession() {
     let cookie = `; ${document.cookie}`.match(`;\\s*token=([^;]+)`);
     let token = cookie ? cookie[1] : "";
     //console.log(token)
@@ -185,9 +185,9 @@ const AuthContextProvider = (props) => {
   }
 
   function getId(n) {
-    let profile = `; ${document.cookie}`.match(`;\\s*profil=([^;]+)`);
-    let profil = profile ? profile[1] : "";
-    //console.log(profil)
+    let profile = `; ${document.cookie}`.match(`;\\s*username=([^;]+)`);
+    let profil = profile ? profile[1] : "kosong username";
+    console.log(profil)
 
     dispatch({
       type: "checkId",

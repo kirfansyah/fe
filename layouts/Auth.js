@@ -1,13 +1,11 @@
 import React from "react";
 
-import Navbar from "components/Navbars/AuthNavbar.js";
 import Footer from "components/Footers/Footer.js";
 import Image from "next/image";
 
 export default function Auth({ children }) {
   return (
     <>
-  <Navbar transparent />
   <main>
   <section className="relative w-full h-full min-h-screen flex flex-col items-center justify-center py-20"> 
     {/* Background image (di belakang children) */}

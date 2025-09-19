@@ -1,9 +1,9 @@
 import { useState,useCallback } from "react";
 import Admin from "layouts/Admin.js";
-import CoursesListView from "/components/Course/Course"; 
-import EnrollmentView from "/components/Course/Enroll";
-import ContentAdditionView from "/components/Course/AddContent";
-import { useCourses } from "/hooks/useCourses";
+import CoursesListView from "../../components/Course/Course"; 
+import EnrollmentView from "../../components/Course/Enroll";
+import ContentAdditionView from "../../components/Course/AddContent";
+import { useCourses } from "../../hooks/useCourses";
 export default function Management() {
     const [activeTab, setActiveTab] = useState('courses-list');
     const [currentPage, setCurrentPage] = useState('main');
