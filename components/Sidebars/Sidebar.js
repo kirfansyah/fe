@@ -21,7 +21,7 @@ export default function Sidebar() {
     { icon: FileText, label: "Report", link: "/course/management" },
     { icon: MessageSquare, label: "Feedback", link: "/course/management" },
     { icon: Library, label: "Library", link: "/course/management" },
-    { icon: Users, label: "Employee Course", link: "/course/employeeCourse" },
+    { icon: Users, label: "Employee Course", link: "/course/course" },
     { icon: Users, label: "User Management", link: "/course/management" },
     { icon: GraduationCap, label: "Mastering", link: "/course/management" },
     { icon: Settings, label: "Setting", link: "/course/management" },

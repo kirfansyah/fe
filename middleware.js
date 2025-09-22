@@ -18,9 +18,9 @@ export function middleware(req) {
   }
 
   // Jika sudah login & mencoba akses root "/" → redirect ke Dashboard
-  if (isValidToken && pathname === "/") {
-    return NextResponse.redirect(new URL("/dashboard", req.url));
-  }
+  //   if (isValidToken && pathname === "/") {
+  //     return NextResponse.redirect(new URL("/dashboard", req.url));
+  //   }
 
   return NextResponse.next();
 }
