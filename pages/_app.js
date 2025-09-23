@@ -10,7 +10,7 @@ import "../styles/toggle.scss";
 import { useEffect, useState } from "react";
 import AuthContextProvider from "../contexts/AuthContext";
 import LanguageContextProvider from "../contexts/LanguageContext";
-import LoadingPages from "../components/LoadingPage"; 
+import LoadingPages from "../components/LoadingPage";
 import moment from "moment";
 import idLocal from "moment/locale/id";
 import { useRouter } from "next/router";
@@ -25,11 +25,14 @@ function Loading() {
     const handleStart = (url) => {
       url !== router.asPath && setLoading(true);
     };
-    const handleComplete = (url) => {
-      url === router.asPath &&
-        setTimeout(() => {
-          setLoading(false);
-        }, 1500);
+    // const handleComplete = (url) => {
+    //   url === router.asPath &&
+    //     setTimeout(() => {
+    //       setLoading(false);
+    //     }, 1500);
+    // };
+    const handleComplete = () => {
+      setTimeout(() => setLoading(false), 300);
     };
 
     router.events.on("routeChangeStart", handleStart);
@@ -55,37 +58,37 @@ function MyApp({ Component, pageProps }) {
       delay: 100,
       duration: 1000,
     });
-  }, []); 
- const Layout = Component.layout || (({ children }) => <>{children}</>)
+  }, []);
+  const Layout = Component.layout || (({ children }) => <>{children}</>);
   return (
     <>
       <React.Fragment>
-
         <Head>
-          <meta charSet='utf-8' />
-          <meta httpEquiv='X-UA-Compatible' content='IE=edge' />
+          <meta charSet="utf-8" />
+          <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
           <meta
-            name='viewport'
-            content='width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no'
+            name="viewport"
+            content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no"
           />
           <title>Learning Management System</title>
-
         </Head>
-        <Layout> 
-         <ParallaxProvider>
-            <SeekingContextProvider>
-              <AuthContextProvider>
-                <LanguageContextProvider>
-                  <ProfileContextProvider>
-                      <Loading />
-                      <Component {...pageProps} />
-                  </ProfileContextProvider>
-                </LanguageContextProvider>
-              </AuthContextProvider>
-            </SeekingContextProvider>
+        {/* <Layout>  */}
+        <ParallaxProvider>
+          <Loading />
+          <SeekingContextProvider>
+            <AuthContextProvider>
+              <LanguageContextProvider>
+                <ProfileContextProvider>
+                  <Layout>
+                    <Component {...pageProps} />
+                  </Layout>
+                </ProfileContextProvider>
+              </LanguageContextProvider>
+            </AuthContextProvider>
+          </SeekingContextProvider>
         </ParallaxProvider>
 
-        </Layout>
+        {/* </Layout> */}
       </React.Fragment>
     </>
   );
