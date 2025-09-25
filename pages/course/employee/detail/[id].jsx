@@ -6,7 +6,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ChevronRight, Star, FileText, Video } from "lucide-react";
@@ -80,7 +79,10 @@ export default function CourseDetail() {
               </div>
 
               {/* Start Course Button */}
-              <Button className="w-full bg-blue-900 hover:bg-blue-700 text-white">
+              <Button
+                className="w-full bg-blue-900 hover:bg-blue-700 text-white"
+                onClick={() => router.push(`/course/employee/start/${id}`)}
+              >
                 Start Course
               </Button>
 

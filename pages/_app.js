@@ -17,6 +17,7 @@ import { useRouter } from "next/router";
 import { ParallaxProvider } from "react-scroll-parallax";
 import ProfileContextProvider from "contexts/profile/ProfileContext";
 import SeekingContextProvider from "contexts/SeekingContext";
+import CourseProvider from "../contexts/CourseContext";
 
 function Loading() {
   const router = useRouter();
@@ -79,9 +80,11 @@ function MyApp({ Component, pageProps }) {
             <AuthContextProvider>
               <LanguageContextProvider>
                 <ProfileContextProvider>
-                  <Layout>
-                    <Component {...pageProps} />
-                  </Layout>
+                  <CourseProvider>
+                    <Layout>
+                      <Component {...pageProps} />
+                    </Layout>
+                  </CourseProvider>
                 </ProfileContextProvider>
               </LanguageContextProvider>
             </AuthContextProvider>

@@ -1,12 +1,20 @@
-import React from "react";
-import Sidebar from "components/Sidebars/Sidebar";
-import Footer from "components/Footers/Footer.js";
+import React, { useEffect, useState } from "react";
 import Header from "components/Headers/Header";
 
 export default function CourseLayout({ children }) {
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () =>
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
   return (
     <div className="flex h-screen bg-gray-50">
-      <Header />
+      {!isFullscreen && <Header />}
 
       {/* Main Content */}
       <div className="flex-1 pt-12 overflow-auto">
