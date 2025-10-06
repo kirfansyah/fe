@@ -1,3 +1,5 @@
+"use client";
+
 import { useState } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Search, Download, SlidersHorizontal } from "lucide-react";
