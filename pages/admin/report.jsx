@@ -68,9 +68,9 @@ export default function ReportPage() {
         : i % 3 === 1
         ? "Communication Skills"
         : "Project Management",
-    provider: i % 2 === 0 ? "Provider A" : "Provider B",
+    provider: i % 2 === 0 ? "KEMNAKER" : "KEMNAKER",
     certificateid: `CERT-${7000 + i}`,
-    status: i % 2 === 0 ? "Valid" : "Expired",
+    // status: i % 2 === 0 ? "Valid" : "Expired",
     date: "11-05-2025",
     expire: "11-05-2026",
   }));
@@ -443,11 +443,10 @@ export default function ReportPage() {
                       <TableHead>Employee ID</TableHead>
                       <TableHead>Position</TableHead>
                       <TableHead>Department</TableHead>
-                      <TableHead>Company</TableHead>
+                      <TableHead>Company Unit</TableHead>
                       <TableHead>Training Title</TableHead>
                       <TableHead>Provider</TableHead>
                       <TableHead>Certificate ID</TableHead>
-                      <TableHead>Status</TableHead>
                       <TableHead>Date</TableHead>
                       <TableHead>Expire</TableHead>
                     </TableRow>
@@ -471,19 +470,6 @@ export default function ReportPage() {
                         <TableCell>{e.trainingtitle}</TableCell>
                         <TableCell>{e.provider}</TableCell>
                         <TableCell>{e.certificateid}</TableCell>
-                        <TableCell>
-                          <Badge
-                            className={
-                              e.status === "Expired"
-                                ? "bg-red-500 text-white"
-                                : e.status === "Valid"
-                                ? "bg-green-500 text-white"
-                                : "bg-gray-300 text-black"
-                            }
-                          >
-                            {e.status}
-                          </Badge>
-                        </TableCell>
                         <TableCell>{e.date}</TableCell>
                         <TableCell>{e.expire}</TableCell>
                       </TableRow>
