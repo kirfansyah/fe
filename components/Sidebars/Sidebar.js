@@ -18,7 +18,7 @@ export default function Sidebar() {
     { icon: Home, label: "Home", active: true },
     { icon: BarChart3, label: "Dashboard", link: "/admin/dashboard" },
     { icon: BookOpen, label: "Course Management", link: "/course/management" },
-    { icon: FileText, label: "Report", link: "/course/management" },
+    { icon: FileText, label: "Report", link: "/admin/report" },
     { icon: MessageSquare, label: "Feedback", link: "/course/management" },
     { icon: Library, label: "Library", link: "/course/management" },
     { icon: Users, label: "Employee Course", link: "/course/employee/course" },
