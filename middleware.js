@@ -4,8 +4,7 @@ export function middleware(req) {
   const token = req.cookies.get("token")?.value;
   const { pathname } = req.nextUrl;
 
-  //   const isValidToken = token && token !== "undefined";
-  const isValidToken = true;
+  const isValidToken = token && token !== "undefined";
 
   // Jika belum login & bukan di halaman Login → redirect ke Login
   if (!isValidToken && pathname !== "/login") {
@@ -18,14 +17,15 @@ export function middleware(req) {
   }
 
   // Jika sudah login & mencoba akses root "/" → redirect ke Dashboard
-  //   if (isValidToken && pathname === "/") {
-  //     return NextResponse.redirect(new URL("/dashboard", req.url));
-  //   }
+  if (isValidToken && pathname === "/") {
+    return NextResponse.redirect(new URL("/dashboard", req.url));
+  }
 
   return NextResponse.next();
 }
 
-// export const config = {
-//   // batasi hanya ke route yang perlu dijaga
-//   matcher: ["/", "/dashboard/:path*", "/login"],
-// };
+export const config = {
+  // batasi hanya ke route yang perlu dijaga
+  matcher: ["/", "/dashboard/:path*", "/login"],
+
+};

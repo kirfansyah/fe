@@ -26,14 +26,9 @@ function Loading() {
     const handleStart = (url) => {
       url !== router.asPath && setLoading(true);
     };
-    // const handleComplete = (url) => {
-    //   url === router.asPath &&
-    //     setTimeout(() => {
-    //       setLoading(false);
-    //     }, 1500);
-    // };
+  
     const handleComplete = () => {
-      setTimeout(() => setLoading(false), 300);
+      setTimeout(() => setLoading(false), 1000);
     };
 
     router.events.on("routeChangeStart", handleStart);

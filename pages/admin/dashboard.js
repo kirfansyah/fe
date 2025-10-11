@@ -1,14 +1,11 @@
 import React from "react";
 
-// components
-// layout for page
-
 import Admin from "layouts/Admin.js";
 
 export default function Dashboard() {
   
   return (
-    <div className="mt-6 ml-2 grid grid-cols-1 gap-6">
+    <div className="mt-6 p-4 grid grid-cols-1 gap-6">
       {/* Notifikasi */}
       <div className="bg-white p-4 rounded-lg shadow">
         <h2 className="font-semibold mb-2">Notification</h2>

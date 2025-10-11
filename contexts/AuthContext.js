@@ -26,6 +26,7 @@ const AuthContextProvider = (props) => {
     dispatch({ type: "loading" }); // loading
     if (tc) {
       if (password.length < 8) {
+
         Swal.fire({
           icon: "error",
           text: "Password minimal 8 karakter",
@@ -33,12 +34,14 @@ const AuthContextProvider = (props) => {
           showCancelButton: false,
           cancelButtonText: "OK",
           confirmButtonColor: "#1e3a8a",
-        }).then((result) => {});
+        }).then((result) => {
+        });
 
         dispatch({
           type: "loginFailed",
           data: { message: "Password minimal 8 karakter", status: false },
         });
+
       } else {
         // AlertFailed({
         //   message: "Konfirmasi password tidak sesuai!",
@@ -50,7 +53,8 @@ const AuthContextProvider = (props) => {
           showCancelButton: false,
           cancelButtonText: "OK",
           confirmButtonColor: "#1e3a8a",
-        }).then((result) => {});
+        }).then((result) => {
+        });
         dispatch({
           type: "loginFailed",
           data: { message: "Konfirmasi password tidak sesuai!", status: false },
@@ -70,6 +74,7 @@ const AuthContextProvider = (props) => {
     }
   };
 
+
   const Forgot = async ({ email }) => {
     dispatch({ type: "loading" }); // loading
     try {
@@ -81,6 +86,7 @@ const AuthContextProvider = (props) => {
         data: {
           message: "Email berhasil dikirim!",
           status: true,
+
         },
       });
       AlertSuccess({
@@ -88,6 +94,7 @@ const AuthContextProvider = (props) => {
       });
 
       router.push("/");
+
     } catch (err) {
       Swal.fire({
         icon: "error",
@@ -96,99 +103,70 @@ const AuthContextProvider = (props) => {
         showCancelButton: false,
         cancelButtonText: "OK",
         confirmButtonColor: "#1e3a8a",
-      }).then((result) => {});
+      }).then((result) => {
+      });
 
       dispatch({
         type: "loginFailed",
-        data: { message: "Email anda tidak ditemukan", status: false },
+        data: { message: 'Email anda tidak ditemukan', status: false },
       });
     }
-  };
+  }
 
   const Login = async ({ username, password }) => {
     dispatch({ type: "loading" }); // loading
+    try {
+      const response = await API.post("/auth/get_token", { username, password });
+      const { status, message, data } = response.data;
+ 
+      if (status === 200 && data.length > 0) {
+      const user = data[0]; 
+      document.cookie = `token=${user.token}; path=/`;
+      document.cookie = `username=${user.nik}; path=/`;
+      document.cookie = `nama=${user.nama}; path=/`;
 
-    const message = "test";
-    const user = {
-      token: "tasdasadasa",
-      nik: "10158",
-      nama: "Kiki",
-    };
-
-    dispatch({
-      type: "loginSuccess",
-      data: {
-        message: message,
-        status: true,
-        token: user.token,
-        profil: {
-          nik: user.nik,
-          nama: user.nama,
+      dispatch({
+        type: "loginSuccess",
+        data: {
+          message: message,
+          status: true,
+          token: user.token,
+          profil: {
+            nik: user.nik,
+            nama: user.nama,
+          },
         },
-      },
-    });
+      });
 
-    // Alert sukses
-    Swal.fire({
-      icon: "success",
-      title: "Berhasil Login",
-      text: `Selamat datang ${user.nama}`,
-      confirmButtonColor: "#1e3a8a",
-    });
+      // Alert sukses
+      Swal.fire({
+        icon: "success",
+        title: "Berhasil Login",
+        text: `Selamat datang ${user.nama}`,
+        confirmButtonColor: "#1e3a8a",
+      });
 
-    router.push("/dashboard");
-    // try {
-    //   const response = await API.post("/auth/get_token", { username, password });
-    //   const { status, message, data } = response.data;
+      router.push("/dashboard");
+    } else {
+      throw new Error("Login gagal");
+    }
+    } catch (err) { 
+      Swal.fire({
+        icon: "error",
+        title: "Username atau password anda tidak sesuai",
+        showCloseButton: true,
+        showCancelButton: false,
+        cancelButtonText: "OK",
+        confirmButtonColor: "#1e3a8a",
+      }).then((result) => {
+      });
 
-    //   if (status === 200 && data.length > 0) {
-    //   const user = data[0];
-    //   document.cookie = `token=${user.token}; path=/`;
-    //   document.cookie = `username=${user.nik}; path=/`;
-    //   document.cookie = `nama=${user.nama}; path=/`;
-
-    //   dispatch({
-    //     type: "loginSuccess",
-    //     data: {
-    //       message: message,
-    //       status: true,
-    //       token: user.token,
-    //       profil: {
-    //         nik: user.nik,
-    //         nama: user.nama,
-    //       },
-    //     },
-    //   });
-
-    //   // Alert sukses
-    //   Swal.fire({
-    //     icon: "success",
-    //     title: "Berhasil Login",
-    //     text: `Selamat datang ${user.nama}`,
-    //     confirmButtonColor: "#1e3a8a",
-    //   });
-
-    //   router.push("/dashboard");
-    // } else {
-    //   throw new Error("Login gagal");
-    // }
-    // } catch (err) {
-    //   Swal.fire({
-    //     icon: "error",
-    //     title: "Username atau password anda tidak sesuai",
-    //     showCloseButton: true,
-    //     showCancelButton: false,
-    //     cancelButtonText: "OK",
-    //     confirmButtonColor: "#1e3a8a",
-    //   }).then((result) => {
-    //   });
-
-    //   dispatch({
-    //     type: "loginSuccess",
-    //     data: { message: 'Username atau password anda tidak sesuai', status: false },
-    //   });
-    //   console.log(err.response);
-    // }
+      dispatch({
+        type: "loginSuccess",
+        data: { message: 'Username atau password anda tidak sesuai', status: false },
+      });
+      console.log(err.response);
+    }
   };
 
   function getSession() {
@@ -209,7 +187,7 @@ const AuthContextProvider = (props) => {
   function getId(n) {
     let profile = `; ${document.cookie}`.match(`;\\s*username=([^;]+)`);
     let profil = profile ? profile[1] : "kosong username";
-    console.log(profil);
+    console.log(profil)
 
     dispatch({
       type: "checkId",
@@ -243,7 +221,7 @@ const AuthContextProvider = (props) => {
       confirmButtonText: "Yakin",
       cancelButtonText: "Belum",
       confirmButtonColor: "#941d05",
-      cancelButtonColor: "#1e3a8a",
+      cancelButtonColor : "#1e3a8a"
     }).then((result) => {
       /* Read more about isConfirmed, isDenied below */
       if (result.isConfirmed) {
@@ -259,12 +237,7 @@ const AuthContextProvider = (props) => {
     });
   };
 
-  const changePassword = async ({
-    email,
-    passwordOld,
-    password,
-    passwordConfirm,
-  }) => {
+  const changePassword = async ({ email, passwordOld, password, passwordConfirm }) => {
     dispatch({ type: "loading" });
     if (password === passwordConfirm) {
       try {
@@ -323,7 +296,8 @@ const AuthContextProvider = (props) => {
             showCancelButton: false,
             cancelButtonText: "OK",
             confirmButtonColor: "#1e3a8a",
-          }).then((result) => {});
+          }).then((result) => {
+          });
 
           dispatch({
             type: "loginFailed",
@@ -337,32 +311,36 @@ const AuthContextProvider = (props) => {
             showCancelButton: false,
             cancelButtonText: "OK",
             confirmButtonColor: "#1e3a8a",
-          }).then((result) => {});
+          }).then((result) => {
+          });
 
           dispatch({
             type: "loginFailed",
             data: { message: "Password minimal 8 karakter", status: false },
           });
-        } else {
+        }else{
+
           try {
             const response = await API.post("/pelamar/resetPasswordConfirm", {
               email,
               password,
             });
-
+  
             var { data, meta } = response.data;
             dispatch({
               type: "loginSuccess",
               data: {
                 message: "Register sukses!",
                 status: true,
+  
               },
             });
             AlertSuccess({
               message: "Reset Password Berhasil",
             });
-
+  
             router.push("/login");
+
           } catch (err) {
             var message = err.response.data.data;
             Swal.fire({
@@ -372,14 +350,18 @@ const AuthContextProvider = (props) => {
               showCancelButton: false,
               cancelButtonText: "OK",
               confirmButtonColor: "#1e3a8a",
-            }).then((result) => {});
+            }).then((result) => {
+            });
             dispatch({
               type: "loginFailed",
               data: { message: err.response.data.data, status: false },
             });
           }
+          
         }
-      } else {
+
+      }
+      else {
         Swal.fire({
           icon: "error",
           title: "Alamat URL sudah kadaluwarsa",
@@ -387,12 +369,14 @@ const AuthContextProvider = (props) => {
           showCancelButton: false,
           cancelButtonText: "OK",
           confirmButtonColor: "#1e3a8a",
-        }).then((result) => {});
+        }).then((result) => {
+        });
         dispatch({
           type: "loginFailed",
-          data: { message: "Email anda tidak ditemukan", status: false },
+          data: { message: 'Email anda tidak ditemukan', status: false },
         });
       }
+
     } catch (err) {
       Swal.fire({
         icon: "error",
@@ -401,11 +385,12 @@ const AuthContextProvider = (props) => {
         showCancelButton: false,
         cancelButtonText: "OK",
         confirmButtonColor: "#1e3a8a",
-      }).then((result) => {});
+      }).then((result) => {
+      });
 
       dispatch({
         type: "loginFailed",
-        data: { message: "Email anda tidak ditemukan", status: false },
+        data: { message: 'Email anda tidak ditemukan', status: false },
       });
     }
   };
@@ -423,9 +408,8 @@ const AuthContextProvider = (props) => {
         getId,
         Register,
         getEmail,
-        changePassword,
-      }}
-    >
+        changePassword
+      }}>
       {props.children}
     </AuthContext.Provider>
   );
