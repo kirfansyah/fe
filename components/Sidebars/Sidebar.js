@@ -1,5 +1,5 @@
 import { useState } from "react";
-import Link from "next/link";
+import Link from "next/link"; 
 import { useRouter } from "next/router";
 import { 
   Home, 
@@ -10,12 +10,14 @@ import {
   Library, 
   Users, 
   GraduationCap, 
-  Settings
+  Settings 
 } from "lucide-react";
+
+// import { Button } from "../components/ui/button";
 
 export default function Sidebar() {
   const [currentPage, setCurrentPage] = useState('Home');
-  const sidebarItems = [
+  const sidebarItems = [ 
     { icon: Home, label: 'Home' },
     { icon: BarChart3, label: 'Dashboard' , link :'/admin/dashboard'},
     { icon: BookOpen, label: 'Course Management', link :'/course/management' },
@@ -51,7 +53,6 @@ export default function Sidebar() {
             );  
           })}
         </nav>
-      </aside>
-
+      </aside> 
   );
 }
