@@ -13,8 +13,7 @@
   "password_placeholder": "Please enter your password",
   "remember_me": "Remember me",
   "dont_have_account": "Don’t have an account ?",
-  "register_here": "Register here!",
-  "home": "Home",
+  "register_here": "Register here!", 
   "about_us": "About Us",
   "contact_us": "Contact Us",
   "courses": "Courses",
@@ -22,5 +21,17 @@
   "forgot_password": "Forgot Password",
   "reset_password": "Reset Password",
   "create_new_account": "Create New Account",
-  "login_with_otp": "Login with OTP"
+  "login_with_otp": "Login with OTP",
+  "home": "Home",
+  "dashboard": "Dasboard",
+  "course_management": "Course Management",
+  "report": "Report",
+  "feedback": "Feedback",
+  "library": "Library",
+  "employee_course": "Employee Course",
+  "master_data": "Data Master",
+  "user_management": "User Management",
+  "mastering": "Mastering",
+  "setting": "Setting"
+
 }
