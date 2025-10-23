@@ -32,6 +32,17 @@
   "master_data": "Data Master",
   "user_management": "User Management",
   "mastering": "Mastering",
-  "setting": "Setting"
+  "setting": "Setting",
+  "training_portal": "Training Portal",
+  "course": "Course",
+  "profile": "Profile",
+  "calendar": "Calendar", 
+  "logout_confirmation": "Are you sure you want to logout?",
+  "cancel": "Cancel",
+  "confirm": "Confirm",
+  "welcome_back": "Welcome Back!",
+  "enter_your_credentials": "Enter your credentials to access your account.",
+  "invalid_credentials": "Invalid username or password.",
+  "reset_link_sent": "Reset link has been sent to your email."
 
 }

@@ -32,5 +32,17 @@
   "master_data": "Data Master",
   "user_management": "Manajemen Pengguna",
   "mastering": "Penguasaan",
-  "setting": "Pengaturan"
+  "setting": "Pengaturan",
+  "training_portal": "Portal Pelatihan",
+  "course": "Kursus",
+  "profile": "Profil",
+  "calendar": "Kalender", 
+  "logout_confirmation": "Apakah Anda yakin ingin keluar?",
+  "cancel": "Batal",
+  "confirm": "Konfirmasi",
+  "welcome_back": "Selamat Datang Kembali!",
+  "enter_your_credentials": "Masukkan kredensial Anda untuk mengakses akun Anda.",
+  "invalid_credentials": "Nama pengguna atau kata sandi tidak valid.",
+  "reset_link_sent": "Tautan pengaturan ulang telah dikirim ke email Anda."
+  
 }

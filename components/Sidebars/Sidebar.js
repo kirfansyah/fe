@@ -20,7 +20,7 @@ import { LanguageContext } from "@/contexts/LanguageContext";
 export default function Sidebar() {
   const [currentPage, setCurrentPage] = useState('Home');
   const { stateLanguage } = useContext(LanguageContext);
-  const { listLanguage, lang } = stateLanguage;
+  const { listLanguage } = stateLanguage;
   const sidebarItems = [ 
     { icon: Home, label: listLanguage.home, link :'/admin/home' },
     { icon: BarChart3, label: listLanguage.dashboard, link :'/admin/dashboard'},
