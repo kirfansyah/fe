@@ -18,5 +18,9 @@
   "about_us": "Tentang Kami",
   "contact_us": "Hubungi Kami",
   "courses": "Kursus",
-  "blog": "Blog"
+  "blog": "Blog",
+  "forgot_password": "Lupa Kata Sandi",
+  "reset_password": "Atur Ulang Kata Sandi",
+  "create_new_account": "Buat Akun Baru",
+  "login_with_otp": "Masuk dengan OTP"
 }

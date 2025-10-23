@@ -18,5 +18,9 @@
   "about_us": "About Us",
   "contact_us": "Contact Us",
   "courses": "Courses",
-  "blog": "Blog"
+  "blog": "Blog",
+  "forgot_password": "Forgot Password",
+  "reset_password": "Reset Password",
+  "create_new_account": "Create New Account",
+  "login_with_otp": "Login with OTP"
 }
