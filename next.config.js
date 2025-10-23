@@ -11,8 +11,7 @@ const withPWA = require("next-pwa")({
 
 module.exports = withPWA({
   env: {
-    appName: "LMS SAMBU GROUP",
-    API_URL: "http://192.168.12.73:5000/api",
+    appName: "LMS SAMBU GROUP", 
   },
   async rewrites() {
     //konfigurasi Router
