@@ -12,7 +12,7 @@ const WebLayout = ({ children, contentRef }) => {
     <>
       <Header />
       { sS.isModal ? <SeekingModal /> : <></> }
-      <main className='h-screen-75 w-full select-none relative z-30 min-h-[720px]' ref={contentRef}>
+      <main className='h-screen-75 w-full select-none z-30 min-h-[720px]' ref={contentRef}>
         {children}
       </main>
       <Footer />

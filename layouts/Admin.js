@@ -1,23 +1,21 @@
 import React from "react";
-import Sidebar from "components/Sidebars/Sidebar";
-import Footer from "components/Footers/Footer.js";
-import Header from "components/Headers/Header";
+import Sidebar from "../components/Sidebars/Sidebar";
+import Footer from "../components/Footers/Footer.js";
+import Header from "../components/Headers/Header.js";
 
 export default function Admin({ children }) {
   return (
-    <div className="flex h-screen bg-gray-50">
-       <Header />
-      {/* Sidebar */}
-      <Sidebar />
-
+    <div className="min-h-screen bg-gray-50">
+      <Header />
       {/* Main Content */}
-      <div className="flex-1 pt-12 overflow-auto">
-
+      <div className="flex pt-24 overflow-auto">
+        <Sidebar />
         {/* Content */}
-        <main className="flex-1 mt-6 p-6 overflow-y-auto">
+        <main className="flex-1">
           {children}
         </main>
       </div>
+      <Footer />
     </div>
   );
 }

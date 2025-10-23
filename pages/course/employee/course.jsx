@@ -85,8 +85,8 @@ export default function CoursePage() {
   const goPrev = () => setCurrentPage((prev) => Math.max(prev - 1, 1));
   const goNext = () => setCurrentPage((prev) => Math.min(prev + 1, totalPages));
 
-  return (
-    <div>
+  return ( 
+    <div className="mt-6 p-2 grid grid-cols-1 gap-6"> 
       {/* Search + Toolbar */}
       <div className="w-full mt-5">
         <div className="flex flex-row items-center justify-between gap-4 flex-wrap">

@@ -58,7 +58,7 @@ export default function ListEmployee() {
         }
     };
     return (
-        <div className="w-full max-w-7xl mx-auto p-6 bg-white">
+        <div className="mt-6 ml-2 grid grid-cols-1 gap-6 relative">
         {/* Header */}
             <div className="flex items-center justify-between mb-6 gap-6">
                 <div className="flex items-center gap-6 flex-1 min-w-0">
@@ -178,11 +178,7 @@ export default function ListEmployee() {
                 1 to {Math.min(pageSize, filteredEmployees.length)} of {filteredEmployees.length}
                 </div>
             </div>
-
-        {/* Yellow Warning Indicator */}
-            <div className="absolute left-1/2 transform -translate-x-1/2 mt-2">
-                <div className="w-1 h-6 bg-yellow-400 rounded"></div>
-            </div>
+            
         </div>
     );
 }

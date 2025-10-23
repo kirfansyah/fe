@@ -1,4 +1,5 @@
-import { useContext, useState } from "react";
+
+import { useContext, useState } from "react"; 
 import Link from "next/link"; 
 import { useRouter } from "next/router";
 import { 
@@ -30,7 +31,7 @@ export default function Sidebar() {
     { icon: Users, label: listLanguage.employee_course, link :'/course/employee/course' },
     { icon: Users, label: listLanguage.user_management, link :'/course/5' },
     { icon: GraduationCap, label: listLanguage.mastering, link :'/course/6' },
-    { icon: Settings, label: listLanguage.mastering, link :'/course/7' },
+    { icon: Settings, label: listLanguage.mastering, link :'/course/7' }, 
   ];
 
   return (
