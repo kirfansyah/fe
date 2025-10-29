@@ -1,5 +1,24 @@
 export const courseReducer = (state, action) => {
   switch (action.type) {
+    case "SET_COURSE_DATA":
+      return { ...state, courseData: action.payload };
+    case "SET_FLOW":
+      return { ...state, flow: action.payload };
+    case "SET_COURSE_ID":
+      return { ...state, courseId: action.payload };
+    case "SET_COURSE_DATA":
+      return {
+        ...state,
+        courseData: action.payload,
+        flow: action.payload.sections || [],
+        totalSteps: Object.keys(action.payload.sections || {}).length,
+      };
+
+    case "SET_LOADING":
+      return { ...state, loading: action.payload };
+
+    case "SET_ERROR":
+      return { ...state, error: action.payload };
     case "SET_STEP":
       return { ...state, currentStep: action.payload };
 

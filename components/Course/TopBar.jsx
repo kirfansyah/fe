@@ -3,11 +3,13 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Maximize, LogOut, Home, Minimize } from "lucide-react";
 
 export default function TopBar() {
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     const handler = () => {
@@ -31,6 +33,22 @@ export default function TopBar() {
     }
   };
 
+  const handleExitCourse = async () => {
+    if (document.fullscreenElement) {
+      await document.exitFullscreen();
+      setIsFullscreen(false);
+    }
+    router.push("/course/employee/detail/1");
+  };
+
+  const handleMainCourse = async () => {
+    if (document.fullscreenElement) {
+      await document.exitFullscreen();
+      setIsFullscreen(false);
+    }
+    router.push("/course/employee/course");
+  };
+
   return (
     <Card>
       <CardContent className="flex justify-between items-center p-3">
@@ -47,23 +65,19 @@ export default function TopBar() {
             )}
           </Button>
 
-          <Link href="/course/employee/detail/1">
-            <Button variant="outline" size="sm">
-              <LogOut className="w-4 h-4 mr-1" /> Exit Course
-            </Button>
-          </Link>
+          <Button variant="outline" size="sm" onClick={handleExitCourse}>
+            <LogOut className="w-4 h-4 mr-1" /> Exit Course
+          </Button>
 
-          <Link href="/course/employee/course">
-            <Button variant="outline" size="sm">
-              <Home className="w-4 h-4 mr-1" /> Main Course
-            </Button>
-          </Link>
+          <Button variant="outline" size="sm" onClick={handleMainCourse}>
+            <Home className="w-4 h-4 mr-1" /> Main Course
+          </Button>
         </div>
 
-        <div className="flex gap-6 text-gray-700 font-medium">
+        {/* <div className="flex gap-6 text-gray-700 font-medium">
           <span>Courses</span>
           <span>Reviews</span>
-        </div>
+        </div> */}
       </CardContent>
     </Card>
   );

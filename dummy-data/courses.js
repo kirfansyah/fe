@@ -23,7 +23,7 @@ const titles = [
   "Keselamatan di Area Konstruksi",
 ];
 
-export const generateCourses = Array.from({ length: 100 }, (_, i) => {
+export const generateCourses = Array.from({ length: 6 }, (_, i) => {
   const title =
     titles[i % titles.length] + ` Batch ${Math.floor(i / titles.length) + 1}`;
 
@@ -35,6 +35,12 @@ export const generateCourses = Array.from({ length: 100 }, (_, i) => {
 
   const statuses = ["Passed", "On Going", "Failed"];
   const status = statuses[Math.floor(Math.random() * statuses.length)];
+
+  // 🎯 Tambahan data statistik peserta
+  const invited = Math.floor(Math.random() * 100) + 20; // total yang diundang
+  const onGoing = Math.floor(Math.random() * invited * 0.5); // setengahnya mungkin masih jalan
+  const finished = Math.floor(Math.random() * (invited - onGoing)); // sebagian sudah selesai
+  const total = invited; // total peserta sama dengan invited
 
   return {
     id: i + 1,
@@ -48,5 +54,9 @@ export const generateCourses = Array.from({ length: 100 }, (_, i) => {
     review: (Math.random() * (5 - 3.5) + 3.5).toFixed(1),
     status,
     categories,
+    invited,
+    onGoing,
+    finished,
+    total,
   };
 });

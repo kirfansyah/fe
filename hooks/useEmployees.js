@@ -1,0 +1,111 @@
+import { useState, useEffect, useCallback } from "react";
+import API from "../services/EmployeesService";
+
+export function useEmployees() {
+  const [courses, setCourses] = useState([]);
+  const [contentTypes, setcontentTypes] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const fetchEmployees = useCallback(
+    async (page = 1, limit = 8, search = "") => {
+      try {
+        const result = await API.getAllData(page, limit, search);
+        return {
+          data: result.data || [],
+          pagination: result.pagination || 0,
+        };
+      } catch (err) {
+        console.error("❌ fetchEmployees error:", err);
+        return { data: [], pagination: { totalCount: 0 } };
+      }
+    },
+    []
+  );
+
+  const getCourseById = useCallback(async (id) => {
+    try {
+      const result = await API.getCourseContent(id);
+      //   console.log("result getCourseById:", result);
+
+      return {
+        data: result,
+      };
+    } catch (err) {
+      console.error("❌ getCourseById error:", err);
+      return { data: [] };
+    }
+  }, []);
+
+  const getCourseDetailById = useCallback(async (id) => {
+    try {
+      const result = await API.getCourseDetail(id);
+      //   console.log("result getCourseById:", result);
+
+      return {
+        data: result,
+      };
+    } catch (err) {
+      console.error("❌ getCourseDetailById error:", err);
+      return { data: [] };
+    }
+  }, []);
+
+  // save data course
+  const addCourse = useCallback(async (courseName) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const payload = {
+        course_title: courseName,
+        course_description: "testing",
+        created_by: "system",
+        created_device: "system",
+      };
+
+      const newCourse = await API.createCourse(payload);
+      await fetchCourses();
+      setCourses((prevCourses) => [...prevCourses, newCourse.data]);
+
+      return newCourse.data;
+    } catch (err) {
+      setError(err.message || "Failed to create course");
+      console.error("Error creating course:", err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  //   get all data content type
+  const fetchContentTypes = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const res = await API.getAllContentType();
+      setcontentTypes(res.data);
+    } catch (err) {
+      setError(err.message || "Failed to fetch courses");
+      console.error("Error fetching courses:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+  //   useEffect(() => {
+  //     Promise.all([fetchCourses(), fetchContentTypes()]);
+  //   }, [fetchCourses, fetchContentTypes]);
+
+  return {
+    courses,
+    contentTypes,
+    loading,
+    error,
+    fetchEmployees,
+    getCourseById,
+    getCourseDetailById,
+    addCourse,
+    fetchContentTypes,
+  };
+}

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import CourseLayout from "@/layouts/CourseLayout";
 import { useRouter } from "next/router";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,17 +11,55 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ChevronRight, Star, FileText, Video } from "lucide-react";
 import Link from "next/link";
 import { generateCourses } from "@/dummy-data/courses"; // pastikan ini array
+import { useEmployees } from "@/hooks/useEmployees";
+import { CourseContext } from "@/contexts/CourseContext";
 
 export default function CourseDetail() {
+  const { setCourseId } = useContext(CourseContext);
+  const { getCourseById, getCourseDetailById } = useEmployees();
   const router = useRouter();
   const { id } = router.query;
+
   const courses = generateCourses;
   const [reviewText, setReviewText] = useState("");
+  const [courseData, setCourses] = useState([]);
   const [rating, setRating] = useState(0);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const res = await getCourseById(id);
+        // console.log("res data course id :", res);
+
+        setCourses(res.data.data || []);
+      } catch (error) {
+        console.error("❌ Gagal memuat data:", error);
+      }
+    };
+
+    loadData();
+  }, [getCourseById, id]);
+
+  useEffect(() => {
+    const test = async () => {
+      try {
+        const res = await getCourseDetailById(id);
+        // console.log("res data course id :", res);
+
+        setCourses(res.data.data || []);
+        // console.log("ini data loh :", res.data.data);
+      } catch (error) {
+        console.error("❌ Gagal memuat data:", error);
+      }
+    };
+
+    test();
+  }, [getCourseDetailById, id]);
 
   if (!id) return <div className="p-6">Loading...</div>; // tunggu id
 
-  const course = courses.find((c) => c.id === Number(id));
+  //   const course = courses.find((c) => c.id === Number(id));
+  const course = courses.find((c) => c.id === Number(1));
 
   if (!course) return <div className="p-6">Course not found</div>;
   const lessons = [
@@ -44,7 +82,9 @@ export default function CourseDetail() {
             Courses
           </Link>
           <ChevronRight className="w-5 h-5 text-gray-500" />
-          <span className="text-gray-600 font-bold">{course.title}</span>
+          <span className="text-gray-600 font-bold">
+            {courseData.course_title}
+          </span>
         </CardContent>
       </Card>
 
@@ -55,7 +95,7 @@ export default function CourseDetail() {
           <Card>
             <CardContent className="flex flex-col items-center space-y-4 p-3">
               <img
-                src="/img/course/k3.jpg"
+                src={`${courseData.thumbnail || "/img/course/k3.jpg"}`}
                 alt="Course"
                 className="w-full h-48 object-cover rounded-md"
               />
@@ -72,16 +112,22 @@ export default function CourseDetail() {
 
               {/* Progress Bar */}
               <div className="w-full">
-                <Progress value={50} className="h-3 rounded-full" />
+                <Progress
+                  value={courseData.progress_percentage}
+                  className="h-3 rounded-full"
+                />
                 <span className="text-sm text-gray-500 mt-1">
-                  50% Completed
+                  {courseData.progress_percentage}% Completed
                 </span>
               </div>
 
               {/* Start Course Button */}
               <Button
                 className="w-full bg-blue-900 hover:bg-blue-700 text-white"
-                onClick={() => router.push(`/course/employee/start/${id}`)}
+                onClick={() => {
+                  setCourseId(courseData.id_course); // ✅ kirim ID ke context
+                  router.push(`/course/employee/start/${courseData.id_course}`);
+                }}
               >
                 Start Course
               </Button>
@@ -89,28 +135,29 @@ export default function CourseDetail() {
               {/* Course Info */}
               <div className="w-full space-y-1 text-sm text-gray-700">
                 <div className="flex justify-between">
-                  <span>Instructor</span> <span>{course.instructor}</span>
+                  <span>Instructor</span> <span>{courseData.instructor}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Attempt Date</span> <span>{course.attemptDate}</span>
+                  <span>Attempt Date</span>{" "}
+                  <span>{courseData.attempt_date}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Completion Date</span>{" "}
-                  <span>{course.completionDate}</span>
+                  <span>{courseData.completed_at}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Completion Time</span>{" "}
-                  <span>{course.completionTime}</span>
+                  <span>{courseData.completion_time}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Reviews</span> <span>{course.review}/5</span>
+                  <span>Reviews</span> <span>{courseData.rating}/5</span>
                 </div>
-                <div className="flex justify-between">
+                {/* <div className="flex justify-between">
                   <span>Result</span> <span>{course.result}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Status</span> <span>{course.status}</span>
-                </div>
+                </div> */}
               </div>
             </CardContent>
           </Card>
@@ -119,7 +166,7 @@ export default function CourseDetail() {
         {/* Right Column */}
         <div className="md:w-3/4 space-y-4">
           {/* Course Title */}
-          <h1 className="text-3xl font-bold">{course.title}</h1>
+          <h1 className="text-3xl font-bold">{courseData.course_title}</h1>
 
           {/* Tabs */}
           <Tabs defaultValue="course" className="space-y-4">
@@ -131,42 +178,325 @@ export default function CourseDetail() {
             {/* Tab Course */}
 
             <TabsContent value="course" className="space-y-4">
-              {lessons.map((lesson, idx) => (
-                <div key={idx} className="space-y-2">
-                  <h2 className="text-lg font-semibold">{lesson.title}</h2>
-                  <div className="space-y-2">
-                    {Array.from({ length: 3 }).map((_, i) => (
-                      <Card
-                        key={i}
-                        className="flex items-center justify-between p-4"
-                      >
-                        {/* Dynamic icon */}
-                        {lesson.type === "pdf" && (
+              {/* About Course */}
+              <div className="space-y-4">
+                {courseData.sections?.courseGuide?.length > 0 ? (
+                  courseData.sections.courseGuide.map((v, index) => (
+                    <div key={index} className="space-y-2">
+                      {/* Judul Section */}
+                      <h2 className="text-lg font-semibold">
+                        {v.content_title}
+                      </h2>
+
+                      {/* Isi Content Body */}
+                      {v.content_body ? (
+                        v.content_body
+                          .replace(/\n+/g, "\n")
+                          .split("\n")
+                          .map((content, i) => (
+                            <Card
+                              key={i}
+                              className="flex items-center justify-between p-4"
+                            >
+                              <FileText className="w-5 h-5 text-gray-400 mr-4" />
+                              <span className="flex-1 text-gray-700">
+                                {content}
+                              </span>
+                              <Checkbox
+                                checked={v.is_completed}
+                                className="w-5 h-5 border-gray-300 rounded bg-white 
+                      data-[state=checked]:bg-blue-600 
+                      data-[state=checked]:border-blue-600 focus:ring-0"
+                              />
+                            </Card>
+                          ))
+                      ) : (
+                        <Card className="flex items-center justify-between p-4">
                           <FileText className="w-5 h-5 text-gray-400 mr-4" />
-                        )}
-                        {lesson.type === "video" && (
-                          <Video className="w-5 h-5 text-gray-400 mr-4" />
-                        )}
-                        {lesson.type === "ppt" && (
+                          <span className="flex-1 text-gray-500 italic">
+                            No content available.
+                          </span>
+                          <Checkbox
+                            checked={v.is_completed}
+                            className="w-5 h-5 border-gray-300 rounded bg-white 
+                  data-[state=checked]:bg-blue-600 
+                  data-[state=checked]:border-blue-600 focus:ring-0"
+                          />
+                        </Card>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <Card className="flex items-center justify-between p-4">
+                    <FileText className="w-5 h-5 text-gray-400 mr-4" />
+                    <span className="flex-1 text-gray-500 italic">
+                      No content available.
+                    </span>
+                    <Checkbox
+                      //   checked={v.is_completed}
+                      className="w-5 h-5 border-gray-300 rounded bg-white 
+                  data-[state=checked]:bg-blue-600 
+                  data-[state=checked]:border-blue-600 focus:ring-0"
+                    />
+                  </Card>
+                )}
+              </div>
+
+              {/* Course Outline */}
+              <div className="space-y-4">
+                {courseData.sections?.courseOutline?.length > 0 ? (
+                  courseData.sections.courseOutline.map((v, index) => (
+                    <div key={index} className="space-y-2">
+                      {/* Judul Section */}
+                      <h2 className="text-lg font-semibold">
+                        {v.content_title}
+                      </h2>
+
+                      {/* Isi Content Body */}
+                      {v.content_body ? (
+                        v.content_body
+                          .replace(/\n+/g, "\n")
+                          .split("\n")
+                          .map((content, i) => (
+                            <Card
+                              key={i}
+                              className="flex items-center justify-between p-4"
+                            >
+                              <FileText className="w-5 h-5 text-gray-400 mr-4" />
+                              <span className="flex-1 text-gray-700">
+                                {content}
+                              </span>
+                              <Checkbox
+                                checked={v.is_completed}
+                                className="w-5 h-5 border-gray-300 rounded bg-white 
+                      data-[state=checked]:bg-blue-600 
+                      data-[state=checked]:border-blue-600 focus:ring-0"
+                              />
+                            </Card>
+                          ))
+                      ) : (
+                        <Card className="flex items-center justify-between p-4">
                           <FileText className="w-5 h-5 text-gray-400 mr-4" />
-                        )}{" "}
-                        {/* bisa ganti custom */}
-                        {/* Teks tengah */}
-                        <span className="flex-1 text-gray-700">
-                          Lorem ipsum dolor sit amet, consectetur adipiscing
-                          elit.
-                        </span>
-                        {/* Checkbox */}
-                        <Checkbox
-                          className="w-5 h-5 border-gray-300 rounded bg-white 
-                                    data-[state=checked]:bg-blue-600 
-                                    data-[state=checked]:border-blue-600  focus:ring-0"
-                        />
-                      </Card>
-                    ))}
-                  </div>
-                </div>
-              ))}
+                          <span className="flex-1 text-gray-500 italic">
+                            No content available.
+                          </span>
+                          <Checkbox
+                            checked={v.is_completed}
+                            className="w-5 h-5 border-gray-300 rounded bg-white 
+                  data-[state=checked]:bg-blue-600 
+                  data-[state=checked]:border-blue-600 focus:ring-0"
+                          />
+                        </Card>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <Card className="flex items-center justify-between p-4">
+                    <FileText className="w-5 h-5 text-gray-400 mr-4" />
+                    <span className="flex-1 text-gray-500 italic">
+                      No content available.
+                    </span>
+                    <Checkbox
+                      //   checked={v.is_completed}
+                      className="w-5 h-5 border-gray-300 rounded bg-white 
+                  data-[state=checked]:bg-blue-600 
+                  data-[state=checked]:border-blue-600 focus:ring-0"
+                    />
+                  </Card>
+                )}
+              </div>
+
+              {/* Pre Test */}
+              <div className="space-y-4">
+                {courseData.sections?.preTest?.length > 0 ? (
+                  courseData.sections.preTest.map((v, index) => (
+                    <div key={index} className="space-y-2">
+                      {/* Judul Section */}
+                      <h2 className="text-lg font-semibold">
+                        {v.content_title}
+                      </h2>
+
+                      {/* Isi Content Body */}
+                      {v.content_body ? (
+                        v.content_body
+                          .replace(/\n+/g, "\n")
+                          .split("\n")
+                          .map((content, i) => (
+                            <Card
+                              key={i}
+                              className="flex items-center justify-between p-4"
+                            >
+                              <FileText className="w-5 h-5 text-gray-400 mr-4" />
+                              <span className="flex-1 text-gray-700">
+                                {content}
+                              </span>
+                              <Checkbox
+                                checked={v.is_completed}
+                                className="w-5 h-5 border-gray-300 rounded bg-white 
+                      data-[state=checked]:bg-blue-600 
+                      data-[state=checked]:border-blue-600 focus:ring-0"
+                              />
+                            </Card>
+                          ))
+                      ) : (
+                        <Card className="flex items-center justify-between p-4">
+                          <FileText className="w-5 h-5 text-gray-400 mr-4" />
+                          <span className="flex-1 text-gray-500 italic">
+                            No content available.
+                          </span>
+                          <Checkbox
+                            checked={v.is_completed}
+                            className="w-5 h-5 border-gray-300 rounded bg-white 
+                  data-[state=checked]:bg-blue-600 
+                  data-[state=checked]:border-blue-600 focus:ring-0"
+                          />
+                        </Card>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <Card className="flex items-center justify-between p-4">
+                    <FileText className="w-5 h-5 text-gray-400 mr-4" />
+                    <span className="flex-1 text-gray-500 italic">
+                      No content available.
+                    </span>
+                    <Checkbox
+                      //   checked={v.is_completed}
+                      className="w-5 h-5 border-gray-300 rounded bg-white 
+                  data-[state=checked]:bg-blue-600 
+                  data-[state=checked]:border-blue-600 focus:ring-0"
+                    />
+                  </Card>
+                )}
+              </div>
+
+              {/* Course Content */}
+              <div className="space-y-4">
+                {courseData.sections?.courseContent?.length > 0 ? (
+                  courseData.sections.courseContent.map((v, index) => (
+                    <div key={index} className="space-y-2">
+                      {/* Judul Section */}
+                      <h2 className="text-lg font-semibold">
+                        {v.content_title}
+                      </h2>
+
+                      {/* Isi Content Body */}
+                      {v.content_body ? (
+                        v.content_body
+                          .replace(/\n+/g, "\n")
+                          .split("\n")
+                          .map((content, i) => (
+                            <Card
+                              key={i}
+                              className="flex items-center justify-between p-4"
+                            >
+                              <FileText className="w-5 h-5 text-gray-400 mr-4" />
+                              <span className="flex-1 text-gray-700">
+                                {content}
+                              </span>
+                              <Checkbox
+                                checked={v.is_completed}
+                                className="w-5 h-5 border-gray-300 rounded bg-white 
+                      data-[state=checked]:bg-blue-600 
+                      data-[state=checked]:border-blue-600 focus:ring-0"
+                              />
+                            </Card>
+                          ))
+                      ) : (
+                        <Card className="flex items-center justify-between p-4">
+                          <FileText className="w-5 h-5 text-gray-400 mr-4" />
+                          <span className="flex-1 text-gray-500 italic">
+                            No content available.
+                          </span>
+                          <Checkbox
+                            checked={v.is_completed}
+                            className="w-5 h-5 border-gray-300 rounded bg-white 
+                  data-[state=checked]:bg-blue-600 
+                  data-[state=checked]:border-blue-600 focus:ring-0"
+                          />
+                        </Card>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <Card className="flex items-center justify-between p-4">
+                    <FileText className="w-5 h-5 text-gray-400 mr-4" />
+                    <span className="flex-1 text-gray-500 italic">
+                      No content available.
+                    </span>
+                    <Checkbox
+                      //   checked={v.is_completed}
+                      className="w-5 h-5 border-gray-300 rounded bg-white 
+                  data-[state=checked]:bg-blue-600 
+                  data-[state=checked]:border-blue-600 focus:ring-0"
+                    />
+                  </Card>
+                )}
+              </div>
+
+              {/* Post Test */}
+              <div className="space-y-4">
+                {courseData.sections?.postTest?.length > 0 ? (
+                  courseData.sections.postTest.map((v, index) => (
+                    <div key={index} className="space-y-2">
+                      {/* Judul Section */}
+                      <h2 className="text-lg font-semibold">
+                        {v.content_title}
+                      </h2>
+
+                      {/* Isi Content Body */}
+                      {v.content_body ? (
+                        v.content_body
+                          .replace(/\n+/g, "\n")
+                          .split("\n")
+                          .map((content, i) => (
+                            <Card
+                              key={i}
+                              className="flex items-center justify-between p-4"
+                            >
+                              <FileText className="w-5 h-5 text-gray-400 mr-4" />
+                              <span className="flex-1 text-gray-700">
+                                {content}
+                              </span>
+                              <Checkbox
+                                checked={v.is_completed}
+                                className="w-5 h-5 border-gray-300 rounded bg-white 
+                      data-[state=checked]:bg-blue-600 
+                      data-[state=checked]:border-blue-600 focus:ring-0"
+                              />
+                            </Card>
+                          ))
+                      ) : (
+                        <Card className="flex items-center justify-between p-4">
+                          <FileText className="w-5 h-5 text-gray-400 mr-4" />
+                          <span className="flex-1 text-gray-500 italic">
+                            No content available.
+                          </span>
+                          <Checkbox
+                            checked={v.is_completed}
+                            className="w-5 h-5 border-gray-300 rounded bg-white 
+                  data-[state=checked]:bg-blue-600 
+                  data-[state=checked]:border-blue-600 focus:ring-0"
+                          />
+                        </Card>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <Card className="flex items-center justify-between p-4">
+                    <FileText className="w-5 h-5 text-gray-400 mr-4" />
+                    <span className="flex-1 text-gray-500 italic">
+                      No content available.
+                    </span>
+                    <Checkbox
+                      //   checked={v.is_completed}
+                      className="w-5 h-5 border-gray-300 rounded bg-white 
+                  data-[state=checked]:bg-blue-600 
+                  data-[state=checked]:border-blue-600 focus:ring-0"
+                    />
+                  </Card>
+                )}
+              </div>
             </TabsContent>
 
             {/* Tab Reviews */}

@@ -27,11 +27,11 @@ export default function CoursePlayer() {
           completed={completed}
           onStepSelect={setStep}
         />
-        <ContentArea
+        {/* <ContentArea
           stepId={currentStep}
           flow={flow}
           onNext={(nextId) => goNext(currentStep, nextId)}
-        />
+        /> */}
       </div>
     </div>
   );

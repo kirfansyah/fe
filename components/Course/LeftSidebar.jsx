@@ -8,11 +8,14 @@ import { CourseContext } from "@/contexts/CourseContext";
 export default function LeftSidebar() {
   const { state, setStep } = useContext(CourseContext);
   const { flow, currentStep, completed } = state;
+  console.log("flow : ", flow);
 
-  const totalItems = flow.reduce(
-    (acc, step) => acc + (step.children ? step.children.length : 1),
-    0
-  );
+  //   const totalItems = flow.reduce(
+  //     (acc, step) => acc + (step.children ? step.children.length : 1),
+  //     0
+  //   );
+
+  const totalItems = 7;
   const progressValue = (completed.length / totalItems) * 100;
 
   return (
