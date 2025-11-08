@@ -25,10 +25,9 @@ function Loading() {
   useEffect(() => {
     const handleStart = (url) => {
       url !== router.asPath && setLoading(true);
-    };
-  
+    }; 
     const handleComplete = () => {
-      setTimeout(() => setLoading(false), 1000);
+      setTimeout(() => setLoading(false), 1000); 
     };
 
     router.events.on("routeChangeStart", handleStart);
