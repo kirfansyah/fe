@@ -64,7 +64,9 @@ export const QuestionEditor = ({
                     value={formData.answerKey}
                     options={ANSWER_KEYS}
                     placeholder="Select answer key"
-                    onChange={onAnswerKeyChange}
+                    onChange={(val) => {
+                        onAnswerKeyChange(val);
+                    }}
                 />
                 <CustomSelect
                     label="Correct Answer Points"
@@ -75,7 +77,9 @@ export const QuestionEditor = ({
                     placeholder={pointDistribution === 'Equal Distribution' ? 
                         (autoCalculatedPoints ? `Auto: ${autoCalculatedPoints}` : 'Select total points first')
                         : 'Select points'}
-                    onChange={onPointsChange}
+                    onChange={(val) => {
+                        onPointsChange(val);
+                    }}
                     disabled={pointDistribution === 'Equal Distribution'}
                 />
                 <div className="text-gray-700 font-medium">

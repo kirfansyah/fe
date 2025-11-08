@@ -4,7 +4,8 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/router";
-export default function Course({ courses, onAddContent, onSave, onDelete }) {
+import { useSweetAlert } from '../../hooks/useSweetAlert';
+export default function Course({ courses, onAddContent,onEditContent, onSave, onDelete }) {
     const [expandedCourse, setExpandedCourse] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [courseName, setCourseName] = useState('');
@@ -15,12 +16,44 @@ export default function Course({ courses, onAddContent, onSave, onDelete }) {
     const toggleCourse = (courseId) => {
         setExpandedCourse(expandedCourse === courseId ? null : courseId);
     };
+    const { showLoading, showSuccess, showError, showWarning, confirmAction } = useSweetAlert();
+    const handleSave = async () => {
+        if (!courseName.trim()) {
+            showWarning('Course name cannot be empty.');
+            return;
+        };
+        const result = await confirmAction({
+            title: 'Save this course?',
+            text: `Course name: ${courseName}`,
+            confirmButtonText: 'Yes, save it!'
+        });
+        if (!result.isConfirmed) return;
+        try {
+            showLoading('Saving course...');
+            await onSave(courseName);
+            await showSuccess('Course saved successfully!');
+            setCourseName('');
+            setIsModalOpen(false);
+        } catch (error) {
+            showError('Failed to save course: ' + error.message);
+        }
 
-    const handleSave = () => {
-        if (!courseName.trim()) return;
-        onSave(courseName);
-        setCourseName("");
-        setIsModalOpen(false);
+    };
+
+    const handleDelete = async (courseId) => {
+        const result = await confirmAction({
+            title: 'Are you sure you want to delete this course?',  
+            text: "This action cannot be undone.",
+            confirmButtonText: 'Yes, delete it!'
+        });
+        if (!result.isConfirmed) return;
+        try {
+            showLoading('Deleting course...');
+            await onDelete(courseId);
+            await showSuccess('Course deleted successfully!');
+        } catch (error) {
+            showError('Failed to delete course: ' + error.message);
+        }
     };
 
     const handleCancel = () => {
@@ -28,15 +61,7 @@ export default function Course({ courses, onAddContent, onSave, onDelete }) {
         setIsModalOpen(false);
     };
 
-    const handleEditContent = (courseId, contentId) => {
-        router.push({
-            pathname: '/course/content/pre-test-edit',
-            query: { 
-                courseId: courseId, 
-                contentId: contentId 
-            }
-        });
-    };
+    
 
     // Filter courses
     const filteredCourses = courses.filter(course => {
@@ -187,7 +212,7 @@ export default function Course({ courses, onAddContent, onSave, onDelete }) {
 
                                 {/* Delete Button */}
                                 <button 
-                                    onClick={() => onDelete && onDelete(course.id_course)}
+                                    onClick={() => handleDelete && handleDelete(course.id_course)}
                                     className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                                 >
                                     <Trash2 className="w-4 h-4" />
@@ -232,7 +257,7 @@ export default function Course({ courses, onAddContent, onSave, onDelete }) {
                                                 Preview
                                             </button>
                                             <button
-                                                onClick={() => handleEditContent(course.id_course, content.id_course_content)}
+                                                onClick={() => onEditContent(course.id_course, content.id_course_content,content.id_content_type)}
                                                 className="p-1.5 text-gray-500 hover:bg-gray-200 rounded transition-colors">
                                                 <Edit className="w-4 h-4" />
                                             </button>

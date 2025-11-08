@@ -25,7 +25,17 @@ export default function PreTestPage() {
     const { getKaryawan, dataKaryawan } = useContext(ProfileContext);
               
     const dataKaryawans = dataKaryawan?.length ? dataKaryawan[0] : [];
-    
+    const handleSave = async (pretestData) => {
+        try {
+            const response = await handleSavePreTest(pretestData);
+            
+            alert('Pre Test Save successfully!');
+            router.push('/course/management'); 
+            
+        } catch (error) {
+            alert('Failed to save: ' + error.message);
+        }
+    };
     useEffect(() => {
         getKaryawan();
     }, []);
@@ -42,7 +52,7 @@ export default function PreTestPage() {
         <PreTestForm 
             courseId={courseId}
             onBack={handleBack}
-            onSave={handleSavePreTest}
+            onSave={handleSave}
             createdBy={dataKaryawans.nama}
         />
     );
