@@ -2,12 +2,15 @@ import {useContext,useEffect} from "react";
 import WebLayout from "../layouts/WebLayout";
 import { ProfileContext } from "../contexts/profile/ProfileContext";
 import Link from "next/link";
+import { LanguageContext } from "@/contexts/LanguageContext";
 
 // components 
 const Dashboard = () => {
   const { getKaryawan, dataKaryawan } = useContext(ProfileContext);
       
   const dataKaryawans = dataKaryawan?.length ? dataKaryawan[0] : [];
+    const { stateLanguage } = useContext(LanguageContext);
+    const { listLanguage, lang } = stateLanguage;
   
   useEffect(() => {
     getKaryawan();
@@ -15,27 +18,27 @@ const Dashboard = () => {
 
   const menuItems = [
     {
-      label: "Trainer Portal",
+      label: listLanguage.training_portal,
       icon: <img src='/img/website.png' width={100} />,
       link: "/admin/dashboard",
     },
     {
-      label: "Profile",
+      label: listLanguage.profile,
       icon: <img src='/img/profile.png' width={100} />,
       link: "/profile",
     },
     {
-      label: "Course",
+      label:  listLanguage.course,
       icon: <img src='/img/learning.png' width={100} />,
       link: "/course",
     },
     {
-      label: "Calendar",
+      label: listLanguage.calendar,
       icon: <img src='/img/calendar.png' width={100} />,
       link: "/calendar",
     },
     {
-      label: "Library",
+      label: listLanguage.library,
       icon: <img src='/img/bookshelf.png' width={100} />,
       link: "/library",
     },
