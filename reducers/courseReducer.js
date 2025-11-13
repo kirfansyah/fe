@@ -1,7 +1,7 @@
 export const courseReducer = (state, action) => {
   switch (action.type) {
-    case "SET_COURSE_DATA":
-      return { ...state, courseData: action.payload };
+    // case "SET_COURSE_DATA":
+    //   return { ...state, courseData: action.payload };
     case "SET_FLOW":
       return { ...state, flow: action.payload };
     case "SET_COURSE_ID":
@@ -43,6 +43,12 @@ export const courseReducer = (state, action) => {
         answers: { ...state.answers, [questionId]: answer },
       };
     }
+
+    case "SET_PROGRESS":
+      return {
+        ...state,
+        progress: action.payload,
+      };
 
     default:
       return state;

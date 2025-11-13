@@ -19,6 +19,8 @@ import ProfileContextProvider from "contexts/profile/ProfileContext";
 import SeekingContextProvider from "contexts/SeekingContext";
 import CourseProvider from "../contexts/CourseContext";
 
+import { Toaster } from "@/components/ui/sonner";
+
 function Loading() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -89,6 +91,7 @@ function MyApp({ Component, pageProps }) {
               </LanguageContextProvider>
             </AuthContextProvider>
           </SeekingContextProvider>
+          <Toaster position="top-right" richColors />
         </ParallaxProvider>
 
         {/* </Layout> */}

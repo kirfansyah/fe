@@ -1,14 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Maximize, LogOut, Home, Minimize } from "lucide-react";
+import { CourseContext } from "@/contexts/CourseContext";
 
 export default function TopBar() {
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const { state } = useContext(CourseContext);
+  const { courseId } = state;
+
   const router = useRouter();
 
   useEffect(() => {
@@ -34,17 +38,31 @@ export default function TopBar() {
   };
 
   const handleExitCourse = async () => {
+    const navigate = router.push(`/course/employee/detail/${courseId}`);
+
     if (document.fullscreenElement) {
-      await document.exitFullscreen();
-      setIsFullscreen(false);
+      Promise.race([
+        document.exitFullscreen(),
+        new Promise((resolve) => setTimeout(resolve, 200)),
+      ])
+        .then(() => setIsFullscreen(false))
+        .catch((err) => console.warn("Gagal keluar fullscreen:", err));
     }
-    router.push("/course/employee/detail/1");
+
+    await navigate;
   };
 
   const handleMainCourse = async () => {
     if (document.fullscreenElement) {
-      await document.exitFullscreen();
-      setIsFullscreen(false);
+      try {
+        await Promise.race([
+          document.exitFullscreen(),
+          new Promise((resolve) => setTimeout(resolve, 200)),
+        ]);
+        setIsFullscreen(false);
+      } catch (err) {
+        console.warn("Gagal keluar dari fullscreen:", err);
+      }
     }
     router.push("/course/employee/course");
   };

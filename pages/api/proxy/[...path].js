@@ -9,6 +9,8 @@ export default async function handler(req, res) {
   }`;
 
   console.log("➡️ Proxying to:", target);
+  console.log("🧩 Method:", req.method);
+  console.log("📦 Body:", req.body);
 
   try {
     const response = await fetch(target, {
@@ -17,7 +19,13 @@ export default async function handler(req, res) {
         "Content-Type": req.headers["content-type"] || "application/json",
         Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_TOKEN}`,
       },
-      body: ["GET", "HEAD"].includes(req.method) ? undefined : req.body,
+      //   body: ["GET", "HEAD"].includes(req.method) ? undefined : req.body,
+      body:
+        ["GET", "HEAD"].includes(req.method) || !req.body
+          ? undefined
+          : typeof req.body === "string"
+          ? req.body
+          : JSON.stringify(req.body),
     });
 
     const contentType = response.headers.get("content-type");

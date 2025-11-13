@@ -1,75 +1,22 @@
-// import { createContext, useReducer, useMemo, useEffect } from "react";
-// import { courseReducer } from "@/reducers/courseReducer";
-// import { courseFlow } from "@/dummy-data/courseFlow";
-// import { useEmployees } from "@/hooks/useEmployees"; // ✅ Import API Hook
-
-// export const CourseContext = createContext();
-
-// export default function CourseProvider({ children }) {
-//   const { getCourseDetailById } = useEmployees();
-//   const initialState = {
-//     currentStep: "guide",
-//     completed: [],
-//     progress: 0,
-//     totalSteps,
-//     flow: courseFlow,
-//     answers: {},
-//   };
-//   const [state, dispatch] = useReducer(courseReducer, initialState);
-//   // ✅ Set ID Course
-//   const setCourseId = (id) => dispatch({ type: "SET_COURSE_ID", payload: id });
-//   useEffect(() => {
-//     const fetchCourse = async () => {
-//       const res = await getCourseDetailById(id);
-//     };
-//   }, [fetchCourse]);
-
-//   console.log("context : ", fetchCourse);
-
-//   const totalSteps = useMemo(
-//     () => courseFlow.flatMap((s) => s.children ?? [s]).length,
-//     []
-//   );
-
-//   const setStep = (stepId) => dispatch({ type: "SET_STEP", payload: stepId });
-//   const completeStep = (stepId) =>
-//     dispatch({ type: "COMPLETE_STEP", payload: stepId });
-//   const goNext = (currentStep, nextStep) =>
-//     dispatch({ type: "NEXT_STEP", payload: { currentStep, nextStep } });
-
-//   const setAnswer = (questionId, answer) =>
-//     dispatch({ type: "SET_ANSWER", payload: { questionId, answer } });
-
-//   return (
-//     <CourseContext.Provider
-//       value={{ state, setCourseId, setStep, completeStep, goNext, setAnswer }}
-//     >
-//       {children}
-//     </CourseContext.Provider>
-//   );
-// }
-
 import { createContext, useReducer, useMemo, useEffect } from "react";
 import { courseReducer } from "@/reducers/courseReducer";
 import { courseFlow } from "@/dummy-data/courseFlow";
-import { useEmployees } from "@/hooks/useEmployees"; // ✅ Import API Hook
+import { useEmployees } from "@/hooks/useEmployees";
 
 export const CourseContext = createContext();
 
-export default function CourseProvider({ children }) {
+export default function CourseProvider({ children, courseId }) {
   const { getCourseDetailById } = useEmployees();
 
-  // ✅ Hitung totalSteps dulu
   const totalSteps = useMemo(
     () => courseFlow.flatMap((s) => s.children ?? [s]).length,
     []
   );
 
-  // ✅ Definisikan initialState sebelum useReducer
   const initialState = {
-    courseId: null,
+    courseId: courseId || null,
     courseData: null,
-    currentStep: "guide",
+    currentStep: 0,
     completed: [],
     progress: 0,
     totalSteps,
@@ -79,29 +26,26 @@ export default function CourseProvider({ children }) {
 
   const [state, dispatch] = useReducer(courseReducer, initialState);
 
-  // ✅ Setter untuk ID course
   const setCourseId = (id) => {
     dispatch({ type: "SET_COURSE_ID", payload: id });
   };
 
-  // ✅ Ambil data dari API saat courseId berubah
   useEffect(() => {
     const fetchCourse = async () => {
       if (!state.courseId) return;
+      if (!state.courseId) {
+        console.log("⛔ Gagal fetch: courseId belum ada");
+        return;
+      }
+
       try {
         const res = await getCourseDetailById(state.courseId);
-        console.log("res :", res);
 
         if (res?.data?.data) {
           const courseData = res.data.data;
-
-          // 🔹 ambil semua key parent dari sections (misal: ["courseGuide", "courseOutline", ...])
           const sections = courseData.sections || {};
           const flow = Object.keys(sections);
-
-          // 🔹 update state courseData dan flow sekaligus
           dispatch({ type: "SET_COURSE_DATA", payload: courseData });
-          //   dispatch({ type: "SET_FLOW", payload: flow });
           dispatch({ type: "SET_FLOW", payload: sections });
         }
       } catch (err) {
@@ -110,9 +54,27 @@ export default function CourseProvider({ children }) {
     };
 
     fetchCourse();
-  }, [state.courseId]); // ⬅️ jalan setiap ID berubah
+  }, [state.courseId]);
 
-  // ✅ Aksi reducer lain
+  // ===== Fungsi baru untuk refresh progress dari API =====
+  const refreshCourseProgress = async () => {
+    try {
+      if (!state.courseId) return;
+      const res = await getCourseDetailById(state.courseId);
+      if (res?.data?.data) {
+        const courseData = res.data.data;
+        dispatch({ type: "SET_COURSE_DATA", payload: courseData });
+        dispatch({ type: "SET_FLOW", payload: courseData.sections || {} });
+        dispatch({
+          type: "SET_PROGRESS",
+          payload: courseData.progress_percentage,
+        });
+      }
+    } catch (err) {
+      console.error("❌ Gagal refresh progress:", err);
+    }
+  };
+
   const setStep = (stepId) => dispatch({ type: "SET_STEP", payload: stepId });
   const completeStep = (stepId) =>
     dispatch({ type: "COMPLETE_STEP", payload: stepId });
@@ -120,20 +82,25 @@ export default function CourseProvider({ children }) {
     dispatch({ type: "NEXT_STEP", payload: { currentStep, nextStep } });
   const setAnswer = (questionId, answer) =>
     dispatch({ type: "SET_ANSWER", payload: { questionId, answer } });
+  const setProgress = (value) =>
+    dispatch({ type: "SET_PROGRESS", payload: value });
+
+  const value = useMemo(
+    () => ({
+      state,
+      flow: state.flow, // ⬅️ tambahkan ini
+      setCourseId,
+      setStep,
+      completeStep,
+      goNext,
+      setAnswer,
+      setProgress,
+      refreshCourseProgress,
+    }),
+    [state]
+  );
 
   return (
-    <CourseContext.Provider
-      value={{
-        state,
-        flow: state.flow, // ⬅️ tambahkan ini
-        setCourseId,
-        setStep,
-        completeStep,
-        goNext,
-        setAnswer,
-      }}
-    >
-      {children}
-    </CourseContext.Provider>
+    <CourseContext.Provider value={value}>{children}</CourseContext.Provider>
   );
 }

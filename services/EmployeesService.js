@@ -132,24 +132,83 @@ class EmployeesService {
     }
   }
 
-  /**
-   * Create new course
-   * @param {Object} courseData - Course data
-   * @returns {Promise} API response
-   */
-  static async createCourse(courseData) {
+  static async completeContent(courseData) {
     try {
-      const response = await API.post("course", courseData);
+      const response = await API.post(
+        "/learner/course/content/complete",
+        courseData,
+        {
+          headers: {
+            Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_TOKEN}`,
+          },
+          validateStatus: (status) => status >= 200 && status < 500,
+        }
+      );
+
       return {
         success: response.data.success,
         data: response.data.data,
         message: response.data.message,
       };
     } catch (error) {
-      console.error("ManagementService.createCourse Error:", error);
-      throw new Error(
-        error.response?.data?.message || "Failed to create course"
-      );
+      console.error("EmployeesService.completeContent Error:", error);
+    }
+  }
+
+  static async sendAnswers(answers) {
+    try {
+      const response = await API.post("/learner/course/assessment", answers, {
+        headers: {
+          Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_TOKEN}`,
+        },
+        validateStatus: (status) => status >= 200 && status < 500,
+      });
+
+      return {
+        success: response.data.success,
+        data: response.data.data,
+        message: response.data.message,
+      };
+    } catch (error) {
+      console.error("EmployeesService.sendAnswers Error:", error);
+    }
+  }
+
+  static async sendEnrollment(data) {
+    try {
+      const response = await API.post("/learner/course/enrollment", data, {
+        headers: {
+          Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_TOKEN}`,
+        },
+        validateStatus: (status) => status >= 200 && status < 500,
+      });
+
+      return {
+        success: response.data.success,
+        data: response.data.data,
+        message: response.data.message,
+      };
+    } catch (error) {
+      console.error("EmployeesService.sendEnrollment Error:", error);
+    }
+  }
+
+  static async sendFeedback(data) {
+    try {
+      const response = await API.post("/learner/course/review", data, {
+        headers: {
+          Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_TOKEN}`,
+        },
+        validateStatus: (status) => status >= 200 && status < 500,
+      });
+
+      return {
+        success: response.data.success,
+        data: response.data.data,
+        message: response.data.message,
+      };
+    } catch (error) {
+      console.error("EmployeesService.sendFeedback Error:", error);
     }
   }
 }
