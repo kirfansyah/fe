@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef  } from 'react';
 
 export const useQuestionManager = (isEditMode, contentData, testConfig) => {
     const [savedQuestions, setSavedQuestions] = useState([]);
@@ -13,6 +13,14 @@ export const useQuestionManager = (isEditMode, contentData, testConfig) => {
         answerKey: '',
         correctAnswerPoints: ''
     });
+
+    const savedQuestionsRef = useRef([]);
+    
+    // ✅ Sync ref dengan state
+    useEffect(() => {
+        savedQuestionsRef.current = savedQuestions;
+    }, [savedQuestions]);
+
 
     // Load questions saat edit mode
     useEffect(() => {
@@ -131,13 +139,11 @@ export const useQuestionManager = (isEditMode, contentData, testConfig) => {
         alert(`Question ${currentQuestionNumber} updated!`);
     }, [formData, savedQuestions, currentQuestionIndex, currentQuestionNumber]);
 
-    const handleSaveAndNext = useCallback(() => {
-        // Validation
-        if (savedQuestions.length === 0) {
-            if (!testConfig.randomType || !testConfig.totalNumber || !testConfig.totalPoints) {
-                alert('Please complete test configuration');
-                return;
-            }
+    const handleSaveAndNext = useCallback((onComplete) => {
+    
+        if (!testConfig.randomType || !testConfig.totalNumber || !testConfig.totalPoints) {
+            alert('Please complete test configuration');
+            return;
         }
 
         if (!formData.question.trim()) {
@@ -156,16 +162,20 @@ export const useQuestionManager = (isEditMode, contentData, testConfig) => {
             return;
         }
 
+        const currentSavedQuestions = savedQuestionsRef.current;
+        
         const currentPoints = parseInt(formData.correctAnswerPoints);
-        const newTotalUsed = totalPointsUsed + currentPoints;
         const totalPoints = parseInt(testConfig.totalPoints);
+        
+        const currentTotalUsed = currentSavedQuestions.reduce((sum, q) => sum + parseInt(q.points || 0), 0);
+        const newTotalUsed = currentTotalUsed + currentPoints;
 
         if (newTotalUsed > totalPoints) {
-            alert(`Points exceed total! Remaining: ${totalPoints - totalPointsUsed}`);
+            alert(`Points exceed total! Remaining: ${totalPoints - currentTotalUsed}`);
             return;
         }
 
-        if (savedQuestions.length >= parseInt(testConfig.totalNumber)) {
+        if (currentSavedQuestions.length >= parseInt(testConfig.totalNumber)) {
             alert(`Maximum number of questions reached!`);
             return;
         }
@@ -179,9 +189,20 @@ export const useQuestionManager = (isEditMode, contentData, testConfig) => {
             timestamp: new Date().toISOString()
         };
 
-        setSavedQuestions(prev => [...prev, newQuestion]);
+        // ✅ UPDATE dengan ref
+        const updatedQuestions = [...currentSavedQuestions, newQuestion];
+        
+        console.log('🔍 SAVE DEBUG:');
+        console.log('Previous (from ref):', currentSavedQuestions.length);
+        console.log('Saving Q#:', currentQuestionNumber);
+        console.log('✅ Updated:', updatedQuestions.length);
+        console.log('Questions:', updatedQuestions.map(q => `Q${q.questionNumber}`).join(', '));
+
+        // ✅ UPDATE STATE
+        setSavedQuestions(updatedQuestions);
         setTotalPointsUsed(newTotalUsed);
 
+        // RESET FORM
         setFormData({
             question: '',
             options: ['', '', '', ''],
@@ -194,9 +215,42 @@ export const useQuestionManager = (isEditMode, contentData, testConfig) => {
 
         alert(`Question ${currentQuestionNumber} saved!`);
 
-        return [...savedQuestions, newQuestion];
-    }, [formData, savedQuestions, testConfig, totalPointsUsed, currentQuestionNumber]);
+        // CHECK SUBMIT
+        const totalRequired = parseInt(testConfig.totalNumber);
+        if (updatedQuestions.length === totalRequired && onComplete) {
+            setTimeout(() => {
+                const confirmSubmit = window.confirm(
+                    `All ${totalRequired} questions completed! Submit test now?`
+                );
+                
+                if (confirmSubmit) {
+                    onComplete(updatedQuestions);
+                }
+            }, 100);
+        }
 
+    }, [formData, testConfig, currentQuestionNumber]);
+    // ✅ Tetap pakai dependency ini, tapi logic pakai ref
+    // const resetAll = () => {
+    // setSavedQuestions([]);
+    // setCurrentQuestionNumber(1);
+    // setTotalPointsUsed(0);
+    // setTestConfig({
+    //     randomType: '',
+    //     totalNumber: '',
+    //     totalPoints: '',
+    //     pointDistribution: '',
+    //     timeDuration: ''
+    // });
+    // setFormData({
+    //     question: '',
+    //     options: ['', '', '', ''],
+    //     answerKey: '',
+    //     correctAnswerPoints: ''
+    // });
+    // };
+    
+    
     return {
         savedQuestions,
         currentQuestionIndex,

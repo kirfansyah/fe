@@ -4,7 +4,8 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/router";
-export default function Course({ courses, onAddContent, onSave, onDelete }) {
+import { useSweetAlert } from '../../hooks/useSweetAlert';
+export default function Course({ courses, onAddContent,onEditContent, onSave, onDelete }) {
     const [expandedCourse, setExpandedCourse] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [courseName, setCourseName] = useState('');
@@ -15,12 +16,44 @@ export default function Course({ courses, onAddContent, onSave, onDelete }) {
     const toggleCourse = (courseId) => {
         setExpandedCourse(expandedCourse === courseId ? null : courseId);
     };
+    const { showLoading, showSuccess, showError, showWarning, confirmAction } = useSweetAlert();
+    const handleSave = async () => {
+        if (!courseName.trim()) {
+            showWarning('Course name cannot be empty.');
+            return;
+        };
+        const result = await confirmAction({
+            title: 'Save this course?',
+            text: `Course name: ${courseName}`,
+            confirmButtonText: 'Yes, save it!'
+        });
+        if (!result.isConfirmed) return;
+        try {
+            showLoading('Saving course...');
+            await onSave(courseName);
+            await showSuccess('Course saved successfully!');
+            setCourseName('');
+            setIsModalOpen(false);
+        } catch (error) {
+            showError('Failed to save course: ' + error.message);
+        }
 
-    const handleSave = () => {
-        if (!courseName.trim()) return;
-        onSave(courseName);
-        setCourseName("");
-        setIsModalOpen(false);
+    };
+
+    const handleDelete = async (courseId) => {
+        const result = await confirmAction({
+            title: 'Are you sure you want to delete this course?',  
+            text: "This action cannot be undone.",
+            confirmButtonText: 'Yes, delete it!'
+        });
+        if (!result.isConfirmed) return;
+        try {
+            showLoading('Deleting course...');
+            await onDelete(courseId);
+            await showSuccess('Course deleted successfully!');
+        } catch (error) {
+            showError('Failed to delete course: ' + error.message);
+        }
     };
 
     const handleCancel = () => {
@@ -28,15 +61,7 @@ export default function Course({ courses, onAddContent, onSave, onDelete }) {
         setIsModalOpen(false);
     };
 
-    const handleEditContent = (courseId, contentId) => {
-        router.push({
-            pathname: '/course/content/pre-test-edit',
-            query: { 
-                courseId: courseId, 
-                contentId: contentId 
-            }
-        });
-    };
+    
 
     // Filter courses
     const filteredCourses = courses.filter(course => {
@@ -75,13 +100,13 @@ export default function Course({ courses, onAddContent, onSave, onDelete }) {
                         className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                 </div>
-                <div className="flex gap-2">
+                <div className="flex items-center gap-3">
                     <button
                         onClick={() => setFilterStatus('all')}
                         className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                             filterStatus === 'all'
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                                ? 'bg-blue-300 text-white focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-transparent'
+                                : 'bg-white '
                         }`}
                     >
                         All
@@ -90,8 +115,8 @@ export default function Course({ courses, onAddContent, onSave, onDelete }) {
                         onClick={() => setFilterStatus('published')}
                         className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                             filterStatus === 'published'
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                                ? 'bg-blue-300 text-white focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-transparent'
+                                : 'bg-white'
                         }`}
                     >
                         Published
@@ -100,15 +125,15 @@ export default function Course({ courses, onAddContent, onSave, onDelete }) {
                         onClick={() => setFilterStatus('unpublished')}
                         className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                             filterStatus === 'unpublished'
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                                ? 'bg-blue-300 text-white focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-transparent'
+                                : 'bg-white'
                         }`}
                     >
                         Unpublished
                     </button>
                     <button 
                         onClick={() => setIsModalOpen(true)}
-                        className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm"
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
                     >
                         <Plus className="w-5 h-5" />
                         <span className="font-medium">Add New Course</span>
@@ -187,7 +212,7 @@ export default function Course({ courses, onAddContent, onSave, onDelete }) {
 
                                 {/* Delete Button */}
                                 <button 
-                                    onClick={() => onDelete && onDelete(course.id_course)}
+                                    onClick={() => handleDelete && handleDelete(course.id_course)}
                                     className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                                 >
                                     <Trash2 className="w-4 h-4" />
@@ -228,11 +253,8 @@ export default function Course({ courses, onAddContent, onSave, onDelete }) {
 
                                         {/* Content Actions */}
                                         <div className="flex items-center gap-2">
-                                            <button className="px-3 py-1.5 bg-green-500 text-white text-xs font-medium rounded hover:bg-green-600 transition-colors">
-                                                Preview
-                                            </button>
                                             <button
-                                                onClick={() => handleEditContent(course.id_course, content.id_course_content)}
+                                                onClick={() => onEditContent(course.id_course, content.id_course_content,content.id_content_type)}
                                                 className="p-1.5 text-gray-500 hover:bg-gray-200 rounded transition-colors">
                                                 <Edit className="w-4 h-4" />
                                             </button>
@@ -328,8 +350,8 @@ export default function Course({ courses, onAddContent, onSave, onDelete }) {
                             <button
                                 onClick={handleSave}
                                 disabled={!courseName.trim()}
-                                className="px-4 py-2 bg-green-600 text-white rounded-lg
-                                        hover:bg-green-700 transition-colors font-medium
+                                className="px-4 py-2 bg-blue-600 text-white rounded-lg
+                                        hover:bg-blue-700 transition-colors font-medium
                                         disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 Save Course
