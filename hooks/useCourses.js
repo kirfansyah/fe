@@ -8,6 +8,7 @@ export function useCourses(contentId = null){
     const [groupEnroll, setGroupEnroll] = useState([]);
     const [contentData, setContentData] = useState(null);
     const [employeeData, setEmployeeData] = useState(null);
+    const [profileInfo, setProfileInfo] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null); 
     const router = useRouter();
@@ -100,7 +101,7 @@ export function useCourses(contentId = null){
     }, []);
     
 
-// Delete Course
+    // Delete Course
     const deleteCourse = async (courseId) => {
         try {
             const deletedBy = dataKaryawans?.nama || "System";
@@ -168,6 +169,7 @@ export function useCourses(contentId = null){
         try {
             let response;
             response = await API.assignEmployeesToGroup(assignData);
+            await fetchEmployeeData();
             return response;
         } catch (err) {
             setError(err.message);
@@ -175,7 +177,7 @@ export function useCourses(contentId = null){
         } finally {
             setLoading(false);
         }
-    },[]);
+    },[fetchEmployeeData]);
 
     //get data content by id
     const fetchContentByID = useCallback(async (contentId) => {
@@ -194,10 +196,26 @@ export function useCourses(contentId = null){
         }  
     }, []);
 
+    //get profile info
+    const fetchProfileInfo = useCallback(async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const res = await API.getProfileInfo();
+            setProfileInfo(res.data); 
+        } catch (err) {
+            setError(err.message || 'Failed to fetch profile info');
+            console.error('Error fetching profile info:', err);
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
 
     useEffect(() => {
-        Promise.all([fetchCourses(), fetchContentTypes(), fetchGroupEnroll(), fetchEmployeeData()]);
-    }, [fetchCourses, fetchContentTypes, fetchGroupEnroll, fetchEmployeeData]);
+        Promise.all([fetchCourses(), fetchContentTypes(), fetchGroupEnroll(), fetchEmployeeData(), fetchProfileInfo()]);
+    }, [fetchCourses, fetchContentTypes, fetchGroupEnroll, fetchEmployeeData, fetchProfileInfo]);
     useEffect(() => {
         if (contentId) {
             fetchContentByID(contentId);
@@ -209,6 +227,7 @@ export function useCourses(contentId = null){
     contentData,
     groupEnroll,
     employeeData,
+    profileInfo,
     loading, 
     error,           
     fetchCourses, 
@@ -220,6 +239,7 @@ export function useCourses(contentId = null){
     handleSavePreTest,
     handleSaveEnroll,
     handleSaveAssignEmployeeGrouping,
-    fetchContentByID
+    fetchContentByID,
+    fetchProfileInfo,
   };
 }

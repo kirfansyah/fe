@@ -100,13 +100,13 @@ export default function Course({ courses, onAddContent,onEditContent, onSave, on
                         className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                 </div>
-                <div className="flex gap-2">
+                <div className="flex items-center gap-3">
                     <button
                         onClick={() => setFilterStatus('all')}
                         className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                             filterStatus === 'all'
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                                ? 'bg-blue-300 text-white focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-transparent'
+                                : 'bg-white '
                         }`}
                     >
                         All
@@ -115,8 +115,8 @@ export default function Course({ courses, onAddContent,onEditContent, onSave, on
                         onClick={() => setFilterStatus('published')}
                         className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                             filterStatus === 'published'
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                                ? 'bg-blue-300 text-white focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-transparent'
+                                : 'bg-white'
                         }`}
                     >
                         Published
@@ -125,15 +125,15 @@ export default function Course({ courses, onAddContent,onEditContent, onSave, on
                         onClick={() => setFilterStatus('unpublished')}
                         className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                             filterStatus === 'unpublished'
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                                ? 'bg-blue-300 text-white focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-transparent'
+                                : 'bg-white'
                         }`}
                     >
                         Unpublished
                     </button>
                     <button 
                         onClick={() => setIsModalOpen(true)}
-                        className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm"
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
                     >
                         <Plus className="w-5 h-5" />
                         <span className="font-medium">Add New Course</span>
@@ -253,9 +253,6 @@ export default function Course({ courses, onAddContent,onEditContent, onSave, on
 
                                         {/* Content Actions */}
                                         <div className="flex items-center gap-2">
-                                            <button className="px-3 py-1.5 bg-green-500 text-white text-xs font-medium rounded hover:bg-green-600 transition-colors">
-                                                Preview
-                                            </button>
                                             <button
                                                 onClick={() => onEditContent(course.id_course, content.id_course_content,content.id_content_type)}
                                                 className="p-1.5 text-gray-500 hover:bg-gray-200 rounded transition-colors">
@@ -353,8 +350,8 @@ export default function Course({ courses, onAddContent,onEditContent, onSave, on
                             <button
                                 onClick={handleSave}
                                 disabled={!courseName.trim()}
-                                className="px-4 py-2 bg-green-600 text-white rounded-lg
-                                        hover:bg-green-700 transition-colors font-medium
+                                className="px-4 py-2 bg-blue-600 text-white rounded-lg
+                                        hover:bg-blue-700 transition-colors font-medium
                                         disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 Save Course

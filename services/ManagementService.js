@@ -268,6 +268,26 @@ class ManagementService {
         }
     }
 
+    /**
+     * Get Profile Info
+     * @returns {Promise} API response
+     * /
+     */
+    static async getProfileInfo() {
+        try {
+            const response = await API.get("/learner/profile");
+            return {
+                success: response.data.success,
+                data: response.data.data || null,
+                message: response.data.message
+            };
+        } catch (error) {
+            console.error('ManagementService.getProfileInfo Error:', error);
+            throw new Error(error.response?.data?.message || 'Failed to fetch profile info');
+        }
+    }
+
+
 
 }
 export default ManagementService;

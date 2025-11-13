@@ -90,7 +90,7 @@ export default function PreTestForm({
         } else if (testConfig.pointDistribution !== 'Equal Distribution' && !isEditMode) {
             setAutoCalculatedPoints(0);
         }
-    }, [testConfig.pointDistribution, testConfig.totalPoints, testConfig.totalNumber, isEditMode]);
+    }, [testConfig.pointDistribution, testConfig.totalPoints, testConfig.totalNumber,currentQuestionNumber, isEditMode]);
 
 
 
@@ -140,6 +140,7 @@ export default function PreTestForm({
         const finalTest = {
             id_course: courseId,
             id_content_type: 3,
+            random_type: testConfig.randomType,
             content_title: isEditMode ? contentData?.content_title : "Pre Test",
             total_points: parseInt(testConfig.totalPoints) || 0,
             total_number: parseInt(testConfig.totalNumber) || 0,
@@ -250,6 +251,7 @@ export default function PreTestForm({
                     editorKey={editorKey}
                     quillModules={quillModules}
                     quillFormats={quillFormats}
+                    isEditMode={isEditMode}
                     autoCalculatedPoints={autoCalculatedPoints}
                     pointDistribution={testConfig.pointDistribution}
                     onQuestionChange={handleQuestionChange}
@@ -269,18 +271,18 @@ export default function PreTestForm({
                         <button 
                         onClick={handleSaveAndNextWithSubmit}
                         disabled={!isFormValid()}
-                         className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700">
+                         className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
                             Save & Next
                         </button>
                     )}
                     {isEditMode && (
-                        <button onClick={() => handleSubmitTest()} className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700">
+                        <button onClick={() => handleSubmitTest()} className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
                             Save All Changes
                         </button>
                     )}
                     <button 
                         onClick={handlePreview} 
-                        className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                        className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700"
                     >
                         Preview ({savedQuestions.length})
                     </button>

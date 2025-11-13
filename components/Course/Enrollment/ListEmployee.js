@@ -161,12 +161,12 @@ export default function ListEmployee(
                     <button 
                         onClick={handleOpenGroupingModal}
                         disabled={selectedEmployees.length === 0}
-                        className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         <Users size={20} />
                         Assign Grouping
                         {selectedEmployees.length > 0 && (
-                            <span className="ml-1 px-2 py-0.5 bg-green-700 rounded-full text-xs">
+                            <span className="ml-1 px-2 py-0.5 bg-blue-700 rounded-full text-xs">
                                 {selectedEmployees.length}
                             </span>
                         )}

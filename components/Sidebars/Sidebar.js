@@ -18,7 +18,7 @@ import {
 export default function Sidebar() {
   const [currentPage, setCurrentPage] = useState('Home');
   const sidebarItems = [ 
-    { icon: Home, label: 'Home' },
+    { icon: Home, label: 'Home' , link :'/admin/home'},
     { icon: BarChart3, label: 'Dashboard' , link :'/admin/dashboard'},
     { icon: BookOpen, label: 'Course Management', link :'/course/management' },
     { icon: FileText, label: 'Report', link :'/course/1' },
@@ -26,7 +26,7 @@ export default function Sidebar() {
     { icon: Library, label: 'Library', link :'/course/3' },
     { icon: Users, label: 'Employee Course', link :'/course/employee/course' },
     { icon: Users, label: 'User Management', link :'/course/5' },
-    { icon: GraduationCap, label: 'Mastering', link :'/course/6' },
+    { icon: GraduationCap, label: 'Mastering', link :'/master/role' },
     { icon: Settings, label: 'Setting', link :'/course/7' },
   ];
 

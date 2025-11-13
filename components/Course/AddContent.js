@@ -211,7 +211,7 @@ export default function AddContent({
                 />
             </div>
             <div className="mt-12 flex gap-6 justify-start items-center">
-                <button onClick={handleSubmit} className="px-6 py-2 bg-green-600 text-white rounded">
+                <button onClick={handleSubmit} className="px-6 py-2 bg-blue-600 text-white rounded">
                     Save
                 </button>
                 <button onClick={onBack} className="px-6 py-2 bg-red-600 text-gray-700 rounded hover:bg-gray-300">
