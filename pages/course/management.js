@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import Admin from "layouts/Admin.js";
 import CoursesListView from "../../components/Course/Course";
-import EnrollmentView from "../../components/Course/Enroll";
+import EnrollmentView from "../../components/Course/Enrollment/Enroll";
 import ContentAdditionView from "../../components/Course/AddContent";
 import { useCourses } from "../../hooks/useCourses";
 export default function Management() {
