@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import CourseCardSkeleton from "@/components/course/CourseCardSkeleton";
+import CourseCardSkeleton from "@/components/Course/CourseCardSkeleton";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
