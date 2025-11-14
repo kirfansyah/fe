@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: process.env.API_URL,
+  baseURL: "/api/v1/",
   headers: {
     "Content-Type": "application/json",
   },
@@ -10,7 +10,8 @@ const api = axios.create({
 // interceptor untuk tambahkan token
 api.interceptors.request.use((config) => {
   if (typeof window !== "undefined") {
-    const token = localStorage.getItem("token") || process.env.API_TOKEN;
+    const match = document.cookie.match(new RegExp("(^| )token=([^;]+)"));
+    const token = match ? match[2] : null;
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }

@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useContext, useEffect } from "react";
-import TopBar from "@/components/course/TopBar";
-import LeftSidebar from "@/components/course/LeftSidebar";
+import TopBar from "@/components/Course/TopBar";
+import LeftSidebar from "@/components/Course/LeftSidebar";
 import ContentArea from "@/components/Course/ContentArea";
 import { CourseContext } from "@/contexts/CourseContext";
 

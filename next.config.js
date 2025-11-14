@@ -11,9 +11,7 @@ const withPWA = require("next-pwa")({
 
 module.exports = withPWA({
   env: {
-    appName: "LMS SAMBU GROUP",
-    // API_URL: "http://192.168.12.73:5000/api",
-    API_URL: "https://melvina-thiolacetic-herschel.ngrok-free.dev/api",
+    appName: "LMS SAMBU GROUP", 
   },
   async rewrites() {
     //konfigurasi Router
@@ -21,15 +19,11 @@ module.exports = withPWA({
       {
         source: "/auth/login", // custom route/page
         destination: "/login", // route/page asalnya
-      },
+      }, 
       {
-        // source: "/api/v1/:path*", // route untuk api backend agar tidak kena cors
-        // destination: `${process.env.API_URL}/:path*`, // server api backend asal
-
-        source: "/proxy/:path*",
-        destination:
-          "https://melvina-thiolacetic-herschel.ngrok-free.dev/api/:path*",
-      },
+        source: "/api/v1/:path*", // route untuk api backend agar tidak kena cors
+        destination: `${process.env.API_URL}/:path*`, // server api backend asal
+      },  
     ];
   },
 });
