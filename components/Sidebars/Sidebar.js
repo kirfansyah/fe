@@ -33,7 +33,11 @@ export default function Sidebar() {
       link: "/course/management",
     },
     { icon: FileText, label: listLanguage.report, link: "/course/1" },
-    { icon: MessageSquare, label: listLanguage.feedback, link: "/course/2" },
+    {
+      icon: MessageSquare,
+      label: listLanguage.feedback,
+      link: "/feedback/feedback",
+    },
     { icon: Library, label: listLanguage.library, link: "/library/ebook" },
     {
       icon: Users,
