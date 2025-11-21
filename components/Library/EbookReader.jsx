@@ -78,7 +78,6 @@ export default function EbookReader({
         });
         console.log("✅ Reading completed, saved page:", currentPage);
 
-        // Show review modal when finished (only if not from review submission)
         if (!forceComplete && !showReviewModal) {
           setShowReviewModal(true);
         }
@@ -146,11 +145,10 @@ export default function EbookReader({
   const handleClose = async () => {
     await saveProgress(true, false);
 
-    // Show review modal if completed and not shown yet
     if (currentPage >= totalPages && !showReviewModal) {
       setShowReviewModal(true);
     } else {
-      onClose(currentPage, totalPages, true); // true = refresh list
+      onClose(currentPage, totalPages, true);
     }
   };
 
@@ -163,7 +161,6 @@ export default function EbookReader({
 
     setIsSubmittingReview(true);
     try {
-      // Submit review first
       if (submitReviewFn) {
         await submitReviewFn(ebook.id_ebook, rating, comment, {
           userId: "current_user_id",
@@ -172,12 +169,11 @@ export default function EbookReader({
         console.log("⭐ Review submitted successfully");
       }
 
-      // Then mark as complete (Done)
       await saveProgress(true, true);
 
       alert("Thank you for your feedback!");
       setShowReviewModal(false);
-      onClose(currentPage, totalPages, true); // true = refresh list
+      onClose(currentPage, totalPages, true);
     } catch (error) {
       console.error("Failed to submit review:", error);
       alert("Failed to submit review. Please try again.");
@@ -188,10 +184,9 @@ export default function EbookReader({
 
   // Skip review
   const handleSkipReview = async () => {
-    // Still mark as complete even if skipped review
     await saveProgress(true, true);
     setShowReviewModal(false);
-    onClose(currentPage, totalPages, true); // true = refresh list
+    onClose(currentPage, totalPages, true);
   };
 
   // Toggle fullscreen
@@ -209,7 +204,6 @@ export default function EbookReader({
         } else if (readerContainerRef.current.msRequestFullscreen) {
           readerContainerRef.current.msRequestFullscreen();
         }
-        setIsFullscreen(true);
       }
     } else {
       if (document.exitFullscreen) {
@@ -223,21 +217,19 @@ export default function EbookReader({
       } else if (document.msExitFullscreen) {
         document.msExitFullscreen();
       }
-      setIsFullscreen(false);
     }
   };
 
   // Listen to fullscreen changes
   useEffect(() => {
     const handleFullscreenChange = () => {
-      setIsFullscreen(
-        !!(
-          document.fullscreenElement ||
-          document.webkitFullscreenElement ||
-          document.mozFullScreenElement ||
-          document.msFullscreenElement
-        )
+      const isNowFullscreen = !!(
+        document.fullscreenElement ||
+        document.webkitFullscreenElement ||
+        document.mozFullScreenElement ||
+        document.msFullscreenElement
       );
+      setIsFullscreen(isNowFullscreen);
     };
 
     document.addEventListener("fullscreenchange", handleFullscreenChange);
@@ -265,7 +257,6 @@ export default function EbookReader({
   // Handle keyboard navigation
   useEffect(() => {
     const handleKeyPress = (e) => {
-      // Prevent arrow key navigation if in review modal
       if (showReviewModal) return;
 
       if (e.key === "ArrowLeft") {
@@ -274,6 +265,8 @@ export default function EbookReader({
         handleNextPage();
       } else if (e.key === "Escape" && !isFullscreen) {
         handleClose();
+      } else if (e.key === "f" || e.key === "F") {
+        toggleFullscreen();
       }
     };
 
@@ -283,20 +276,17 @@ export default function EbookReader({
 
   // Disable body scroll when reader is open
   useEffect(() => {
-    // Save original styles
     const originalBodyOverflow = document.body.style.overflow;
     const originalHtmlOverflow = document.documentElement.style.overflow;
     const originalBodyHeight = document.body.style.height;
     const originalHtmlHeight = document.documentElement.style.height;
 
-    // Apply no-scroll styles
     document.body.style.overflow = "hidden";
     document.documentElement.style.overflow = "hidden";
     document.body.style.height = "100vh";
     document.documentElement.style.height = "100vh";
 
     return () => {
-      // Restore original styles
       document.body.style.overflow = originalBodyOverflow;
       document.documentElement.style.overflow = originalHtmlOverflow;
       document.body.style.height = originalBodyHeight;
@@ -307,7 +297,7 @@ export default function EbookReader({
   return (
     <div
       ref={readerContainerRef}
-      className="fixed inset-0 bg-gray-100 z-[9999]"
+      className="fixed inset-0 bg-black z-[9999]"
       style={{
         overflow: "hidden",
         position: "fixed",
@@ -319,64 +309,57 @@ export default function EbookReader({
         height: "100vh",
       }}
     >
-      {/* Header */}
-      <div
-        className="bg-gradient-to-r from-blue-700 to-blue-600 text-white shadow-lg"
-        style={{ flexShrink: 0 }}
-      >
-        <div className="px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={handleClose}
-              className="text-white hover:text-gray-200 transition-colors font-medium"
-            >
-              Home
-            </button>
-            <div className="h-6 w-px bg-white/30"></div>
-            <h1 className="text-lg font-semibold truncate max-w-md">
-              {ebook.title || "eBook Reader"}
-            </h1>
-          </div>
+      {/* Header - Hidden in Fullscreen */}
+      {!isFullscreen && (
+        <div
+          className="bg-gradient-to-r from-blue-700 to-blue-600 text-white shadow-lg"
+          style={{ flexShrink: 0 }}
+        >
+          <div className="px-6 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={handleClose}
+                className="text-white hover:text-gray-200 transition-colors font-medium"
+              >
+                Home
+              </button>
+              <div className="h-6 w-px bg-white/30"></div>
+              <h1 className="text-lg font-semibold truncate max-w-md">
+                {ebook.title || "eBook Reader"}
+              </h1>
+            </div>
 
-          <div className="flex items-center gap-3">
-            {isSaving && (
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-white/20 rounded-lg">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                <span className="text-sm">Saving...</span>
-              </div>
-            )}
-
-            <button
-              onClick={toggleFullscreen}
-              className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors flex items-center gap-2"
-            >
-              {isFullscreen ? (
-                <>
-                  <Minimize size={18} />
-                  <span className="text-sm font-medium">Exit Full Screen</span>
-                </>
-              ) : (
-                <>
-                  <Maximize size={18} />
-                  <span className="text-sm font-medium">Full Screen</span>
-                </>
+            <div className="flex items-center gap-3">
+              {isSaving && (
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-white/20 rounded-lg">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span className="text-sm">Saving...</span>
+                </div>
               )}
-            </button>
 
-            <button
-              onClick={handleClose}
-              disabled={isSaving}
-              className="px-4 py-2 bg-red-500 hover:bg-red-600 rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50"
-            >
-              <X size={18} />
-              <span className="text-sm font-medium">Exit eBook</span>
-            </button>
+              <button
+                onClick={toggleFullscreen}
+                className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors flex items-center gap-2"
+              >
+                <Maximize size={18} />
+                <span className="text-sm font-medium">Full Screen</span>
+              </button>
+
+              <button
+                onClick={handleClose}
+                disabled={isSaving}
+                className="px-4 py-2 bg-red-500 hover:bg-red-600 rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50"
+              >
+                <X size={18} />
+                <span className="text-sm font-medium">Exit eBook</span>
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Resume Notification */}
-      {showResumeNotification && (
+      {showResumeNotification && !isFullscreen && (
         <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50">
           <div className="flex items-center gap-2">
             <span className="text-lg">📖</span>
@@ -390,20 +373,22 @@ export default function EbookReader({
       {/* Main Content */}
       <div
         style={{
-          height: "calc(100vh - 76px)",
+          height: isFullscreen ? "100vh" : "calc(100vh - 76px)",
           overflow: "hidden",
           position: "relative",
         }}
       >
         <div
-          className="w-full h-full flex items-center justify-center px-20"
+          className="w-full h-full flex items-center justify-center"
           style={{ overflow: "hidden" }}
         >
           {/* Previous Button */}
           <button
             onClick={handlePrevPage}
             disabled={currentPage === 1}
-            className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white shadow-lg hover:shadow-xl disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center group z-20"
+            className={`absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full shadow-lg hover:shadow-xl disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center group z-20 ${
+              isFullscreen ? "bg-white/90 hover:bg-white" : "bg-white"
+            }`}
             aria-label="Previous page"
           >
             <ChevronLeft
@@ -414,8 +399,12 @@ export default function EbookReader({
 
           {/* eBook Display Area */}
           <div
-            className="w-full h-full max-w-5xl bg-white rounded-lg shadow-2xl"
-            style={{ overflow: "hidden" }}
+            className="w-full h-full bg-white"
+            style={{
+              overflow: "hidden",
+              maxWidth: isFullscreen ? "100%" : "80rem",
+              padding: isFullscreen ? "0" : "0 80px",
+            }}
           >
             {ebook.file_path_url ? (
               <iframe
@@ -466,7 +455,9 @@ export default function EbookReader({
           <button
             onClick={handleNextPage}
             disabled={currentPage === totalPages}
-            className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white shadow-lg hover:shadow-xl disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center group z-20"
+            className={`absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full shadow-lg hover:shadow-xl disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center group z-20 ${
+              isFullscreen ? "bg-white/90 hover:bg-white" : "bg-white"
+            }`}
             aria-label="Next page"
           >
             <ChevronRight
@@ -475,12 +466,53 @@ export default function EbookReader({
             />
           </button>
 
+          {/* Fullscreen Controls - Floating Header */}
+          {isFullscreen && (
+            <div className="absolute top-4 right-4 flex items-center gap-3 z-30">
+              {isSaving && (
+                <div className="flex items-center gap-2 px-3 py-2 bg-black/70 text-white rounded-lg backdrop-blur-sm">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span className="text-sm">Saving...</span>
+                </div>
+              )}
+
+              <button
+                onClick={toggleFullscreen}
+                className="p-2.5 bg-black/70 hover:bg-black/80 text-white rounded-lg transition-colors backdrop-blur-sm"
+                title="Exit Fullscreen (F key)"
+              >
+                <Minimize size={20} />
+              </button>
+
+              <button
+                onClick={handleClose}
+                disabled={isSaving}
+                className="p-2.5 bg-red-500/90 hover:bg-red-600 text-white rounded-lg transition-colors backdrop-blur-sm disabled:opacity-50"
+                title="Close eBook"
+              >
+                <X size={20} />
+              </button>
+            </div>
+          )}
+
           {/* Page Counter */}
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white/95 backdrop-blur-sm px-6 py-2.5 rounded-full shadow-lg z-20">
-            <span className="text-sm text-gray-600 font-medium">
+          <div
+            className={`absolute bottom-4 left-1/2 -translate-x-1/2 backdrop-blur-sm px-6 py-2.5 rounded-full shadow-lg z-20 ${
+              isFullscreen
+                ? "bg-black/70 text-white"
+                : "bg-white/95 text-gray-600"
+            }`}
+          >
+            <span className="text-sm font-medium">
               Page{" "}
-              <span className="font-bold text-blue-600">{currentPage}</span> of{" "}
-              {totalPages}
+              <span
+                className={`font-bold ${
+                  isFullscreen ? "text-blue-400" : "text-blue-600"
+                }`}
+              >
+                {currentPage}
+              </span>{" "}
+              of {totalPages}
             </span>
           </div>
         </div>
