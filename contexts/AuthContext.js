@@ -107,88 +107,58 @@ const AuthContextProvider = (props) => {
 
   const Login = async ({ username, password }) => {
     dispatch({ type: "loading" }); // loading
+    try {
+      const response = await API.post("/auth/get_token", { username, password });
+      const { status, message, data } = response.data;
+ 
+      if (status === 200 && data.length > 0) {
+      const user = data[0]; 
+      document.cookie = `token=${user.token}; path=/`;
+      document.cookie = `username=${user.nik}; path=/`;
+      document.cookie = `nama=${user.nama}; path=/`;
 
-    const message = "test";
-    const user = {
-      token: "tasdasadasa",
-      nik: "10158",
-      nama: "Kiki",
-    };
-
-    dispatch({
-      type: "loginSuccess",
-      data: {
-        message: message,
-        status: true,
-        token: user.token,
-        profil: {
-          nik: user.nik,
-          nama: user.nama,
+      dispatch({
+        type: "loginSuccess",
+        data: {
+          message: message,
+          status: true,
+          token: user.token,
+          profil: {
+            nik: user.nik,
+            nama: user.nama,
+          },
         },
-      },
-    });
+      });
 
-    // Alert sukses
-    Swal.fire({
-      icon: "success",
-      title: "Berhasil Login",
-      text: `Selamat datang ${user.nama}`,
-      confirmButtonColor: "#1e3a8a",
-    });
+      // Alert sukses
+      Swal.fire({
+        icon: "success",
+        title: "Berhasil Login",
+        text: `Selamat datang ${user.nama}`,
+        confirmButtonColor: "#1e3a8a",
+      });
 
-    router.push("/dashboard");
-    // try {
-    //   const response = await API.post("/auth/get_token", { username, password });
-    //   const { status, message, data } = response.data;
+      router.push("/dashboard");
+    } else {
+      throw new Error("Login gagal");
+    }
+    } catch (err) { 
+      Swal.fire({
+        icon: "error",
+        title: "Username atau password anda tidak sesuai",
+        showCloseButton: true,
+        showCancelButton: false,
+        cancelButtonText: "OK",
+        confirmButtonColor: "#1e3a8a",
+      }).then((result) => {
+      });
 
-    //   if (status === 200 && data.length > 0) {
-    //   const user = data[0];
-    //   document.cookie = `token=${user.token}; path=/`;
-    //   document.cookie = `username=${user.nik}; path=/`;
-    //   document.cookie = `nama=${user.nama}; path=/`;
-
-    //   dispatch({
-    //     type: "loginSuccess",
-    //     data: {
-    //       message: message,
-    //       status: true,
-    //       token: user.token,
-    //       profil: {
-    //         nik: user.nik,
-    //         nama: user.nama,
-    //       },
-    //     },
-    //   });
-
-    //   // Alert sukses
-    //   Swal.fire({
-    //     icon: "success",
-    //     title: "Berhasil Login",
-    //     text: `Selamat datang ${user.nama}`,
-    //     confirmButtonColor: "#1e3a8a",
-    //   });
-
-    //   router.push("/dashboard");
-    // } else {
-    //   throw new Error("Login gagal");
-    // }
-    // } catch (err) {
-    //   Swal.fire({
-    //     icon: "error",
-    //     title: "Username atau password anda tidak sesuai",
-    //     showCloseButton: true,
-    //     showCancelButton: false,
-    //     cancelButtonText: "OK",
-    //     confirmButtonColor: "#1e3a8a",
-    //   }).then((result) => {
-    //   });
-
-    //   dispatch({
-    //     type: "loginSuccess",
-    //     data: { message: 'Username atau password anda tidak sesuai', status: false },
-    //   });
-    //   console.log(err.response);
-    // }
+      dispatch({
+        type: "loginSuccess",
+        data: { message: 'Username atau password anda tidak sesuai', status: false },
+      });
+      console.log(err.response);
+    }
   };
 
   function getSession() {
@@ -260,19 +230,30 @@ const AuthContextProvider = (props) => {
   };
 
   const changePassword = async ({
-    email,
-    passwordOld,
-    password,
-    passwordConfirm,
+    current_password,
+    new_password,
+    confirm_new_password,
+    profile_photo,
   }) => {
+    let cookie = `; ${document.cookie}`.match(`;\\s*token=([^;]+)`);
+    let token = cookie ? cookie[1] : "";
     dispatch({ type: "loading" });
-    if (password === passwordConfirm) {
+    if (new_password === confirm_new_password) {
       try {
-        await API.post("/pelamar/changePassword", {
-          email,
-          password,
-          passwordOld,
-        });
+        await API.post("/auth/account", {
+          current_password,
+          new_password,
+          confirm_new_password,
+          profile_photo
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'multipart/form-data'
+          }
+        }
+      
+      );
 
         dispatch({
           type: "changePassword",
@@ -284,8 +265,6 @@ const AuthContextProvider = (props) => {
         AlertSuccess({
           message: "Update success",
         });
-
-        router.push("/profile", { shallow: true });
       } catch (err) {
         var { data } = err.response;
         AlertFailed({

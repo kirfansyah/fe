@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import Admin from "layouts/Admin.js";
 import { useRoles } from "../../hooks/useRoles";
+import { useSweetAlert } from '@/hooks/useSweetAlert';
 export default function MenuManagement() {
     // State Management
     const [loading, setLoading] = useState(true);
@@ -36,15 +37,14 @@ export default function MenuManagement() {
     const [modalMode, setModalMode] = useState('add');
     const [selectedMenu, setSelectedMenu] = useState(null);
     const [formData, setFormData] = useState({ 
-        menu_code: '',
         menu_name: '',
         menu_url: '',
         menu_icon: '',
         parent_id: null,
         menu_type: 'header',
-        menu_order: 1,
-        is_active: true,
-        roles: []
+        id_role: [],
+        created_by: 'SYSTEM', 
+        created_device: 'WEB'
     });
 
     // Available icons for menu
@@ -65,7 +65,8 @@ export default function MenuManagement() {
         { name: 'icon-profile', icon: User },
         { name: 'icon-course-mgmt', icon: Folder }
     ];
-    const {menus} = useRoles();
+    const {menus, roles, handleCreateMenus} = useRoles();
+    const { showLoading, showSuccess, showError, showWarning, confirmAction } = useSweetAlert();
     useEffect(() => {
         setLoading(false);
     }, []);
@@ -116,31 +117,36 @@ export default function MenuManagement() {
     const handleAdd = (parentId = null) => {
         setModalMode('add');
         setFormData({ 
-            menu_code: '',
             menu_name: '',
             menu_url: '',
             menu_icon: '',
             parent_id: parentId,
             menu_type: parentId ? 'submenu' : 'header',
-            menu_order: 1,
             is_active: true,
-            roles: []
+            id_role: [],
+            created_by: 'SYSTEM', // Should be from current user
+            created_device: 'WEB'
         });
         setShowModal(true);
     };
 
     const handleEdit = (menu) => {
         setSelectedMenu(menu);
+        // Convert role names to role IDs for editing
+        const roleIds = menu.roles ? menu.roles.map(roleName => {
+            const role = availableRoles.find(r => r.role_name === roleName);
+            return role ? role.id_role : null;
+        }).filter(id => id !== null) : [];
         setFormData({ 
-            menu_code: menu.menu_code,
             menu_name: menu.menu_name,
             menu_url: menu.menu_url,
             menu_icon: menu.menu_icon || '',
             parent_id: menu.parent_id,
             menu_type: menu.menu_type,
-            menu_order: menu.menu_order,
             is_active: menu.is_active,
-            roles: menu.roles
+            id_role: roleIds,
+            created_by: 'SYSTEM', // Should be from current user
+            created_device: 'WEB'
         });
         setModalMode('edit');
         setShowModal(true);
@@ -168,11 +174,24 @@ export default function MenuManagement() {
         setShowModal(true);
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async(e) => {
         e.preventDefault();
         
         if (modalMode === 'add') {
             console.log('Adding menu:', formData);
+            const result = await confirmAction({
+                title: 'Add New Menu',
+                text: 'Are you sure you want to add this new menu?',
+                icon: 'question'
+            });
+            if (!result.isConfirmed) return;
+            try {
+                showLoading('Adding new menu...');
+                await handleCreateMenus(formData);
+                showSuccess('Menu added successfully');
+            } catch (error) {
+                showError(error.message || 'Failed to add menu');
+            }
         } else if (modalMode === 'edit') {
             console.log('Editing menu:', formData);
         } else if (modalMode === 'delete') {
@@ -194,7 +213,7 @@ export default function MenuManagement() {
     };
 
     // Available roles
-    const availableRoles = ['Administrator', 'Trainer', 'Learner A', 'Learner B'];
+    const availableRoles = roles || [];
 
     // Get icon component
     const getIconComponent = (iconName) => {
@@ -471,7 +490,7 @@ export default function MenuManagement() {
 
             {/* Modal */}
             {showModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                <div className="fixed inset-0 bg-black bg-opacity-50  flex items-center justify-center p-4 z-50">
                     <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl">
                         <div className="px-6 py-4 border-b border-gray-200">
                             <h3 className="text-lg font-semibold text-gray-900">
@@ -507,33 +526,18 @@ export default function MenuManagement() {
                                     </div>
                                 ) : (
                                     <div className="space-y-4">
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                    Menu Code <span className="text-red-500">*</span>
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    required
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                    value={formData.menu_code}
-                                                    onChange={(e) => setFormData({ ...formData, menu_code: e.target.value.toUpperCase() })}
-                                                    placeholder="e.g. MENU_DASHBOARD"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                    Menu Name <span className="text-red-500">*</span>
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    required
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                    value={formData.menu_name}
-                                                    onChange={(e) => setFormData({ ...formData, menu_name: e.target.value })}
-                                                    placeholder="Enter menu name"
-                                                />
-                                            </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                Menu Name <span className="text-red-500">*</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                required
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                value={formData.menu_name}
+                                                onChange={(e) => setFormData({ ...formData, menu_name: e.target.value })}
+                                                placeholder="Enter menu name"
+                                            />
                                         </div>
 
                                         <div className="grid grid-cols-2 gap-4">
@@ -573,7 +577,7 @@ export default function MenuManagement() {
                                             </div>
                                         </div>
 
-                                        <div className="grid grid-cols-3 gap-4">
+                                        <div className="grid grid-cols-2 gap-4">
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                                     Menu Type
@@ -609,18 +613,6 @@ export default function MenuManagement() {
                                                     ))}
                                                 </select>
                                             </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                    Order
-                                                </label>
-                                                <input
-                                                    type="number"
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                    value={formData.menu_order}
-                                                    onChange={(e) => setFormData({ ...formData, menu_order: parseInt(e.target.value) })}
-                                                    min="1"
-                                                />
-                                            </div>
                                         </div>
 
                                         <div>
@@ -629,7 +621,7 @@ export default function MenuManagement() {
                                             </label>
                                             <select
                                                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                value={formData.is_active.toString()}
+                                                value={formData.is_active}
                                                 onChange={(e) => setFormData({ ...formData, is_active: e.target.value === 'true' })}
                                             >
                                                 <option value="true">Active</option>
@@ -643,26 +635,32 @@ export default function MenuManagement() {
                                             </label>
                                             <div className="space-y-2 p-3 border border-gray-200 rounded-md">
                                                 {availableRoles.map(role => (
-                                                    <label key={role} className="flex items-center">
+                                                    <label key={role.id_role} className="flex items-center">
                                                         <input
                                                             type="checkbox"
                                                             className="mr-2"
-                                                            checked={formData.roles.includes(role)}
+                                                            checked={formData.id_role.includes(role.id_role)}
                                                             onChange={(e) => {
                                                                 if (e.target.checked) {
                                                                     setFormData({ 
                                                                         ...formData, 
-                                                                        roles: [...formData.roles, role]
+                                                                        id_role: [...formData.id_role, role.id_role]
                                                                     });
                                                                 } else {
                                                                     setFormData({ 
                                                                         ...formData, 
-                                                                        roles: formData.roles.filter(r => r !== role)
+                                                                        id_role: formData.id_role.filter(id => id !== role.id_role)
                                                                     });
                                                                 }
                                                             }}
                                                         />
-                                                        <span className="text-sm text-gray-700">{role}</span>
+                                                        <div className="flex-1">
+                                                            <span className="text-sm text-gray-700 font-medium">{role.role_name}</span>
+                                                            <span className="text-xs text-gray-500 ml-2">({role.role_code})</span>
+                                                            {role.role_description && (
+                                                                <p className="text-xs text-gray-500">{role.role_description}</p>
+                                                            )}
+                                                        </div>
                                                     </label>
                                                 ))}
                                             </div>

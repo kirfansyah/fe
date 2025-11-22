@@ -1,6 +1,6 @@
 
 import { Menu, Transition } from "@headlessui/react";
-import {  React, Fragment, useEffect,useContext } from "react";
+import {  React, Fragment, useEffect,useContext, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { AuthContext } from "contexts/AuthContext";
@@ -8,6 +8,7 @@ import ToggleSwitch from "components/ToggleSwitch/ToggleSwitch";
 import { LanguageContext } from "contexts/LanguageContext";
 import { ProfileContext } from "contexts/profile/ProfileContext";
 import { IoIosNotifications } from "react-icons/io";
+import ChangePasswordModal from "components/ChangePasswordModal";
 
 const Header = () => {
   const { stateLanguage, changeLanguage } = useContext(LanguageContext); 
@@ -30,9 +31,10 @@ const Header = () => {
     getKaryawan();
   }, []);
 
-  console.log("dataKaryawans", dataKaryawans);
+  const [showChangePassword, setShowChangePassword] = useState(false);
  
   return ( 
+    <>
     <header className='bg-white shadow-sm p-4 flex justify-between items-center fixed w-full z-20'>
         <div className='flex  items-center space-x-3'>
           <a href='/'>
@@ -114,7 +116,7 @@ const Header = () => {
                           <Menu.Item>
                             {({ active }) => (
                               <button
-                                onClick={() => router.push("/profile/setting")}
+                                onClick={() => setShowChangePassword(true)}
                                 className={`${
                                   active
                                     ? "bg-blue-900 text-white"
@@ -187,7 +189,11 @@ const Header = () => {
           </ul>
         </div>
     </header>
-    
+     <ChangePasswordModal 
+            isOpen={showChangePassword}
+            onClose={() => setShowChangePassword(false)}
+        />
+  </>
   );
 };
 

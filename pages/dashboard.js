@@ -2,16 +2,17 @@ import {useContext,useEffect} from "react";
 import WebLayout from "../layouts/WebLayout";
 import { ProfileContext } from "../contexts/profile/ProfileContext";
 import Link from "next/link";
-
-// components 
+import { useCourses } from '../hooks/useCourses';
 const Dashboard = () => {
-  const { getKaryawan, dataKaryawan } = useContext(ProfileContext);
-      
+  const { getKaryawan, dataKaryawan } = useContext(ProfileContext);  
   const dataKaryawans = dataKaryawan?.length ? dataKaryawan[0] : [];
   
   useEffect(() => {
     getKaryawan();
   }, []);
+
+  const {profileInfo} = useCourses();   
+  const profileData = profileInfo || dataKaryawans || {};
 
   const menuItems = [
     {
@@ -47,10 +48,18 @@ const Dashboard = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <h1 className="text-4xl font-bold mb-2">{dataKaryawans.nama}</h1>
           <p className="text-blue-100 text-lg">
-            Talent Management Head | Human Resources | Pulau Sambu Jakarta
+            {profileData.position_name || ''
+            } - {profileData.company_name || ''}
           </p>
           <div className="mt-4 text-blue-100">
-            <span>Monday, October 17, 2025</span>
+            <span>
+              {new Date().toLocaleDateString("en-US", {
+                weekday: "long",
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })}
+            </span>
             <span className="mx-3">|</span>
             <span>09.32 AM</span>
           </div>

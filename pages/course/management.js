@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState,useContext } from "react";
 import Admin from "layouts/Admin.js";
 import CoursesListView from "../../components/Course/Course"; 
 import EnrollmentView from "../../components/Course/Enrollment/Enroll";
@@ -6,17 +6,17 @@ import ContentAdditionView from "../../components/Course/AddContent";
 import { useCourses } from "../../hooks/useCourses";
 import { ChevronRight, BookOpen, Users, Home } from 'lucide-react';
 import { useRouter } from "next/router";
-
+import { ProfileContext } from "../../contexts/profile/ProfileContext";
 export default function ModernManagement() {
     const [activeTab, setActiveTab] = useState('courses-list');
     const [currentPage, setCurrentPage] = useState('main');
     const [selectedCourseId, setSelectedCourseId]= useState('');
     const [selectedContentId, setSelectedContentId] = useState(null);
-    const {courses, contentTypes, groupEnroll, addCourse, deleteCourse } = useCourses();
+    const {courses, contentTypes, groupEnroll,companies, addCourse, deleteCourse,enrollData } = useCourses();
     const [editData, setEditData] = useState(null);
     const [activeEnrollmentTab, setActiveEnrollmentTab] = useState('courses-list-sub');
     const router = useRouter();
-    
+    console.log("Companies Units:", companies);
     const handleAddContent = (courseId) => {
         setSelectedCourseId(courseId);
         setCurrentPage('addContent');
@@ -30,6 +30,10 @@ export default function ModernManagement() {
         5: '/course/upload/edit-content',
         6: '/course/upload/edit-content'
     };
+
+    const { getKaryawan, dataKaryawan } = useContext(ProfileContext);
+                      
+    const dataKaryawans = dataKaryawan?.length ? dataKaryawan[0] : [];
 
     const handleEditContent = (courseId, contentId, contentTypeId) => {
         const specialRoute = CONTENT_TYPE_ROUTES[contentTypeId];
@@ -118,6 +122,7 @@ export default function ModernManagement() {
                             onEditContent={handleEditContent}
                             onSave={addCourse}
                             onDelete={deleteCourse}
+                            createdBy={dataKaryawans.nama}
                         />
                     )}
                     
@@ -125,6 +130,8 @@ export default function ModernManagement() {
                         <EnrollmentView 
                             courses={courses} 
                             groupEnroll={groupEnroll} 
+                            companyUnits={companies}
+                            enrollData={enrollData}
                             activeEnrollmentTab={activeEnrollmentTab} 
                             setActiveEnrollmentTab={setActiveEnrollmentTab}
                             onSuccess={handleSaveSuccess}

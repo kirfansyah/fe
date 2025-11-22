@@ -1,6 +1,6 @@
 
 import { Menu, Transition } from "@headlessui/react";
-import {  React, Fragment, useEffect,useContext } from "react";
+import {  React, Fragment, useEffect,useContext, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { AuthContext } from "../contexts/AuthContext";
@@ -8,7 +8,7 @@ import ToggleSwitch from "components/ToggleSwitch/ToggleSwitch";
 import { LanguageContext } from "contexts/LanguageContext";
 import { ProfileContext } from "../contexts/profile/ProfileContext";
 import { IoIosNotifications } from "react-icons/io";
-
+import ChangePasswordModal from "components/ChangePasswordModal";
 const Header = () => {
   const { stateLanguage, changeLanguage } = useContext(LanguageContext); 
   const { getSession, stateAuth, Logout } = useContext(AuthContext);
@@ -29,10 +29,11 @@ const Header = () => {
     getSession();
     getKaryawan();
   }, []);
-
+  const [showChangePassword, setShowChangePassword] = useState(false);
   console.log("dataKaryawans", dataKaryawans);
  
   return ( 
+    <>
     <header className='flex items-center w-full h-16 bg-transparent sticky top-0 left-0 z-99 backdrop-blur backdrop-filter'>
       <div className='relative w-full container mx-auto flex items-center justify-between h-full px-4'>
         <div className='flex items-center'>
@@ -116,7 +117,7 @@ const Header = () => {
                           <Menu.Item>
                             {({ active }) => (
                               <button
-                                onClick={() => router.push("/profile/setting")}
+                                onClick={() => setShowChangePassword(true)}
                                 className={`${
                                   active
                                     ? "bg-blue-900 text-white"
@@ -189,8 +190,13 @@ const Header = () => {
           </ul>
         </div>
       </div>
+      
     </header>
-    
+    <ChangePasswordModal 
+        isOpen={showChangePassword}
+        onClose={() => setShowChangePassword(false)}
+    />
+    </>
   );
 };
 

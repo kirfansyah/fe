@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useContext   } from "react";
 import API from '../services/ManagementService';
 import { useRouter } from 'next/router';
-import { ProfileContext } from '../contexts/profile/ProfileContext';
+
 export function useCourses(contentId = null){
     const [courses, setCourses] = useState([]);
     const [contentTypes, setContentTypes] = useState([]);
@@ -9,12 +9,11 @@ export function useCourses(contentId = null){
     const [contentData, setContentData] = useState(null);
     const [employeeData, setEmployeeData] = useState(null);
     const [profileInfo, setProfileInfo] = useState(null);
+    const [companies, setCompanies] = useState([]);
+    const [enrollData, setEnrollData] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null); 
     const router = useRouter();
-
-    const { dataKaryawan } = useContext(ProfileContext);
-    const dataKaryawans = dataKaryawan?.length ? dataKaryawan[0] : null;
 
     // get semua data course
     const fetchCourses = useCallback(async () => {
@@ -32,18 +31,11 @@ export function useCourses(contentId = null){
     }, []);
 
     // save data course
-    const addCourse = useCallback(async (courseName) => {
+    const addCourse = useCallback(async (formData) => {
         setLoading(true);
         setError(null);
-        
         try {
-            const payload = {
-                course_title: courseName,
-                created_by: dataKaryawans?.nama || "System",
-                created_device: "system",
-            };
-        
-            const newCourse = await API.createCourse(payload);
+            const newCourse = await API.createCourse(formData);
             await fetchCourses();
             return newCourse.data; 
         } catch (err) {    
@@ -52,7 +44,7 @@ export function useCourses(contentId = null){
         } finally {
             setLoading(false);
         }
-    }, [dataKaryawans, fetchCourses]);
+    }, [fetchCourses]);
 
     //   get all data content type
     const fetchContentTypes = useCallback(async () => {
@@ -144,23 +136,7 @@ export function useCourses(contentId = null){
         }
     };
 
-    ////save enroll courses
-    const handleSaveEnroll = useCallback(async (enrollData) => {
-        setLoading(true);
-        setError(null);
-        
-        try {
-            let response;
-            response = await API.saveEnrollCourse(enrollData);
-            await fetchCourses();
-            return response;
-        } catch (err) {
-            setError(err.message);
-            throw err;
-        } finally {
-            setLoading(false);
-        }
-    },([fetchCourses]));
+    
 
     //handle save assign employee grouping
     const handleSaveAssignEmployeeGrouping = useCallback(async (assignData) => {
@@ -212,10 +188,67 @@ export function useCourses(contentId = null){
         }
     }, []);
 
+    //get company units
+    const fetchCompanyUnits = useCallback(async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const res = await API.getCompanyUnits();
+            setCompanies(res.data); 
+        }
+        catch (err) {
+            setError(err.message || 'Failed to fetch company units');
+            console.error('Error fetching company units:', err);
+            throw err;
+        }
+        finally {
+            setLoading(false);
+        }
+    }, []);
+
+    //get all enroll data
+    const fetchEnrollData = useCallback(async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const res = await API.getEnrollments();
+            setEnrollData(res.data);
+        } catch (err) {
+            setError(err.message || 'Failed to fetch enrollments');
+            console.error('Error fetching enrollments:', err);
+            throw err;
+        } finally {
+            setLoading(false);
+        }   
+    }, []);
+
+    ////save enroll courses
+    const handleSaveEnroll = useCallback(async (enrollDataSend) => {
+        setLoading(true);
+        setError(null);
+        
+        try {
+            let response;
+            if (enrollDataSend.id_course_enrollment) {
+                response = await API.updateEnrollCourse(enrollDataSend);
+            } else {
+                response = await API.saveEnrollCourse(enrollDataSend);
+            }
+            
+            await fetchEnrollData();
+            return response;
+        } catch (err) {
+            setError(err.message);
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    },([fetchEnrollData]));
+
 
     useEffect(() => {
-        Promise.all([fetchCourses(), fetchContentTypes(), fetchGroupEnroll(), fetchEmployeeData(), fetchProfileInfo()]);
-    }, [fetchCourses, fetchContentTypes, fetchGroupEnroll, fetchEmployeeData, fetchProfileInfo]);
+        Promise.all([fetchCourses(), fetchContentTypes(), fetchGroupEnroll(), fetchEmployeeData(), fetchProfileInfo(), fetchCompanyUnits(), fetchEnrollData() ]);
+    }, [fetchCourses, fetchContentTypes, fetchGroupEnroll, fetchEmployeeData, fetchProfileInfo, fetchCompanyUnits, fetchEnrollData]);
     useEffect(() => {
         if (contentId) {
             fetchContentByID(contentId);
@@ -228,6 +261,8 @@ export function useCourses(contentId = null){
     groupEnroll,
     employeeData,
     profileInfo,
+    companies,
+    enrollData,
     loading, 
     error,           
     fetchCourses, 
@@ -241,5 +276,7 @@ export function useCourses(contentId = null){
     handleSaveAssignEmployeeGrouping,
     fetchContentByID,
     fetchProfileInfo,
+    fetchCompanyUnits,
+    fetchEnrollData
   };
 }
