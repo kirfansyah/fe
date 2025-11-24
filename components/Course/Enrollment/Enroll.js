@@ -1,194 +1,292 @@
 import ListCourses from "@/components/Course/Enrollment/ListCourse";
-import { useState, useEffect,useContext, use } from "react";
+import { useState, useEffect, useContext } from "react";
 import ListEmployees from "@/components/Course/Enrollment/ListEmployee";
 import { useSweetAlert } from '../../../hooks/useSweetAlert';
 import { Check } from 'lucide-react';
 import { useCourses } from "../../../hooks/useCourses";
 import { ProfileContext } from "../../../contexts/profile/ProfileContext";
+import EnrollmentTabs from "@/components/Course/Enrollment/EnrollmentTabs";
+import EnrollmentHeader from "@/components/Course/Enrollment/EnrollmentHeader";
+
 export default function Enroll({
     courses, 
     groupEnroll, 
+    companyUnits,
+    enrollData,
     activeEnrollmentTab = 'courses-list-sub', 
     setActiveEnrollmentTab,
     onSuccess
 }) {
-    const [enrollmentData, setEnrollmentData] = useState({});
     const [loading, setLoading] = useState(false);
     const { showLoading, showSuccess, showError, confirmAction } = useSweetAlert();
-    const { handleSaveEnroll, fetchCourses } = useCourses();
-    const { getKaryawan, dataKaryawan } = useContext(ProfileContext);
+    const { handleSaveEnroll, fetchCourses, fetchEnrollData } = useCourses();
+    const { dataKaryawan } = useContext(ProfileContext);
     const dataKaryawans = dataKaryawan?.length ? dataKaryawan[0] : [];
-    // ⭐ Initialize dengan check enrolled status
+    
+    // Transform enrollData to use id_course as key
+    const [enrollmentData, setEnrollmentData] = useState(() => {
+        return transformEnrollData(enrollData);
+    });
+    
+    // Update when enrollData changes
     useEffect(() => {
-        const initialData = {};
+        const transformed = transformEnrollData(enrollData);
+        setEnrollmentData(transformed);
+        console.log('🔄 Updated enrollmentData:', transformed);
+    }, [enrollData]);
+
+    // Transform helper function
+    function transformEnrollData(data) {
+        const transformed = {};
         
-        courses.forEach(course => {
-            const isEnrolled = course.id_course_enrollment !== null;
-            
-            if (isEnrolled) {
-                // ⭐ Course sudah enrolled - populate data existing
-                initialData[course.id_course] = {
-                    id_course: course.id_course,
-                    enrollment_type: course.id_enrollment_type === 1 ? 'General' : 'Specific',
-                    status_course: course.id_course_status === 1 ? 'Mandatory' : 'Optional',
-                    publish_date: course.publish_date 
-                        ? new Date(course.publish_date).toISOString().split('T')[0]
-                        : '',
-                    end_date: course.end_date 
-                        ? new Date(course.end_date).toISOString().split('T')[0]
-                        : '',
-                    remedial_allowed: course.remedial_allowed ? 'Yes' : 'No',
-                    times: course.remedial_limit || 1,
-                    enrollment_group_ids: course.groupings?.map(g => g.id_grouping) || [],
-                    _isExisting: true,
-                    _enrollmentId: course.id_course_enrollment
-                };
-            } else {
-                // ⭐ Course belum enrolled - set empty untuk trigger filter
-                initialData[course.id_course] = {
-                    id_course: course.id_course,
-                    enrollment_type: '',  // ⭐ Empty = belum diisi
-                    status_course: '',    // ⭐ Empty = belum diisi
-                    publish_date: '',
-                    end_date: '',
-                    remedial_allowed: 'Yes',
-                    times: 1,
-                    enrollment_group_ids: [],
-                    _isExisting: false,
-                    _enrollmentId: null
+        Object.values(data || {}).forEach(course => {
+            if (course.id_course) {
+                transformed[course.id_course] = {
+                    ...course,
+                    enrollments: course.enrollments || []
                 };
             }
         });
         
-        console.log('📊 Initialized enrollment data:', initialData);
-        setEnrollmentData(initialData);
-    }, [courses]);
-
-    // Handle perubahan field
+        console.log('🔄 Transformed enrollmentData:', transformed);
+        return transformed;
+    }
+    
+    // Handle course changes from child components
     const handleCourseChange = (courseId, field, value) => {
-        setEnrollmentData(prev => ({
-            ...prev,
-            [courseId]: {
-                ...prev[courseId],
-                [field]: value,
-                // Reset enrollment_group_ids jika type berubah ke General
-                ...(field === 'enrollment_type' && value === 'General' && {
-                    enrollment_group_ids: []
-                })
-            }
-        }));
+        console.log('📝 handleCourseChange:', { courseId, field, valueType: typeof value });
+        
+        if (field === 'save_single') {
+            const { enrollment, index } = value;
+            
+            // Save to backend
+            saveSingleEnrollment({
+                courseId: courseId,
+                enrollment: enrollment,
+                index: index
+            });
+            
+            // Update local state
+            updateLocalEnrollmentState(courseId, index, enrollment);
+            
+        } else if (field === 'enrollments') {
+            // Handle normal enrollment updates
+            updateCourseEnrollments(courseId, value);
+        }
     };
 
-    useEffect(() => {fetchCourses();}, [fetchCourses]);
-
-    // ⭐ Transform dengan filter hanya yang diisi
-    const transformEnrollmentData = (data) => {
-        // ⭐ Filter hanya yang enrollment_type DAN status_course sudah diisi
-        const filledData = Object.values(data).filter(courseData => 
-            courseData.enrollment_type && 
-            courseData.enrollment_type !== '' &&
-            courseData.status_course &&
-            courseData.status_course !== ''
-        );
-
-        console.log(`📊 Total courses: ${Object.keys(data).length}, Filled: ${filledData.length}`);
-
-        return filledData.map(courseData => {
-            const enrollmentTypeId = courseData.enrollment_type === 'General' ? 1 : 2;
-            const courseStatusId = courseData.status_course === 'Mandatory' ? 1 : 2;
-            const remedialAllowed = courseData.remedial_allowed === 'Yes';
-
-            // ⭐ Calculate dates properly
-            const publishDate = new Date(courseData.publish_date);
-            let endDate;
-            
-            if (courseData.end_date && courseData.end_date.trim() !== '') {
-                endDate = new Date(courseData.end_date);
-            } else {
-                // Default: 30 days from publish date
-                endDate = new Date(publishDate.getTime() + 30 * 24 * 60 * 60 * 1000);
+    // Update local state after save
+    const updateLocalEnrollmentState = (courseId, index, enrollment) => {
+        setEnrollmentData(prev => {
+            const currentCourse = prev[courseId];
+            if (!currentCourse) {
+                console.error('❌ Course not found:', courseId);
+                return prev;
             }
-
+            
+            const updatedEnrollments = [...(currentCourse.enrollments || [])];
+            updatedEnrollments[index] = enrollment;
+            
             return {
-                id_course: courseData.id_course,
-                id_enrollment_type: enrollmentTypeId,
-                id_course_status: courseStatusId,
-                publish_date: publishDate.toISOString(),
-                end_date: endDate.toISOString(),
-                remedial_allowed: remedialAllowed,
-                remedial_limit: remedialAllowed ? courseData.times : 0,
-                created_by: dataKaryawans.nama,
-                created_device: "System",
-                target_groupings: courseData.enrollment_group_ids || []
+                ...prev,
+                [courseId]: {
+                    ...currentCourse,
+                    enrollments: updatedEnrollments
+                }
             };
         });
     };
 
-    // ⭐ Validasi hanya untuk yang diisi
+    // Update course enrollments
+    const updateCourseEnrollments = (courseId, enrollments) => {
+        setEnrollmentData(prev => {
+            const currentCourse = prev[courseId];
+            
+            if (!currentCourse) {
+                console.error('❌ Course not found:', courseId);
+                console.log('Available courses:', Object.keys(prev));
+                return prev;
+            }
+            
+            console.log('✅ Updating enrollments for course:', courseId);
+            console.log('New enrollments count:', enrollments.length);
+            
+            return {
+                ...prev,
+                [courseId]: {
+                    ...currentCourse,
+                    enrollments: enrollments
+                }
+            };
+        });
+    };
+
+    // Save single enrollment to backend
+    const saveSingleEnrollment = async (enrollmentData) => {
+        try {
+            showLoading('Saving enrollment...');
+            
+            const isUpdate = !!enrollmentData.enrollment.id_course_enrollment;
+            
+            const transformedData = {
+                id_course: parseInt(enrollmentData.courseId),
+                company_id: enrollmentData.enrollment.company_id,
+                id_enrollment_type: enrollmentData.enrollment.enroll_type_name === 'General' ? 1 : 
+                                enrollmentData.enrollment.id_enrollment_type || 2,
+                id_course_status: enrollmentData.enrollment.course_status_name === 'Mandatory' ? 1 : 
+                                enrollmentData.enrollment.id_course_status || 2,
+                publish_date: new Date(enrollmentData.enrollment.publish_date).toISOString(),
+                end_date: enrollmentData.enrollment.end_date ? 
+                    new Date(enrollmentData.enrollment.end_date).toISOString() : null,
+                remedial_allowed: enrollmentData.enrollment.remedial_allowed === 'Yes' || 
+                                enrollmentData.enrollment.remedial_allowed === true,
+                remedial_limit: enrollmentData.enrollment.remedial_limit || 
+                            enrollmentData.enrollment.remedial_limit || 1,
+                created_by: dataKaryawans.nama,
+                    created_device: "system",
+                target_groupings: enrollmentData.enrollment.groupings?.map(g => g.id_grouping) || []
+            };
+            
+            // ✅ PENTING: Tambahkan ID untuk update
+            if (isUpdate) {
+                transformedData.id_course_enrollment = enrollmentData.enrollment.id_course_enrollment;
+            }
+            console.log('datatattatata', transformedData);
+            const response = await handleSaveEnroll(transformedData);
+            
+            if (response.success) {
+                showSuccess(isUpdate ? 'Enrollment updated successfully!' : 'Enrollment saved successfully!');
+                
+                // ✅ Refresh data dari backend
+                await fetchEnrollData();
+            }
+        } catch (error) {
+            console.error('❌ Save enrollment failed:', error);
+            showError('Failed to save enrollment: ' + error.message);
+        }
+    };
+
+    // Transform enrollment data for bulk API call
+    const transformEnrollmentData = (data) => {
+        const allEnrollments = [];
+        
+        Object.entries(data).forEach(([courseId, courseData]) => {
+            const enrollments = courseData.enrollments || [];
+            
+            enrollments.forEach(enrollment => {
+                if (enrollment.company_id && 
+                    enrollment.enroll_type_name && 
+                    enrollment.course_status_name &&
+                    enrollment.is_new) {
+                    
+                    const enrollmentTypeId = enrollment.enroll_type_name === 'General' ? 1 : 2;
+                    const courseStatusId = enrollment.course_status_name === 'Mandatory' ? 1 : 2;
+                    const remedialAllowed = enrollment.remedial_allowed === 'Yes';
+                    
+                    const publishDate = new Date(enrollment.publish_date);
+                    let endDate;
+                    
+                    if (enrollment.end_date && enrollment.end_date.trim() !== '') {
+                        endDate = new Date(enrollment.end_date);
+                    } else {
+                        endDate = new Date(publishDate.getTime() + 30 * 24 * 60 * 60 * 1000);
+                    }
+                    
+                    allEnrollments.push({
+                        id_course: parseInt(courseId),
+                        company_id: enrollment.company_id,
+                        id_enrollment_type: enrollmentTypeId,
+                        id_course_status: courseStatusId,
+                        publish_date: publishDate.toISOString(),
+                        end_date: endDate.toISOString(),
+                        remedial_allowed: remedialAllowed,
+                        remedial_limit: remedialAllowed ? enrollment.remedial_limit : 0,
+                        created_by: dataKaryawans.nama,
+                        created_device: "System",
+                        target_groupings: enrollment.groupings || []
+                    });
+                }
+            });
+        });
+        
+        return allEnrollments;
+    };
+
+    // Validate enrollment data
     const validateEnrollmentData = () => {
         const errors = [];
-
-        // ⭐ Filter hanya yang sudah mulai diisi
-        const filledCourses = Object.entries(enrollmentData).filter(([_, data]) => 
-            data.enrollment_type && data.enrollment_type !== ''
-        );
-
-        console.log(`Validating ${filledCourses.length} filled courses...`);
-
-        filledCourses.forEach(([courseId, data]) => {
+        
+        Object.entries(enrollmentData).forEach(([courseId, courseData]) => {
             const course = courses.find(c => c.id_course === parseInt(courseId));
             const courseName = course?.course_title || `Course ${courseId}`;
-
-            // Validasi status course required
-            if (!data.status_course || data.status_course === '') {
-                errors.push(`${courseName}: Status course is required`);
-            }
-
-            // Validasi Specific harus pilih minimal 1 group
-            if (data.enrollment_type === 'Specific' && 
-                (!data.enrollment_group_ids || data.enrollment_group_ids.length === 0)) {
-                errors.push(`${courseName}: Please select at least one enrollment group`);
-            }
-
-            // Validasi tanggal
-            if (!data.publish_date || data.publish_date === '') {
-                errors.push(`${courseName}: Publish date is required`);
-            }
-
-            if (data.end_date && data.publish_date && 
-                new Date(data.end_date) < new Date(data.publish_date)) {
-                errors.push(`${courseName}: End date must be after publish date`);
-            }
-
-            // Validasi times
-            if (data.remedial_allowed === 'Yes' && 
-                (!data.times || isNaN(data.times) || data.times < 1)) {
-                errors.push(`${courseName}: Remedial times must be at least 1 if remedial is allowed`);
-            }
+            const enrollments = courseData.enrollments || [];
+            
+            enrollments.forEach((enrollment, idx) => {
+                if (!enrollment.is_new) return;
+                
+                if (enrollment.company_id || enrollment.enroll_type_name || enrollment.course_status_name) {
+                    if (!enrollment.company_id) {
+                        errors.push(`${courseName} (Enrollment ${idx + 1}): Company is required`);
+                    }
+                    
+                    if (!enrollment.enroll_type_name) {
+                        errors.push(`${courseName} (Enrollment ${idx + 1}): Enrollment type is required`);
+                    }
+                    
+                    if (!enrollment.course_status_name) {
+                        errors.push(`${courseName} (Enrollment ${idx + 1}): Status course is required`);
+                    }
+                    
+                    if (!enrollment.publish_date) {
+                        errors.push(`${courseName} (Enrollment ${idx + 1}): Publish date is required`);
+                    }
+                    
+                    if (enrollment.enroll_type_name === 'Specific' && 
+                        (!enrollment.enrollment_group_ids || enrollment.enrollment_group_ids.length === 0)) {
+                        errors.push(`${courseName} (Enrollment ${idx + 1}): Please select at least one enrollment group`);
+                    }
+                    
+                    if (enrollment.end_date && enrollment.publish_date && 
+                        new Date(enrollment.end_date) < new Date(enrollment.publish_date)) {
+                        errors.push(`${courseName} (Enrollment ${idx + 1}): End date must be after publish date`);
+                    }
+                    
+                    if (enrollment.remedial_allowed === 'Yes' && 
+                        (!enrollment.remedial_limit || isNaN(enrollment.remedial_limit) || enrollment.remedial_limit < 1)) {
+                        errors.push(`${courseName} (Enrollment ${idx + 1}): Remedial remedial_limit must be at least 1`);
+                    }
+                }
+            });
         });
-
+        
         return errors;
     };
 
-    // ⭐ Count hanya yang diisi
-    const getFilledCoursesCount = () => {
-        return Object.values(enrollmentData).filter(
-            data => data.enrollment_type && data.enrollment_type !== ''
-        ).length;
+    // Get count of new enrollments
+    const getNewEnrollmentsCount = () => {
+        let count = 0;
+        Object.values(enrollmentData).forEach(courseData => {
+            const enrollments = courseData.enrollments || [];
+            count += enrollments.filter(e => 
+                e.is_new && 
+                e.company_id && 
+                e.enroll_type_name && 
+                e.course_status_name
+            ).length;
+        });
+        return count;
     };
 
-    // Main handler
+    // Main handler for bulk enrollment
     const handleConfirmEnrollment = async () => {
-        console.log('📦 Enrollment data (before transform):', enrollmentData);
-
-        // ⭐ Check apakah ada yang diisi
-        const filledCount = getFilledCoursesCount();
-        if (filledCount === 0) {
-            showError('Please select enrollment type for at least one course');
+        console.log('📦 Enrollment data:', enrollmentData);
+        
+        const newEnrollmentsCount = getNewEnrollmentsCount();
+        if (newEnrollmentsCount === 0) {
+            showError('Please add at least one company enrollment');
             return;
         }
-
-        // Validasi
+        
         const errors = validateEnrollmentData();
         if (errors.length > 0) {
             showError(
@@ -203,33 +301,29 @@ export default function Enroll({
             );
             return;
         }
-
-        // Confirm dialog
+        
         const result = await confirmAction(
             'Confirm Enrollment',
-            `Are you sure you want to enroll ${filledCount} course(s)?`
+            `Are you sure you want to create ${newEnrollmentsCount} new enrollment(s)?`
         );
-
+        
         if (!result.isConfirmed) return;
-
+        
         try {
             setLoading(true);
             showLoading('Processing enrollment...');
-
-            // ⭐ Transform (auto-filter yang diisi)
+            
             const enrollmentArray = transformEnrollmentData(enrollmentData);
             
             console.log('📤 Sending to backend:', enrollmentArray);
-            console.log(`📊 Total enrollments: ${enrollmentArray.length}`);
-
-
-            // Call API
+            console.log(`📊 Total new enrollments: ${enrollmentArray.length}`);
+            
             const response = await handleSaveEnroll(enrollmentArray);
             
             if (response.success) {
-                showSuccess(`Successfully enrolled ${filledCount} course(s)!`);
+                showSuccess(`Successfully created ${newEnrollmentsCount} enrollment(s)!`);
                 if (onSuccess) {
-                    fetchCourses();
+                    await fetchCourses();
                     onSuccess();
                 }
             }
@@ -241,80 +335,32 @@ export default function Enroll({
         }
     };
 
-    // ⭐ Get filled count untuk UI
-    const filledCoursesCount = getFilledCoursesCount();
+    const newEnrollmentsCount = getNewEnrollmentsCount();
 
     return (
         <>
             {/* Tabs */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
-                <div className="flex justify-between items-center">
-                    <div className="flex gap-2">
-                        <button
-                            onClick={() => setActiveEnrollmentTab('courses-list-sub')}
-                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                                activeEnrollmentTab === 'courses-list-sub'
-                                    ? 'bg-gray-100 text-gray-900'
-                                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                            }`}
-                        >
-                            Course List Sub
-                        </button>
-                        <button
-                            onClick={() => setActiveEnrollmentTab('employee-list')}
-                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                                activeEnrollmentTab === 'employee-list'
-                                    ? 'bg-gray-100 text-gray-900'
-                                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                            }`}
-                        >
-                            Employee List
-                        </button>
-                        <button
-                            onClick={() => setActiveEnrollmentTab('labor-list')}
-                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                                activeEnrollmentTab === 'labor-list'
-                                    ? 'bg-gray-100 text-gray-900'
-                                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                            }`}
-                        >
-                            Labor List
-                        </button>
-                    </div>
-                </div>
-            </div>
+            <EnrollmentTabs 
+                activeTab={activeEnrollmentTab}
+                onTabChange={setActiveEnrollmentTab}
+            />
 
             {/* Content */}
             <div className="bg-white mt-2 p-4 rounded-lg shadow">
                 {activeEnrollmentTab === 'courses-list-sub' && (
                     <div className="space-y-4">
                         {/* Header with Confirm Button */}
-                        <div className="flex justify-between items-center mb-4">
-                            <div>
-                                <h3 className="text-lg font-semibold text-gray-900">
-                                    Course Enrollment
-                                </h3>
-                                {/* ⭐ Show count */}
-                                <p className="text-sm text-gray-600 mt-1">
-                                    {filledCoursesCount} of {courses.length} courses selected
-                                </p>
-                            </div>
-                            <button 
-                                onClick={handleConfirmEnrollment}
-                                disabled={loading || courses.length === 0 || filledCoursesCount === 0}
-                                className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                <Check className="w-4 h-4" />
-                                <span className="font-medium">
-                                    {loading ? 'Processing...' : `Confirm Enrollment (${filledCoursesCount})`}
-                                </span>
-                            </button>
-                        </div>
+                        <EnrollmentHeader
+                            loading={loading}
+                            coursesCount={courses.length}
+                            newEnrollmentsCount={newEnrollmentsCount}
+                            onConfirm={handleConfirmEnrollment}
+                        />
 
                         {/* Course List */}
                         <ListCourses 
-                            courses={courses}
                             groupEnroll={groupEnroll}
+                            companyUnits={companyUnits}
                             onCourseChange={handleCourseChange}
                             enrollmentData={enrollmentData}
                         />
@@ -324,8 +370,12 @@ export default function Enroll({
                 {activeEnrollmentTab === 'employee-list' && 
                     <ListEmployees 
                         created_by={dataKaryawans?.nama || 'System'}
-                    />}
-                {activeEnrollmentTab === 'labor-list' && <div>Labor List Content</div>}
+                    />
+                }
+                
+                {activeEnrollmentTab === 'labor-list' && 
+                    <div>Labor List Content</div>
+                }
             </div>
         </>
     );
