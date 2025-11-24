@@ -152,14 +152,7 @@ export default function ModernManagement() {
             contentId={null}
         />
     );
-
-  const AddContentPage = () => (
-    <ContentAdditionView
-      onBack={() => setCurrentPage("main")}
-      contentTypes={contentTypes}
-    />
-  );
-
+ 
   return (
     <div>
       {currentPage === "main" && <MainPage />}
