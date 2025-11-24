@@ -39,10 +39,7 @@ const AuthContextProvider = (props) => {
           type: "loginFailed",
           data: { message: "Password minimal 8 karakter", status: false },
         });
-      } else {
-        // AlertFailed({
-        //   message: "Konfirmasi password tidak sesuai!",
-        // });
+      } else { 
         Swal.fire({
           icon: "error",
           text: "Konfirmasi password tidak sesuai!",
@@ -107,12 +104,14 @@ const AuthContextProvider = (props) => {
 
   const Login = async ({ username, password }) => {
     dispatch({ type: "loading" }); // loading
+
+ 
     try {
       const response = await API.post("/auth/get_token", { username, password });
       const { status, message, data } = response.data;
- 
+
       if (status === 200 && data.length > 0) {
-      const user = data[0]; 
+      const user = data[0];
       document.cookie = `token=${user.token}; path=/`;
       document.cookie = `username=${user.nik}; path=/`;
       document.cookie = `nama=${user.nama}; path=/`;
@@ -142,7 +141,7 @@ const AuthContextProvider = (props) => {
     } else {
       throw new Error("Login gagal");
     }
-    } catch (err) { 
+    } catch (err) {
       Swal.fire({
         icon: "error",
         title: "Username atau password anda tidak sesuai",

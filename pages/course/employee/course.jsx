@@ -9,6 +9,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import CourseCardSkeleton from "@/components/Course/CourseCardSkeleton";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -19,48 +21,45 @@ import { Search, MoreVertical, LayoutGrid, List, Filter } from "lucide-react";
 import Admin from "@/layouts/Admin";
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-// dummy data
-import { generateCourses } from "@/dummy-data/courses";
+import { useEmployees } from "@/hooks/useEmployees";
 
 export default function CoursePage() {
+  const { fetchEmployees } = useEmployees();
   const [courses, setCourses] = useState([]);
+  const [totalItems, setTotalItems] = useState(0);
   const [viewMode, setViewMode] = useState("tiles");
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterCategory, setFilterCategory] = useState("All");
+
+  // tampilkan 2 item per halaman di UI
   const itemsPerPage = 8;
 
-  // Dummy data
-  //   const courses = Array.from({ length: 100 }, (_, i) => ({
-  //     title: `Keselamatan Kerja Tingat Dasar ${i + 1}`,
-  //     release: "22-09-2025",
-  //     lesson: 2,
-  //     duration: "01hr 30min",
-  //     review: 4.5,
-  //     status: "Passed",
-  //     category:
-  //       i % 3 === 0 ? "General" : i % 3 === 1 ? "Mandatory" : "All Employee",
-  //   }));
-
-  //   const filteredCourses = courses.filter((course) =>
-  //     course.title.toLowerCase().includes(searchQuery.toLowerCase())
-  //   );
-
   useEffect(() => {
-    setCourses(generateCourses);
-  }, []);
+    const loadData = async () => {
+      try {
+        const res = await fetchEmployees(
+          currentPage,
+          itemsPerPage,
+          searchQuery
+        );
+        setCourses(res.data || []);
+        setTotalItems(res.pagination.totalCount || 0);
+      } catch (error) {
+        console.error("❌ Gagal memuat data:", error);
+      }
+    };
 
-  if (courses.length === 0) {
-    return <div className="p-6 text-gray-500">Loading courses...</div>;
-  }
+    loadData();
+  }, [fetchEmployees, currentPage, searchQuery, itemsPerPage]);
 
   const filteredCourses = courses.filter((course) => {
-    const matchSearch = course.title
-      .toLowerCase()
+    const matchSearch = course.course_title
+      ?.toLowerCase()
       .includes(searchQuery.toLowerCase());
     const matchFilter =
       filterCategory === "All" ||
-      course.categories.some(
+      course.enrollment_categories?.some(
         (cat) => cat.toLowerCase() === filterCategory.toLowerCase()
       );
     return matchSearch && matchFilter;
@@ -76,11 +75,8 @@ export default function CoursePage() {
     setCurrentPage(1);
   };
 
-  const totalPages = Math.ceil(filteredCourses.length / itemsPerPage);
-  const displayedCourses = filteredCourses.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  // hitung total halaman dari total data backend
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
 
   const goPrev = () => setCurrentPage((prev) => Math.max(prev - 1, 1));
   const goNext = () => setCurrentPage((prev) => Math.min(prev + 1, totalPages));
@@ -162,157 +158,186 @@ export default function CoursePage() {
         </div>
       </div>
 
-      {/* Cards */}
-      <div
-        className={
-          viewMode === "tiles"
-            ? "flex flex-wrap gap-5 mt-5 justify-start"
-            : "flex flex-col gap-3 mt-5"
-        }
-      >
-        {displayedCourses.map((course, idx) => (
-          <Card
-            key={idx}
+      {filteredCourses.length > 0 ? (
+        <>
+          {/* Cards */}
+          <div
             className={
-              viewMode === "tiles" ? "w-96 relative" : "w-full relative"
+              viewMode === "tiles"
+                ? "flex flex-wrap gap-5 mt-5 justify-start"
+                : "flex flex-col gap-3 mt-5"
             }
           >
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="absolute top-2 right-2 h-8 w-8 p-0"
-                >
-                  <MoreVertical className="h-5 w-5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem>Edit</DropdownMenuItem>
-                <DropdownMenuItem>Delete</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <CardHeader className="mt-1">
-              <CardTitle className="text-2xl text-blue-600">
-                {course.title}
-              </CardTitle>
-              <CardDescription className="flex gap-2">
-                {course.categories.map((cat, idx) => (
-                  <Badge key={idx} variant="secondary">
-                    {cat}
-                  </Badge>
-                ))}
-              </CardDescription>
-            </CardHeader>
-
-            <CardContent>
-              <div
+            {filteredCourses.map((course, idx) => (
+              <Card
+                key={idx}
                 className={
-                  viewMode === "tiles"
-                    ? "flex flex-col md:flex-row gap-4"
-                    : "flex flex-row gap-3"
+                  viewMode === "tiles" ? "w-96 relative" : "w-full relative"
                 }
               >
-                <div
-                  className={
-                    viewMode === "tiles"
-                      ? "md:w-1/2 flex flex-col items-center"
-                      : "w-32 flex-shrink-0"
-                  }
-                >
-                  <img
-                    src="/img/course/k3.jpg"
-                    alt="Course"
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute top-2 right-2 h-8 w-8 p-0"
+                    >
+                      <MoreVertical className="h-5 w-5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem>Edit</DropdownMenuItem>
+                    <DropdownMenuItem>Delete</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                <CardHeader className="mt-1">
+                  <CardTitle className="text-2xl text-blue-600">
+                    {course.course_title}
+                  </CardTitle>
+                  <CardDescription className="flex gap-2">
+                    {course.enrollment_categories?.map((cat, idx) => (
+                      <Badge key={idx} variant="secondary">
+                        {cat}
+                      </Badge>
+                    ))}
+                  </CardDescription>
+                </CardHeader>
+
+                <CardContent>
+                  <div
                     className={
                       viewMode === "tiles"
-                        ? "w-full h-40 object-cover rounded-md"
-                        : "w-32 h-20 object-cover rounded-md"
+                        ? "flex flex-col md:flex-row gap-4"
+                        : "flex flex-row gap-3"
                     }
-                  />
-                  <Link href={`/course/employee/detail/${course.id}`} passHref>
-                    <Button className="mt-3 w-full bg-blue-900 hover:bg-blue-700 text-white">
-                      View Course
-                    </Button>
-                  </Link>
-                </div>
-
-                <div
-                  className={
-                    viewMode === "tiles"
-                      ? "md:w-1/2 flex flex-col justify-start space-y-2 text-gray-700"
-                      : "flex flex-col justify-start text-gray-700 text-sm"
-                  }
-                >
-                  <div className="flex justify-between">
-                    <span className="font-semibold">Release</span>{" "}
-                    {course.release}
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="font-semibold">Lesson</span>{" "}
-                    {course.lesson}
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="font-semibold">Duration</span>{" "}
-                    {course.duration}
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="font-semibold">Revies</span>{" "}
-                    {course.review}/5
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="font-semibold">Status</span>
-                    <Badge
-                      className={`text-white 
-                            ${
-                              course.status === "Passed"
-                                ? "bg-green-500 hover:bg-green-600"
-                                : ""
-                            }
-                            ${
-                              course.status === "Failed"
-                                ? "bg-red-500 hover:bg-red-600"
-                                : ""
-                            }
-                            ${
-                              course.status === "On Going"
-                                ? "bg-yellow-500 hover:bg-yellow-600 text-black"
-                                : ""
-                            }
-                        `}
+                  >
+                    <div
+                      className={
+                        viewMode === "tiles"
+                          ? "md:w-1/2 flex flex-col items-center"
+                          : "w-32 flex-shrink-0"
+                      }
                     >
-                      {course.status}
-                    </Badge>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
+                      <img
+                        src={`${course.thumbnail || "/img/course/k3.jpg"}`}
+                        alt="Course"
+                        className={
+                          viewMode === "tiles"
+                            ? "w-full h-40 object-cover rounded-md"
+                            : "w-32 h-20 object-cover rounded-md"
+                        }
+                      />
+                      <Link
+                        href={`/course/employee/detail/${course.id_course}`}
+                        passHref
+                      >
+                        <Button className="mt-3 w-full bg-blue-900 hover:bg-blue-700 text-white">
+                          View Course
+                        </Button>
+                      </Link>
+                    </div>
 
-            {viewMode === "tiles" && (
-              <CardFooter className="border-t pt-4">
-                <div className="w-full grid grid-cols-4 divide-x divide-gray-300 text-center">
-                  <div className="px-4">
-                    <div className="text-lg font-bold text-gray-800">0</div>
-                    <div className="text-sm text-gray-500">Invited</div>
+                    <div
+                      className={
+                        viewMode === "tiles"
+                          ? "md:w-1/2 flex flex-col justify-start space-y-2 text-gray-700"
+                          : "flex flex-col justify-start text-gray-700 text-sm"
+                      }
+                    >
+                      <div className="flex justify-between">
+                        <span className="font-semibold">Release</span>{" "}
+                        {course.release}
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-semibold">Lesson</span>{" "}
+                        {course.total_lessons}
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-semibold">Duration</span>{" "}
+                        {course.total_duration}
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-semibold">Reviews</span>{" "}
+                        {course.review}/5
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-semibold">Status</span>
+                        <Badge
+                          className={`text-white 
+                        ${
+                          course.status === "Passed"
+                            ? "bg-green-500 hover:bg-green-600"
+                            : ""
+                        }
+                        ${
+                          course.status === "Failed"
+                            ? "bg-red-500 hover:bg-red-600"
+                            : ""
+                        }
+                        ${
+                          course.status === "On Going"
+                            ? "bg-yellow-500 hover:bg-yellow-600 text-black"
+                            : ""
+                        }
+                      `}
+                        >
+                          {course.status}
+                        </Badge>
+                      </div>
+                    </div>
                   </div>
-                  <div className="px-4">
-                    <div className="text-lg font-bold text-gray-800">203</div>
-                    <div className="text-sm text-gray-500">On Going</div>
-                  </div>
-                  <div className="px-4">
-                    <div className="text-lg font-bold text-gray-800">240</div>
-                    <div className="text-sm text-gray-500">Finished</div>
-                  </div>
-                  <div className="px-4">
-                    <div className="text-lg font-bold text-gray-800">443</div>
-                    <div className="text-sm text-gray-500">Total</div>
-                  </div>
-                </div>
-              </CardFooter>
-            )}
-          </Card>
-        ))}
-      </div>
+                </CardContent>
+
+                {viewMode === "tiles" && (
+                  <CardFooter className="border-t pt-4">
+                    <div className="w-full grid grid-cols-4 divide-x divide-gray-300 text-center">
+                      <div className="px-4">
+                        <div className="text-lg font-bold text-gray-800">
+                          {course.total_invited}
+                        </div>
+                        <div className="text-sm text-gray-500">Invited</div>
+                      </div>
+                      <div className="px-4">
+                        <div className="text-lg font-bold text-gray-800">
+                          {course.total_ongoing}
+                        </div>
+                        <div className="text-sm text-gray-500">On Going</div>
+                      </div>
+                      <div className="px-4">
+                        <div className="text-lg font-bold text-gray-800">
+                          {course.total_finished}
+                        </div>
+                        <div className="text-sm text-gray-500">Finished</div>
+                      </div>
+                      <div className="px-4">
+                        <div className="text-lg font-bold text-gray-800">
+                          {course.total_invited +
+                            course.total_ongoing +
+                            course.total_finished}
+                        </div>
+                        <div className="text-sm text-gray-500">Total</div>
+                      </div>
+                    </div>
+                  </CardFooter>
+                )}
+              </Card>
+            ))}
+          </div>
+        </>
+      ) : (
+        <div
+          className={
+            viewMode === "tiles"
+              ? "flex flex-wrap gap-5 mt-5 justify-start"
+              : "flex flex-col gap-3 mt-5"
+          }
+        >
+          {[...Array(10)].map((_, idx) => (
+            <CourseCardSkeleton key={idx} viewMode={viewMode} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

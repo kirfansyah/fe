@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import CourseLayout from "@/layouts/CourseLayout";
 import { useRouter } from "next/router";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,26 +11,148 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ChevronRight, Star, FileText, Video } from "lucide-react";
 import Link from "next/link";
 import { generateCourses } from "@/dummy-data/courses"; // pastikan ini array
+import { useEmployees } from "@/hooks/useEmployees";
+import { CourseContext } from "@/contexts/CourseContext";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 
 export default function CourseDetail() {
+  const { setCourseId } = useContext(CourseContext);
+  const { getCourseById, getCourseDetailById, sendEnrollment, sendFeedback } =
+    useEmployees();
   const router = useRouter();
   const { id } = router.query;
+
   const courses = generateCourses;
   const [reviewText, setReviewText] = useState("");
+  const [courseData, setCourses] = useState([]);
   const [rating, setRating] = useState(0);
+  const [hasFeedback, setHasFeedback] = useState(false);
+  const [userFeedback, setUserFeedback] = useState(null);
+  const [userRating, setUserRating] = useState(0);
+
+  const [openConfirm, setOpenConfirm] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  //   console.log("courseData : ", courseData);
+  //   toast.success("Terima kasih atas feedback Anda! 🎉");
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const res = await getCourseById(id);
+        // console.log("res : ", res.data.data);
+
+        setCourses(res.data.data || []);
+        if (res.data.data?.feedback) {
+          setHasFeedback(true);
+          setUserFeedback(res.data.data.feedback || "");
+          setUserRating(res.data.data.rating || 0);
+        }
+      } catch (error) {
+        console.error("❌ Gagal memuat data:", error);
+      }
+    };
+
+    loadData();
+  }, [getCourseById, id, hasFeedback, userFeedback]);
+
+  useEffect(() => {
+    const getData = async () => {
+      try {
+        const res = await getCourseDetailById(id);
+        // console.log("res : ", res);
+
+        setCourses(res.data.data || []);
+      } catch (error) {
+        console.error("❌ Gagal memuat data:", error);
+      }
+    };
+
+    getData();
+  }, [getCourseDetailById, id]);
+  const sections = courseData?.sections || {};
+
+  const handleStartCourse = async () => {
+    try {
+      const payload = {
+        id_course_enrollment: 8, // bg maulanan
+        id_course: courseData.id_course,
+        progress_percentage: 0,
+        created_by: "system",
+        created_device: "web",
+      };
+      console.log("courses : ", courseData);
+
+      if (!courseData?.id_user_enrollment) {
+        console.log("📦 Sending enrollment payload:", payload);
+        const result = await sendEnrollment(payload);
+        console.log("✅ Enrollment berhasil:", result);
+      }
+      setCourseId(courseData.id_course);
+      router.push(`/course/employee/start/${courseData.id_course}`);
+    } catch (error) {
+      console.error("❌ Gagal melakukan enrollment:", error);
+    }
+  };
+
+  const handleSendFeedback = async () => {
+    if (!rating) {
+      alert("Silakan beri rating terlebih dahulu.");
+      return;
+    }
+
+    if (!reviewText.trim()) {
+      alert("Silakan isi komentar atau masukan Anda.");
+      return;
+    }
+    setIsSubmitting(true);
+
+    try {
+      const payload = {
+        id_course: courseData.id_course,
+        rating: rating,
+        feedback: reviewText,
+        created_by: "system", // nanti bisa diganti user login
+        created_device: "web",
+      };
+
+      console.log("📦 Sending feedback payload:", payload);
+
+      const result = await sendFeedback(payload);
+      console.log("✅ Feedback terkirim:", result);
+
+      if (result?.success) {
+        toast.success("Terima kasih atas feedback Anda! 🎉");
+        setHasFeedback(true);
+        setUserFeedback(reviewText);
+        setUserRating(rating);
+        setRating(0);
+        setReviewText("");
+      } else {
+        toast.warning(result?.message || "Gagal mengirim feedback.");
+      }
+    } catch (error) {
+      console.error("❌ Gagal mengirim feedback:", error);
+      //   alert("Terjadi kesalahan saat mengirim feedback.");
+      toast.warning("Terjadi kesalahan saat mengirim feedback.");
+    } finally {
+      setIsSubmitting(false); // 🔹 Kembalikan ke false saat proses selesai
+    }
+  };
 
   if (!id) return <div className="p-6">Loading...</div>; // tunggu id
 
-  const course = courses.find((c) => c.id === Number(id));
-
-  if (!course) return <div className="p-6">Course not found</div>;
-  const lessons = [
-    { title: "Course Guide", type: "pdf" },
-    { title: "Course Outline", type: "pdf" },
-    { title: "Pre Test", type: "pdf" },
-    { title: "Course Content", type: "video" },
-    { title: "Post Test", type: "ppt" },
-  ];
   return (
     <div className="p-6 space-y-6">
       {/* Breadcrumb */}
@@ -44,7 +166,9 @@ export default function CourseDetail() {
             Courses
           </Link>
           <ChevronRight className="w-5 h-5 text-gray-500" />
-          <span className="text-gray-600 font-bold">{course.title}</span>
+          <span className="text-gray-600 font-bold">
+            {courseData.course_title}
+          </span>
         </CardContent>
       </Card>
 
@@ -55,7 +179,7 @@ export default function CourseDetail() {
           <Card>
             <CardContent className="flex flex-col items-center space-y-4 p-3">
               <img
-                src="/img/course/k3.jpg"
+                src={`${courseData.thumbnail || "/img/course/k3.jpg"}`}
                 alt="Course"
                 className="w-full h-48 object-cover rounded-md"
               />
@@ -66,51 +190,118 @@ export default function CourseDetail() {
                   <AvatarImage src="/img/avatar.jpg" />
                   <AvatarFallback>U</AvatarFallback>
                 </Avatar>
-                <span className="font-medium">You're Enrolled</span>
-                <Badge variant="success">✓</Badge>
+
+                {/* Teks Status */}
+                <span className="font-medium">
+                  {courseData.progress_percentage === 0
+                    ? "Not Started Yet"
+                    : courseData.progress_percentage === 100
+                    ? "Completed 🎉"
+                    : "In Progress"}
+                </span>
+
+                {/* Badge sesuai status */}
+                {courseData.progress_percentage === 100 ? (
+                  <Badge variant="success">✓</Badge>
+                ) : courseData.progress_percentage > 0 ? (
+                  <Badge variant="secondary">…</Badge>
+                ) : (
+                  <Badge variant="outline">○</Badge>
+                )}
               </div>
 
               {/* Progress Bar */}
               <div className="w-full">
-                <Progress value={50} className="h-3 rounded-full" />
+                <Progress
+                  value={courseData.progress_percentage}
+                  className="h-3 rounded-full [&>div]:bg-blue-600"
+                />
                 <span className="text-sm text-gray-500 mt-1">
-                  50% Completed
+                  {courseData.progress_percentage}% Completed
                 </span>
               </div>
 
               {/* Start Course Button */}
-              <Button
+              {/* <Button
                 className="w-full bg-blue-900 hover:bg-blue-700 text-white"
-                onClick={() => router.push(`/course/employee/start/${id}`)}
+                onClick={handleStartCourse}
+                // onClick={() => {
+                //   setCourseId(courseData.id_course); // ✅ kirim ID ke context
+                //   router.push(`/course/employee/start/${courseData.id_course}`);
+                // }}
               >
                 Start Course
-              </Button>
+              </Button> */}
+              {/* 🟦 Ubah: Tombol dengan dialog konfirmasi */}
+              <AlertDialog open={openConfirm} onOpenChange={setOpenConfirm}>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    className="w-full bg-blue-900 hover:bg-blue-700 text-white"
+                    onClick={() => setOpenConfirm(true)}
+                  >
+                    Start Course
+                  </Button>
+                </AlertDialogTrigger>
+
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>
+                      {courseData?.course_title}
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      {courseData?.id_user_enrollment ? (
+                        <>
+                          Anda akan <strong>melanjutkan</strong> course ini?
+                        </>
+                      ) : (
+                        <>
+                          Dengan menekan <strong>Mulai</strong>, Anda akan
+                          terdaftar dalam course ini dan progress akan dicatat
+                          dari awal.
+                        </>
+                      )}
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter className="flex-row justify-center gap-2 sm:justify-end">
+                    <AlertDialogCancel>Batal</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleStartCourse}
+                      disabled={loading}
+                      className="bg-blue-900 hover:bg-blue-700 text-white"
+                    >
+                      {loading ? "Memulai..." : "Mulai"}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+              {/* 🟦 End of perubahan */}
 
               {/* Course Info */}
               <div className="w-full space-y-1 text-sm text-gray-700">
                 <div className="flex justify-between">
-                  <span>Instructor</span> <span>{course.instructor}</span>
+                  <span>Instructor</span> <span>{courseData.instructor}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Attempt Date</span> <span>{course.attemptDate}</span>
+                  <span>Attempt Date</span>{" "}
+                  <span>{courseData.attempt_date}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Completion Date</span>{" "}
-                  <span>{course.completionDate}</span>
+                  <span>{courseData.completed_at}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Completion Time</span>{" "}
-                  <span>{course.completionTime}</span>
+                  <span>{courseData.completion_time}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Reviews</span> <span>{course.review}/5</span>
+                  <span>Reviews</span> <span>{courseData.rating}/5</span>
                 </div>
-                <div className="flex justify-between">
+                {/* <div className="flex justify-between">
                   <span>Result</span> <span>{course.result}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Status</span> <span>{course.status}</span>
-                </div>
+                </div> */}
               </div>
             </CardContent>
           </Card>
@@ -119,7 +310,7 @@ export default function CourseDetail() {
         {/* Right Column */}
         <div className="md:w-3/4 space-y-4">
           {/* Course Title */}
-          <h1 className="text-3xl font-bold">{course.title}</h1>
+          <h1 className="text-3xl font-bold">{courseData.course_title}</h1>
 
           {/* Tabs */}
           <Tabs defaultValue="course" className="space-y-4">
@@ -131,48 +322,97 @@ export default function CourseDetail() {
             {/* Tab Course */}
 
             <TabsContent value="course" className="space-y-4">
-              {lessons.map((lesson, idx) => (
-                <div key={idx} className="space-y-2">
-                  <h2 className="text-lg font-semibold">{lesson.title}</h2>
-                  <div className="space-y-2">
-                    {Array.from({ length: 3 }).map((_, i) => (
-                      <Card
-                        key={i}
-                        className="flex items-center justify-between p-4"
-                      >
-                        {/* Dynamic icon */}
-                        {lesson.type === "pdf" && (
-                          <FileText className="w-5 h-5 text-gray-400 mr-4" />
+              {Object.entries(sections).map(([sectionKey, items]) => (
+                <div key={sectionKey} className="space-y-4">
+                  {/* 🔹 Judul Section */}
+                  {/* <h2 className="text-lg font-semibold capitalize">
+                    {sectionKey.replace(/([A-Z])/g, " $1")}
+                  </h2> */}
+
+                  {/* 🔹 List isi tiap section */}
+                  {Array.isArray(items) && items.length > 0 ? (
+                    items.map((v, index) => (
+                      <div key={index} className="space-y-2">
+                        <h2 className="text-lg font-semibold capitalize">
+                          {v.content_title}
+                        </h2>
+
+                        {/* 🔹 Jika ada content_body */}
+                        {v.content_body ? (
+                          v.content_body
+                            .replace(/\\n+/g, "\n")
+                            .split("\n")
+                            .map((line) => line.trim()) // hilangkan spasi kiri-kanan
+                            .filter((line) => line.length > 0) // buang baris kosong
+                            .map((content, i) => {
+                              const isSubPoint = /^[-•o]/.test(content); // baris dimulai dengan "-" atau "•"
+                              const isNumbered = /^\d+\./.test(content); // baris dimulai dengan angka + titik
+
+                              return (
+                                <Card
+                                  key={i}
+                                  className={`flex items-center justify-between p-4 ${
+                                    isSubPoint ? "ml-6 bg-gray-50" : "ml-0"
+                                  }`}
+                                >
+                                  <FileText
+                                    className={`w-5 h-5 text-gray-400 mr-4  ${
+                                      isSubPoint ? "opacity-60" : ""
+                                    }`}
+                                  />
+                                  <span
+                                    className={`flex-1 text-gray-700 ${
+                                      isSubPoint ? "text-sm" : "font-semibold"
+                                    }`}
+                                  >
+                                    {content}
+                                  </span>
+                                  <Checkbox
+                                    checked={v.is_completed}
+                                    className="w-5 h-5 border-gray-300 rounded bg-white 
+                            data-[state=checked]:bg-blue-600 
+                            data-[state=checked]:border-blue-600 focus:ring-0"
+                                  />
+                                </Card>
+                              );
+                            })
+                        ) : (
+                          <Card className="flex items-center justify-between p-4">
+                            <FileText className="w-5 h-5 text-gray-400 mr-4" />
+                            <span className="flex-1 text-gray-500 italic">
+                              No content available.
+                            </span>
+                            <Checkbox
+                              checked={v.is_completed}
+                              className="w-5 h-5 border-gray-300 rounded bg-white 
+                        data-[state=checked]:bg-blue-600 
+                        data-[state=checked]:border-blue-600 focus:ring-0"
+                            />
+                          </Card>
                         )}
-                        {lesson.type === "video" && (
-                          <Video className="w-5 h-5 text-gray-400 mr-4" />
-                        )}
-                        {lesson.type === "ppt" && (
-                          <FileText className="w-5 h-5 text-gray-400 mr-4" />
-                        )}{" "}
-                        {/* bisa ganti custom */}
-                        {/* Teks tengah */}
-                        <span className="flex-1 text-gray-700">
-                          Lorem ipsum dolor sit amet, consectetur adipiscing
-                          elit.
-                        </span>
-                        {/* Checkbox */}
-                        <Checkbox
-                          className="w-5 h-5 border-gray-300 rounded bg-white 
-                                    data-[state=checked]:bg-blue-600 
-                                    data-[state=checked]:border-blue-600  focus:ring-0"
-                        />
-                      </Card>
-                    ))}
-                  </div>
+                      </div>
+                    ))
+                  ) : (
+                    <Card className="flex items-center justify-between p-4">
+                      <FileText className="w-5 h-5 text-gray-400 mr-4" />
+                      <span className="flex-1 text-gray-500 italic">
+                        No content available.
+                      </span>
+                      <Checkbox
+                        className="w-5 h-5 border-gray-300 rounded bg-white 
+                  data-[state=checked]:bg-blue-600 
+                  data-[state=checked]:border-blue-600 focus:ring-0"
+                      />
+                    </Card>
+                  )}
                 </div>
               ))}
             </TabsContent>
 
             {/* Tab Reviews */}
-            <TabsContent value="reviews">
+            {/* <TabsContent value="reviews">
               <div className="space-y-4">
-                {/* Add Review */}
+           
                 <div className="flex items-center space-x-2">
                   {[1, 2, 3, 4, 5].map((i) => (
                     <Star
@@ -186,7 +426,7 @@ export default function CourseDetail() {
                   <span className="text-sm text-gray-500">{rating} Stars</span>
                 </div>
 
-                {/* Add Comment */}
+               
                 <textarea
                   value={reviewText}
                   onChange={(e) => setReviewText(e.target.value)}
@@ -194,9 +434,68 @@ export default function CourseDetail() {
                   className="w-full p-2 border rounded-md"
                 />
 
-                <Button className="bg-blue-900 hover:bg-blue-700 text-white">
+                <Button
+                  onClick={handleSendFeedback}
+                  className="bg-blue-900 hover:bg-blue-700 text-white"
+                >
                   Submit Review
                 </Button>
+              </div>
+            </TabsContent> */}
+            <TabsContent value="reviews">
+              <div className="space-y-4">
+                {hasFeedback && userFeedback ? (
+                  <div className="p-4 border rounded-lg bg-gray-50">
+                    <h3 className="font-semibold text-gray-800">
+                      Feedback Anda
+                    </h3>
+                    <div className="flex items-center mt-2 space-x-2">
+                      {[1, 2, 3, 4, 5].map((i) => (
+                        <Star
+                          key={i}
+                          className={`w-6 h-6 ${
+                            i <= userRating
+                              ? "text-yellow-400"
+                              : "text-gray-300"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <p className="mt-2 text-gray-700">{userFeedback}</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center space-x-2">
+                      {[1, 2, 3, 4, 5].map((i) => (
+                        <Star
+                          key={i}
+                          className={`w-6 h-6 cursor-pointer ${
+                            i <= rating ? "text-yellow-400" : "text-gray-300"
+                          }`}
+                          onClick={() => setRating(i)}
+                        />
+                      ))}
+                      <span className="text-sm text-gray-500">
+                        {rating} Stars
+                      </span>
+                    </div>
+
+                    <textarea
+                      value={reviewText}
+                      onChange={(e) => setReviewText(e.target.value)}
+                      placeholder="Tambahkan komentar Anda..."
+                      className="w-full p-2 border rounded-md"
+                    />
+
+                    <Button
+                      onClick={handleSendFeedback}
+                      className="bg-blue-900 hover:bg-blue-700 text-white"
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? "Mengirim..." : "Submit Review"}
+                    </Button>
+                  </>
+                )}
               </div>
             </TabsContent>
           </Tabs>

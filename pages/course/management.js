@@ -1,6 +1,6 @@
 import { useState,useContext } from "react";
 import Admin from "layouts/Admin.js";
-import CoursesListView from "../../components/Course/Course"; 
+import CoursesListView from "../../components/Course/Course";
 import EnrollmentView from "../../components/Course/Enrollment/Enroll";
 import ContentAdditionView from "../../components/Course/AddContent";
 import { useCourses } from "../../hooks/useCourses";
@@ -153,24 +153,18 @@ export default function ModernManagement() {
         />
     );
 
-    const EditContentPage = () => (
-        <ContentAdditionView 
-            onBack={() => setCurrentPage('main')}
-            onSuccess={handleSaveSuccess}
-            courseId={selectedCourseId}   
-            contentTypes={contentTypes}
-            mode="edit"
-            contentId={selectedContentId}
-        />
-    );
+  const AddContentPage = () => (
+    <ContentAdditionView
+      onBack={() => setCurrentPage("main")}
+      contentTypes={contentTypes}
+    />
+  );
 
-    return (
-        <div>
-            {currentPage === 'main' && <MainPage />}
-            {currentPage === 'addContent' && <AddContentPage />}
-            {currentPage === 'editContent' && <EditContentPage />}
-        </div>
-    );
+  return (
+    <div>
+      {currentPage === "main" && <MainPage />}
+      {currentPage === "addContent" && <AddContentPage />}
+    </div>
+  );
 }
-
-ModernManagement.layout = Admin;
+Management.layout = Admin;

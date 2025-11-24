@@ -1,13 +1,16 @@
 "use client";
+
 import React, { useContext, useEffect } from "react";
-import TopBar from "@/components/course/TopBar";
-import LeftSidebar from "@/components/course/LeftSidebar";
+import TopBar from "@/components/Course/TopBar";
+import LeftSidebar from "@/components/Course/LeftSidebar";
 import ContentArea from "@/components/Course/ContentArea";
 import { CourseContext } from "@/contexts/CourseContext";
 
 export default function CoursePlayer() {
   const { state, setStep, goNext } = useContext(CourseContext);
-  const { flow, currentStep, completed } = state;
+  const { flow, currentStep, completed, setCourseId, courseId } = state;
+
+  //   console.log("flow : ", flow);
 
   useEffect(() => {
     if (document.fullscreenEnabled && !document.fullscreenElement) {
