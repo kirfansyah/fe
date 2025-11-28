@@ -114,9 +114,23 @@ export function useRoles(){
         }
     }, [fetchRoles]);
 
+    const fetchAnalytics = useCallback(async () => {
+        setLoading(true);
+        setError(null); 
+        
+        try {
+            const res = await API.getAnalytics();
+            return res;
+        } catch (err) {
+            setError(err.message || 'Failed to fetch courses');
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
 
     useEffect(() => {
-        Promise.all([fetchRoles(), fetchMenus()]);
+        Promise.all([fetchRoles(), fetchMenus(), fetchAnalytics()]);
     }, [fetchRoles, fetchMenus]);
     
   return {
@@ -130,5 +144,6 @@ export function useRoles(){
     fetchMenus,
     handleCreateMenus,
     handleUpdateRolePermissions,
+    fetchAnalytics
   };
 }

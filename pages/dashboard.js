@@ -64,7 +64,12 @@ const Dashboard = () => {
               })}
             </span>
             <span className="mx-3">|</span>
-            <span>09.32 AM</span>
+            <span>
+              {new Date().toLocaleTimeString("en-US", {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </span>
           </div>
         </div>
       </div>

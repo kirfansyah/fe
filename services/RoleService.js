@@ -136,6 +136,24 @@ class RoleService {
         }
     }
 
+    /**
+     * Dashboard Analytics
+     */
+    static async getAnalytics() {
+        try {
+            const response = await API.get("/dashboard/analytics");
+            return {
+                success: response.data.success,
+                data: response.data.data || [],
+                message: response.data.message,
+                pagination: response.data.pagination
+            };
+        } catch (error) {
+            console.error('RoleService.getAllMenus Error:', error);
+            throw new Error(error.response?.data?.message || 'Failed to fetch courses');
+        }
+    }
+
     
 
 

@@ -19,7 +19,7 @@ export default function ModernProfile() {
     const {profileInfo} = useCourses();     
     const dataKaryawans = dataKaryawan?.length ? dataKaryawan[0] : [];
     const [activeTab, setActiveTab] = useState('course-profile');
-    const cleanBaseUrl = 'http://192.168.12.73:5000/';
+    
     const apiData = profileInfo || dataKaryawans || {};
     const profileData = {
         // Profile info
@@ -124,7 +124,7 @@ export default function ModernProfile() {
                                     <div className="relative">
                                         <div className="absolute inset-0 bg-white rounded-full blur-xl opacity-20"></div>
                                         <img
-                                            src={`${cleanBaseUrl}${profileData.profile_photo_url}`}
+                                            src={`${process.env.BASE_URL}${profileData.profile_photo_url}`}
                                             alt={profileData.name}
                                             className="relative w-32 h-32 rounded-full border-4 border-white shadow-2xl object-cover"
                                         />
