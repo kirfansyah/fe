@@ -1,10 +1,21 @@
 "use client";
 import React from "react";
-import CoursePlayer from "@/components/course/CoursePlayer";
+import CoursePlayer from "@/components/Course/CoursePlayer";
 import CourseLayout from "@/layouts/CourseLayout";
+import { useRouter } from "next/router"; // ✅ ini yang benar
+import CourseProvider from "@/contexts/CourseContext";
 
 export default function StartCoursePage() {
-  return <CoursePlayer />;
+  const router = useRouter();
+  const { id } = router.query;
+  const exitCourse = `/course/employee/detail/`;
+  const mainCourse = `/course/employee/course/`;
+  if (!id) return <div>Loading course...</div>;
+  return (
+    <CourseProvider courseId={id}>
+      <CoursePlayer exitCourse={exitCourse} mainCourse={mainCourse} />
+    </CourseProvider>
+  );
 }
 
 StartCoursePage.layout = CourseLayout;

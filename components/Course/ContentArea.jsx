@@ -1,16 +1,92 @@
 "use client";
-import { useContext, useState } from "react";
+import { useContext, useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+
 import { Button } from "@/components/ui/button";
 import Quiz from "./Quiz";
 import { CourseContext } from "@/contexts/CourseContext";
+import PdfViewer from "@/components/Course/PdfViewer";
+import PptViewer from "@/components/Course/PptViewer";
+import dynamic from "next/dynamic";
+import { useEmployees } from "@/hooks/useEmployees";
+import { useRouter } from "next/navigation";
+// import VideoPlayer from "@/components/VideoPlayer";
+
+const VideoPlayer = dynamic(() => import("@/components/Course/VideoPlayer"), {
+  ssr: false,
+});
 
 export default function ContentArea() {
-  const { state, goNext, setStep } = useContext(CourseContext);
-  const { flow, currentStep, answers } = state;
+  const { state, goNext, setStep, completeStep, refreshCourseProgress } =
+    useContext(CourseContext);
+  const { flow, currentStep, answers, courseData } = state;
+  const { completeCourse, sendAswers } = useEmployees();
 
-  const allSteps = flow.flatMap((s) => s.children ?? [s]);
-  const idx = allSteps.findIndex((s) => s.id === currentStep);
+  const orderedKeys = [
+    "courseGuide",
+    "courseOutline",
+    "preTest",
+    "courseContent",
+    "postTest",
+  ];
+
+  const allSteps = Object.entries(flow)
+    .sort(
+      (a, b) => orderedKeys.indexOf(a[0]) - orderedKeys.indexOf(b[0]) // urut berdasarkan orderedKeys
+    )
+    .flatMap(([key, items]) =>
+      items.map((s) => {
+        let type = "text";
+
+        if (s.content_url) {
+          if (s.content_url.endsWith(".mp4")) type = "video";
+          else if (s.content_url.endsWith(".pdf")) type = "pdf";
+          else if (s.content_url.endsWith(".pptx")) type = "pptx";
+        } else if (s.questions) {
+          type = "quiz";
+        }
+
+        return {
+          ...s,
+          id: s.id_course_content,
+          type,
+          section: key, // optional kalau mau track section origin
+        };
+      })
+    );
+
+  //   const allSteps = Object.values(flow)
+  //     .flat()
+  //     .map((s) => {
+  //       let type = "text"; // default
+
+  //       if (s.content_url) {
+  //         if (s.content_url.endsWith(".mp4")) type = "video";
+  //         else if (s.content_url.endsWith(".pdf")) type = "pdf";
+  //         else if (s.content_url.endsWith(".pptx")) type = "pptx";
+  //       } else if (s.questions) {
+  //         type = "quiz";
+  //       }
+
+  //       return {
+  //         ...s,
+  //         id: s.id_course_content,
+  //         type,
+  //       };
+  //     });
+  let idx = allSteps.findIndex((s) => s.id === currentStep);
+  if (idx === -1) idx = 0;
   const step = allSteps[idx];
   const nextStep = allSteps[idx + 1];
   const prevStep = allSteps[idx - 1];
@@ -18,6 +94,60 @@ export default function ContentArea() {
   const [currentQuiz, setCurrentQuiz] = useState(0);
   const [showConfirm, setShowConfirm] = useState(false);
   const [score, setScore] = useState(null);
+  const [showNextConfirm, setShowNextConfirm] = useState(false);
+  const [pendingStep, setPendingStep] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [contentCompleted, setContentCompleted] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [courseId, setCourseId] = useState(null);
+  const [timeLeft, setTimeLeft] = useState(null);
+  const [autoSubmitting, setAutoSubmitting] = useState(false);
+  const router = useRouter();
+  //   console.log("currentStep: ", courseData);
+  useEffect(() => {
+    if (!step) return;
+
+    if (step.type === "quiz" && !step.is_completed) {
+      const totalTime = (step.questions?.length || 0) * 60;
+      setTimeLeft(totalTime);
+    } else {
+      setTimeLeft(null);
+    }
+  }, [step?.id]);
+
+  // Hitung mundur timer
+  useEffect(() => {
+    if (!step || step.type !== "quiz" || step.is_completed) return;
+    if (timeLeft === null) return;
+
+    const interval = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          handleAutoSubmit();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [step]);
+
+  useEffect(() => {
+    if (!currentStep && allSteps.length > 0) {
+      setStep(allSteps[0].id_course_content);
+    }
+    setCourseId(courseData?.id_course);
+    // console.log("courseId useEffect: ", courseId);
+  }, [currentStep, allSteps, setStep]);
+
+  //   console.log(courseId);
+
+  //   console.log("allSteps: ", allSteps);
+  //   console.log("idx: ", idx);
+  //   console.log("step: ", step);
+  //   console.log("courseData: ", courseData);
 
   if (!step) {
     return (
@@ -29,6 +159,67 @@ export default function ContentArea() {
     );
   }
 
+  const handleFinishLogic = async () => {
+    // console.log("User finished course!");
+
+    const navigate = router.push(`/course/employee/detail/${courseId}`);
+
+    if (document.fullscreenElement) {
+      Promise.race([
+        document.exitFullscreen(),
+        new Promise((resolve) => setTimeout(resolve, 200)),
+      ])
+        .then(() => setIsFullscreen(false))
+        .catch((err) => console.warn("Gagal keluar fullscreen:", err));
+    }
+
+    setOpen(false);
+    // console.log("courseId di handleFinishLogic: ", courseId);
+
+    // await navigate;
+  };
+
+  const handleAutoSubmit = async () => {
+    if (autoSubmitting || step.is_completed) return;
+
+    setAutoSubmitting(true);
+    await submitQuiz(); // ⬅️ auto submit seperti Ruangguru
+    setAutoSubmitting(false);
+  };
+
+  const handleCompleteContent = async (stepId) => {
+    try {
+      setIsSubmitting(true);
+      //   console.log("stepid : ", stepId);
+
+      const payload = {
+        id_user_enrollment: courseData.id_user_enrollment,
+        id_course_content: stepId,
+        updated_at: new Date().toISOString(),
+        updated_by: "system",
+        updated_device: "web",
+      };
+      await completeCourse(payload);
+      completeStep(stepId);
+      setContentCompleted((prev) => !prev);
+      await refreshCourseProgress();
+      //   console.log("✅ Konten disimpan sebagai complete:", stepId);
+    } catch (err) {
+      console.error("❌ Gagal menyimpan progress:", err);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const goToNext = async (nextId) => {
+    if (!step.is_completed) {
+      await handleCompleteContent(currentStep);
+    }
+    goNext(currentStep, nextId);
+    setCurrentQuiz(0);
+    setScore(null);
+  };
+
   const handleNext = () => {
     if (step.type === "quiz") {
       if (currentQuiz < step.questions.length - 1) {
@@ -37,21 +228,13 @@ export default function ContentArea() {
         setShowConfirm(true);
       }
     } else if (nextStep) {
-      goNext(currentStep, nextStep.id);
-      setCurrentQuiz(0);
+      setPendingStep(nextStep.id);
+      setShowNextConfirm(true);
     }
   };
+
   const handlePrevious = () => {
-    if (step.type === "quiz") {
-      if (currentQuiz > 0) {
-        setCurrentQuiz((c) => c - 1);
-      } else if (prevStep) {
-        setStep(prevStep.id);
-        setCurrentQuiz(0);
-        setScore(null);
-        setShowConfirm(false);
-      }
-    } else if (prevStep) {
+    if (prevStep) {
       setStep(prevStep.id);
       setCurrentQuiz(0);
       setScore(null);
@@ -59,69 +242,259 @@ export default function ContentArea() {
     }
   };
 
-  const submitQuiz = () => {
-    let correct = 0;
-    step.questions.forEach((q) => {
-      if (answers[q.id] === q.answer) correct++;
-    });
-    const result = Math.round((correct / step.questions.length) * 100);
-    setScore(result);
-    setShowConfirm(false);
+  const submitQuiz = async () => {
+    try {
+      setIsSubmitting(true);
+
+      if (!step || !step.questions || !step.questions.length) return;
+
+      const payload = step.questions.map((q) => {
+        const selectedOptionId = answers[q.id_course_question];
+        const selectedOption = q.options.find(
+          (opt) => opt.id_option === selectedOptionId
+        );
+
+        const isCorrect = selectedOption ? selectedOption.is_correct : false;
+
+        return {
+          id_user_enrollment: courseData.id_user_enrollment,
+          id_course_content: step.id_course_content,
+          id_course_question: q.id_course_question,
+          id_selected_option: selectedOption ? selectedOption.id_option : null,
+          text_answer: selectedOption ? selectedOption.option_text : "",
+          is_correct: isCorrect,
+          points_earned: isCorrect ? q.correct_answer_points : 0,
+          max_points_possible: q.correct_answer_points,
+          attempt_number: 1,
+          is_final_attempt: true,
+          created_by: "system",
+          created_device: "web",
+        };
+      });
+
+      //   console.log("🧩 Payload jawaban:", payload);
+
+      const response = await sendAswers(payload);
+
+      //   console.log("✅ Hasil submit quiz:", response);
+
+      const totalPoints = payload.reduce(
+        (acc, q) => acc + q.max_points_possible,
+        0
+      );
+      const earnedPoints = payload.reduce((acc, q) => acc + q.points_earned, 0);
+      const finalScore = Math.round((earnedPoints / totalPoints) * 100);
+
+      setScore(finalScore);
+
+      await handleCompleteContent(step.id_course_content);
+
+      setShowConfirm(false);
+    } catch (err) {
+      console.error("❌ Gagal submit quiz:", err);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <Card className="flex-1 flex flex-col h-full">
       <CardContent className="p-4 over space-y-4">
-        {step.type === "text" && <p>{step.title}</p>}
-        {step.type === "quiz" && (
-          <Quiz questions={step.questions} current={currentQuiz} />
+        {/* {console.log("type: ", step.type)} */}
+        {step.type === "text" && (
+          <div className="space-y-3 p-5">
+            <h2 className="text-xl font-semibold text-gray-800">
+              {step.content_title}
+            </h2>
+            <div
+              className="text-gray-700 text-lg leading-relaxed whitespace-pre-line"
+              dangerouslySetInnerHTML={{ __html: step.content_body }}
+            />
+          </div>
         )}
-        {step.type === "pdf" && <div>PDF Viewer di sini</div>}
-        {step.type === "video" && <div>Video Player di sini</div>}
 
-        {/* Konfirmasi submit quiz */}
-        {step.type === "quiz" && showConfirm && (
-          <div className="mt-4 p-4 border rounded-lg bg-gray-50 space-y-2">
-            <p>
-              Apakah Anda yakin ingin menyimpan jawaban dan mengakhiri quiz?
-            </p>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setShowConfirm(false)}>
-                Batal
-              </Button>
-              <Button onClick={submitQuiz} className="bg-blue-600 text-white">
-                Simpan & Selesai
-              </Button>
+        {step.type === "quiz" && !step.is_completed && (
+          <div className="p-3 bg-red-50 border border-red-300 rounded text-center text-red-700 font-semibold">
+            ⏱ Waktu Tersisa:{" "}
+            {Math.floor(timeLeft / 60)
+              .toString()
+              .padStart(2, "0")}
+            :{(timeLeft % 60).toString().padStart(2, "0")}
+          </div>
+        )}
+
+        {step.type === "quiz" && (
+          <Quiz
+            questions={step.questions}
+            score={step.earned_points}
+            isCompleted={step.is_completed}
+          />
+        )}
+        {step.type === "pdf" && (
+          <div className="space-y-3 p-5">
+            <h2 className="text-xl font-semibold text-gray-800">
+              {step.content_title}
+            </h2>
+            <div className="w-full flex justify-center ">
+              {/* <PdfViewer file={step.content_url} /> */}
+              <PdfViewer file={`/uploads/pdf/komunikasi-efektif.pdf`} />
+            </div>
+          </div>
+        )}
+        {step.type === "video" && (
+          //   <VideoPlayer url={step.content_url || "/videos/default.mp4"} />
+          <div className="space-y-3 p-5">
+            <h2 className="text-xl font-semibold text-gray-800">
+              {step.content_title}
+            </h2>
+            {/* <VideoPlayer url={step.content_url || "/videos/default.mp4"} /> */}
+            <VideoPlayer
+              url={`/uploads/video/komunikasi-efektif.mp4`}
+              videoId={`${step.id}`}
+            />
+            {/* <video
+              src={`/uploads/video/komunikasi-efektif.mp4`}
+              controls
+              width="100%"
+            /> */}
+          </div>
+        )}
+
+        {step.type === "pptx" && (
+          <div className="space-y-3 p-5">
+            <h2 className="text-xl font-semibold text-gray-800">
+              {step.content_title}
+            </h2>
+            <div className="w-full flex justify-center">
+              {/* <PptViewer file={`/test.pptx`} /> */}
+              {/* <PdfViewer file={step.content_url.replace(".pptx", ".pdf")} /> */}
+              {/* <PdfViewer file={`/test.pptx`.replace(".pptx", ".pdf")} /> */}
+              {/* <PptViewer
+                fileUrl={`https://docs.google.com/presentation/d/1qar5wJ9SEmlBTl-TS3z2GwKldOb4Cjyz/edit?usp=sharing&ouid=107324705590480170219&rtpof=true&sd=true`}
+              /> */}
+              <PptViewer fileUrl="https://docs.google.com/presentation/d/1jsjVVdCjlVd5uAM3e_nlyPVoNUKid07A/edit?usp=sharing" />
+              {/* <PptViewer fileUrl={step.content_url} /> */}
             </div>
           </div>
         )}
 
+        {/* 🔹 Konfirmasi submit quiz pakai AlertDialog */}
+        <AlertDialog open={showConfirm} onOpenChange={setShowConfirm}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                Apakah Anda yakin ingin menyimpan jawaban dan mengakhiri quiz?
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                Pastikan semua pertanyaan sudah dijawab sebelum Anda mengakhiri
+                quiz ini. Jawaban yang sudah disubmit tidak dapat diubah.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="flex-row justify-center gap-2 sm:justify-end">
+              <AlertDialogCancel
+                className="w-2 sm:w-auto"
+                onClick={() => setShowConfirm(false)}
+              >
+                Batal
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={submitQuiz}
+                className="bg-blue-600 text-white hover:bg-blue-700"
+              >
+                Simpan & Selesai
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* 🔹 Konfirmasi sebelum lanjut ke konten berikutnya (pakai shadcn) */}
+        <AlertDialog open={showNextConfirm} onOpenChange={setShowNextConfirm}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                Sudah selesai mempelajari materi ini?
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                Pastikan Anda telah membaca atau menonton semua bagian sebelum
+                lanjut ke materi berikutnya.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="flex-row justify-center gap-2 sm:justify-end">
+              <AlertDialogCancel
+                className="w-2 sm:w-auto"
+                onClick={() => {
+                  setShowNextConfirm(false);
+                  setPendingStep(null);
+                }}
+              >
+                Batal
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  if (pendingStep) goToNext(pendingStep);
+                  setShowNextConfirm(false);
+                }}
+                disabled={isSubmitting}
+                className="bg-blue-600 text-white hover:bg-blue-700"
+              >
+                {isSubmitting ? "Menyimpan..." : "Ya, Lanjutkan"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog open={open} onOpenChange={setOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                Anda akan mengakhiri course ini ?
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                Setelah menekan selesai, progress kamu akan disimpan dan tidak
+                dapat diubah.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="flex-row justify-center gap-2 sm:justify-end">
+              <AlertDialogCancel
+                className="w-2 sm:w-auto"
+                onClick={() => {
+                  setOpen(false);
+                }}
+              >
+                Batal
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleFinishLogic}
+                className="bg-blue-600 text-white hover:bg-blue-700"
+              >
+                Ya, Selesai
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
         {/* Hasil quiz */}
-        {score !== null && (
+        {/* {score !== null && (
           <div className="mt-4 p-4 border rounded-lg bg-blue-50 text-center">
-            <h2 className="text-xl font-bold">Hasil Quiz</h2>
-            <p className="text-lg mt-2">
-              Skor Anda:{" "}
-              <span className="font-bold text-blue-700">{score}</span>%
-            </p>
+          
             {nextStep && (
               <Button
                 onClick={() => {
-                  goNext(currentStep, nextStep.id);
+                  goNext(currentStep, nextStep.id_course_content);
                   setScore(null);
                   setCurrentQuiz(0);
                 }}
                 className="mt-2 bg-blue-900 text-white"
               >
-                Next: {nextStep.title}
+                Next: {nextStep.content_title}
               </Button>
             )}
           </div>
-        )}
+        )} */}
       </CardContent>
 
       <CardFooter className="flex justify-between mt-auto space-x-2">
-        {(step.type === "quiz" && currentQuiz > 0) || prevStep ? (
+        {/* {(step.type === "quiz" && currentQuiz > 0) || prevStep ? (
           <Button
             onClick={handlePrevious}
             variant="outline"
@@ -130,24 +503,105 @@ export default function ContentArea() {
             Previous
           </Button>
         ) : (
-          <div />
+          <></>
         )}
 
-        {step.type !== "quiz" && nextStep && (
+        {step.type !== "quiz" && nextStep ? (
+          <Button onClick={handleNext} className="bg-blue-900 text-white">
+            Next: {nextStep.content_title}
+          </Button>
+        ) : step.section === "postTest" ? (
           <Button
-            onClick={() => goNext(currentStep, nextStep.id)}
+            onClick={() => setOpen(true)}
             className="bg-blue-900 text-white"
           >
-            Next: {nextStep.title}
+            Selesai
+          </Button>
+        ) : null}
+
+        {step.type === "quiz" && !showConfirm && (
+          <>
+            {score === null && !step.is_completed ? (
+              <Button
+                onClick={() => setShowConfirm(true)}
+                className="bg-blue-900 text-white"
+              >
+                Submit Quiz
+              </Button>
+            ) : (
+              // ✅ Jika sudah disubmit, tampilkan tombol Next
+              nextStep && (
+                <Button
+                  onClick={() => {
+                    goNext(currentStep, nextStep.id_course_content);
+                    setScore(null);
+                    setCurrentQuiz(0);
+                  }}
+                  className="mt-2 bg-blue-900 text-white"
+                >
+                  Next: {nextStep.content_title}
+                </Button>
+              )
+            )}
+          </>
+        )} */}
+
+        {/* ===== PREVIOUS BUTTON ===== */}
+        {((step.type === "quiz" && currentQuiz > 0) || prevStep) && (
+          <Button
+            onClick={handlePrevious}
+            variant="outline"
+            className="bg-gray-200 text-gray-800"
+          >
+            Previous
           </Button>
         )}
 
-        {step.type === "quiz" && !showConfirm && score === null && (
-          <Button onClick={handleNext} className="bg-blue-900 text-white">
-            {currentQuiz < step.questions.length - 1
-              ? "Next Question"
-              : "Submit Quiz"}
-          </Button>
+        {/* ===== NEXT / SUBMIT / FINISH LOGIC ===== */}
+        {step.type !== "quiz" ? (
+          // ===================== Non-Quiz Content =====================
+          nextStep ? (
+            <Button onClick={handleNext} className="bg-blue-900 text-white">
+              Next: {nextStep.content_title}
+            </Button>
+          ) : step.section === "postTest" && step.is_completed ? (
+            <Button
+              onClick={() => setOpen(true)}
+              className="bg-blue-900 text-white"
+            >
+              Selesai
+            </Button>
+          ) : null
+        ) : (
+          // ===================== Quiz Content =====================
+          <>
+            {score === null && !step.is_completed ? (
+              <Button
+                onClick={() => setShowConfirm(true)}
+                className="bg-blue-900 text-white"
+              >
+                Submit Quiz
+              </Button>
+            ) : nextStep ? (
+              <Button
+                onClick={() => {
+                  goNext(currentStep, nextStep.id_course_content);
+                  setScore(null);
+                  setCurrentQuiz(0);
+                }}
+                className="bg-blue-900 text-white"
+              >
+                Next: {nextStep.content_title}
+              </Button>
+            ) : step.section === "postTest" && step.is_completed ? (
+              <Button
+                onClick={() => setOpen(true)}
+                className="bg-blue-900 text-white"
+              >
+                Selesai
+              </Button>
+            ) : null}
+          </>
         )}
       </CardFooter>
     </Card>

@@ -1,13 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Maximize, LogOut, Home, Minimize } from "lucide-react";
+import { CourseContext } from "@/contexts/CourseContext";
 
-export default function TopBar() {
+export default function TopBar({ exitCourse, mainCourse }) {
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const { state } = useContext(CourseContext);
+  const { courseId } = state;
+
+  const router = useRouter();
 
   useEffect(() => {
     const handler = () => {
@@ -16,6 +22,7 @@ export default function TopBar() {
     document.addEventListener("fullscreenchange", handler);
     return () => document.removeEventListener("fullscreenchange", handler);
   }, []);
+  //   console.log("exitCourse:", exitCourse + courseId);
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -29,6 +36,36 @@ export default function TopBar() {
         .then(() => setIsFullscreen(false))
         .catch((err) => console.log("Exit fullscreen error:", err));
     }
+  };
+
+  const handleExitCourse = async () => {
+    const navigate = router.push(`${exitCourse}${courseId}`);
+
+    if (document.fullscreenElement) {
+      Promise.race([
+        document.exitFullscreen(),
+        new Promise((resolve) => setTimeout(resolve, 200)),
+      ])
+        .then(() => setIsFullscreen(false))
+        .catch((err) => console.warn("Gagal keluar fullscreen:", err));
+    }
+
+    await navigate;
+  };
+
+  const handleMainCourse = async () => {
+    if (document.fullscreenElement) {
+      try {
+        await Promise.race([
+          document.exitFullscreen(),
+          new Promise((resolve) => setTimeout(resolve, 200)),
+        ]);
+        setIsFullscreen(false);
+      } catch (err) {
+        console.warn("Gagal keluar dari fullscreen:", err);
+      }
+    }
+    router.push(`${mainCourse}`);
   };
 
   return (
@@ -47,23 +84,19 @@ export default function TopBar() {
             )}
           </Button>
 
-          <Link href="/course/employee/detail/1">
-            <Button variant="outline" size="sm">
-              <LogOut className="w-4 h-4 mr-1" /> Exit Course
-            </Button>
-          </Link>
+          <Button variant="outline" size="sm" onClick={handleExitCourse}>
+            <LogOut className="w-4 h-4 mr-1" /> Exit Course
+          </Button>
 
-          <Link href="/course/employee/course">
-            <Button variant="outline" size="sm">
-              <Home className="w-4 h-4 mr-1" /> Main Course
-            </Button>
-          </Link>
+          <Button variant="outline" size="sm" onClick={handleMainCourse}>
+            <Home className="w-4 h-4 mr-1" /> Main Course
+          </Button>
         </div>
 
-        <div className="flex gap-6 text-gray-700 font-medium">
+        {/* <div className="flex gap-6 text-gray-700 font-medium">
           <span>Courses</span>
           <span>Reviews</span>
-        </div>
+        </div> */}
       </CardContent>
     </Card>
   );

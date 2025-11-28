@@ -1,147 +1,361 @@
-import { Plus, Trash2, Menu, Globe, CirclePlus, CircleX, SquarePen } from "lucide-react";
+import { 
+    Plus, Trash2, Globe, GlobeLock, FileText, ChevronDown, ChevronRight,
+    Video, FileCheck, ClipboardList, Edit, X, Search
+} from "lucide-react";
 import { useState } from "react";
-export default function Course({ courses, onAddContent,onSave }) {
-    const toggleCourse = (courseId) => {
-        setExpandedCourse(expandedCourse === courseId ? null : courseId);
-    };
+import { useRouter } from "next/router";
+import { useSweetAlert } from '../../hooks/useSweetAlert';
+export default function Course({ courses, onAddContent,onEditContent, onSave, onDelete }) {
     const [expandedCourse, setExpandedCourse] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [courseName, setCourseName] = useState('');
-    
-    const handleSave = () => {
-        if (!courseName.trim()) return;
-        onSave(courseName);       
-        setCourseName("");        
-        setIsModalOpen(false);    
-    }
+    const [searchTerm, setSearchTerm] = useState('');
+    const [filterStatus, setFilterStatus] = useState('all'); // all | published | unpublished
+    const [editingContent, setEditingContent] = useState(null);
+    const router = useRouter();
+    const toggleCourse = (courseId) => {
+        setExpandedCourse(expandedCourse === courseId ? null : courseId);
+    };
+    const { showLoading, showSuccess, showError, showWarning, confirmAction } = useSweetAlert();
+    const handleSave = async () => {
+        if (!courseName.trim()) {
+            showWarning('Course name cannot be empty.');
+            return;
+        };
+        const result = await confirmAction({
+            title: 'Save this course?',
+            text: `Course name: ${courseName}`,
+            confirmButtonText: 'Yes, save it!'
+        });
+        if (!result.isConfirmed) return;
+        try {
+            showLoading('Saving course...');
+            await onSave(courseName);
+            await showSuccess('Course saved successfully!');
+            setCourseName('');
+            setIsModalOpen(false);
+        } catch (error) {
+            showError('Failed to save course: ' + error.message);
+        }
+
+    };
+
+    const handleDelete = async (courseId) => {
+        const result = await confirmAction({
+            title: 'Are you sure you want to delete this course?',  
+            text: "This action cannot be undone.",
+            confirmButtonText: 'Yes, delete it!'
+        });
+        if (!result.isConfirmed) return;
+        try {
+            showLoading('Deleting course...');
+            await onDelete(courseId);
+            await showSuccess('Course deleted successfully!');
+        } catch (error) {
+            showError('Failed to delete course: ' + error.message);
+        }
+    };
 
     const handleCancel = () => {
         setCourseName('');
         setIsModalOpen(false);
-    }
+    };
+
+    
+
+    // Filter courses
+    const filteredCourses = courses.filter(course => {
+        const matchesSearch = course.course_title.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesFilter = filterStatus === 'all' || 
+                            (filterStatus === 'published' && course.publish_date) ||
+                            (filterStatus === 'unpublished' && !course.publish_date);
+        return matchesSearch && matchesFilter;
+    });
+
+    const getContentIcon = (contentTypeName) => {
+        const name = contentTypeName?.toLowerCase() || '';
+        if (name.includes('video')) return <Video className="w-4 h-4" />;
+        if (name.includes('test') || name.includes('quiz')) return <ClipboardList className="w-4 h-4" />;
+        return <FileCheck className="w-4 h-4" />;
+    };
+
+    const getContentColor = (contentTypeName) => {
+        const name = contentTypeName?.toLowerCase() || '';
+        if (name.includes('video')) return 'bg-purple-100 text-purple-600';
+        if (name.includes('test') || name.includes('quiz')) return 'bg-blue-100 text-blue-600';
+        return 'bg-gray-100 text-gray-600';
+    };
 
     return (
-        <div className="bg-white p-4 rounded-lg shadow">
-            <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-semibold">Course Management</h2>    
-                <button onClick={()=>setIsModalOpen(true)} className="bg-green-600 text-white px-4 py-2 rounded flex items-center">
-                    <Plus className="w-4 h-4 mr-2" /> Add New Course
-                </button>
-            </div>
-            <div className="bg-slate-100">
-                <div className="bg-gray">
-                    {courses.map((course) => (
-                    <div key={course.id_course} className="border-b border-gray-200">
-                        {/* Main Course Row */}
-                        <div className="flex items-center justify-between py-4 px-6 hover:bg-gray-50 transition-colors">
-                            <div className="flex items-center space-x-4">
-                                <button
-                                onClick={() => toggleCourse(course.id_course)}
-                                className="p-1"
-                                >
-                                <Menu className="w-6 h-6 text-gray-600" />
-                                </button>
-                                <span className="text-lg font-medium text-gray-900 tracking-wide">
-                                {course.course_title}
-                                </span>
-                            </div>
-
-                            <div className="flex items-center space-x-6">
-                                <div className="flex items-center space-x-2">
-                                    <Globe className="w-4 h-4 text-gray-600" />
-                                    <span className="text-sm text-gray-700">Published</span>
-                                </div>
-                                <button
-                                    onClick={() => onAddContent && onAddContent(course.id_course)}
-                                    className="flex items-center space-x-2 px-3 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded"
-                                >
-                                    <CirclePlus className="w-4 h-4 text-gray-400" />
-                                    <span>Content</span>
-                                </button>
-                                <button className="flex items-center space-x-2 px-3 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded">
-                                    <CircleX className="w-4 h-4 text-gray-400" />
-                                    <span>Delete</span>
-                                </button>
-                            </div>
-                        </div>
-                        {/* Expanded Modules */}
-                        {expandedCourse === course.id_course && (
-                        <div className="bg-white">
-                            {course.contents.map((module) => (
-                            <div
-                                key={module.id_course_content}
-                                className="flex items-center justify-between py-1 px-6 ml-10 border-l-2 border-gray-300 hover:bg-white transition-colors"
-                            >
-                                <div className="flex items-center space-x-4">
-                                <Menu className="w-2 h-5 text-gray-500" />
-                                <span className="text-gray-700">{module.content_type_name}</span>
-                                </div>
-
-                                <div className="flex items-center space-x-4">
-                                {module.content_type_name && (
-                                    <span className="bg-green-500 text-white text-xs px-2 rounded font-medium">
-                                    Preview
-                                    </span>
-                                )}
-                                
-                                <button className="w-2 h-5 text-gray-400 hover:text-gray-600">
-                                    <SquarePen className="w-2 h-5" />
-                                </button>
-                                
-                                <button className="w-2 h-5 text-gray-400 hover:text-red-500">
-                                    <Trash2 className="w-2 h-5" />
-                                </button>
-                                </div>
-                            </div>
-                            ))}
-                        </div>
-                        )}
-                    </div>
-                    ))}
+        <div >
+            {/* Search & Filter Bar */}
+            <div className="mb-6 flex gap-4 items-center">
+                <div className="flex-1 relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <input
+                        type="text"
+                        placeholder="Search courses..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                </div>
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={() => setFilterStatus('all')}
+                        className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                            filterStatus === 'all'
+                                ? 'bg-blue-300 text-white focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-transparent'
+                                : 'bg-white '
+                        }`}
+                    >
+                        All
+                    </button>
+                    <button
+                        onClick={() => setFilterStatus('published')}
+                        className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                            filterStatus === 'published'
+                                ? 'bg-blue-300 text-white focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-transparent'
+                                : 'bg-white'
+                        }`}
+                    >
+                        Published
+                    </button>
+                    <button
+                        onClick={() => setFilterStatus('unpublished')}
+                        className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                            filterStatus === 'unpublished'
+                                ? 'bg-blue-300 text-white focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-transparent'
+                                : 'bg-white'
+                        }`}
+                    >
+                        Unpublished
+                    </button>
+                    <button 
+                        onClick={() => setIsModalOpen(true)}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                    >
+                        <Plus className="w-5 h-5" />
+                        <span className="font-medium">Add New Course</span>
+                    </button>
                 </div>
             </div>
+
+            {/* Header
+            <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold text-gray-900">Course Management</h2>
+                
+            </div> */}
+
+            {/* Course List */}
+            <div className="space-y-3">
+                {filteredCourses.map((course) => (
+                    <div
+                        key={course.id_course}
+                        className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden"
+                    >
+                        {/* Course Header */}
+                        <div className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors">
+                            <div className="flex items-center gap-3 flex-1">
+                                {/* Expand/Collapse Button */}
+                                <button
+                                    onClick={() => toggleCourse(course.id_course)}
+                                    className="p-1 hover:bg-gray-200 rounded transition-colors"
+                                >
+                                    {expandedCourse === course.id_course ? (
+                                        <ChevronDown className="w-5 h-5 text-gray-600" />
+                                    ) : (
+                                        <ChevronRight className="w-5 h-5 text-gray-600" />
+                                    )}
+                                </button>
+
+                                {/* Course Icon */}
+                                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                    <FileText className="w-5 h-5 text-blue-600" />
+                                </div>
+
+                                {/* Course Title */}
+                                <h3 className="text-base font-semibold text-gray-900">
+                                    {course.course_title}
+                                </h3>
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex items-center gap-3">
+                                {/* Status */}
+                                <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${
+                                    course.publish_date
+                                        ? 'bg-green-50 text-green-700 border border-green-200'
+                                        : 'bg-gray-100 text-gray-600 border border-gray-300'
+                                }`}>
+                                    {course.publish_date ? (
+                                        <>
+                                            <Globe className="w-4 h-4" />
+                                            <span>Published</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <GlobeLock className="w-4 h-4" />
+                                            <span>Unpublished</span>
+                                        </>
+                                    )}
+                                </div>
+
+                                {/* Content Button */}
+                                <button 
+                                    onClick={() => onAddContent && onAddContent(course.id_course)}
+                                    className="flex items-center gap-2 px-3 py-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-blue-200"
+                                >
+                                    <FileText className="w-4 h-4" />
+                                    <span className="text-sm font-medium">Content</span>
+                                </button>
+
+                                {/* Delete Button */}
+                                <button 
+                                    onClick={() => handleDelete && handleDelete(course.id_course)}
+                                    className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Expanded Content List */}
+                        {expandedCourse === course.id_course && course.contents && course.contents.length > 0 && (
+                            <div className="border-t border-gray-100 bg-gray-50">
+                                {course.contents.map((content, index) => (
+                                    <div
+                                        key={content.id_course_content}
+                                        className={`flex items-center justify-between px-4 py-3 hover:bg-white transition-colors ${
+                                            index !== course.contents.length - 1 ? 'border-b border-gray-100' : ''
+                                        }`}
+                                    >
+                                        <div className="flex items-center gap-3 flex-1">
+                                            {/* Drag Handle */}
+                                            <div className="flex items-center justify-center w-6 h-6 text-gray-400 cursor-move">
+                                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                                    <circle cx="8" cy="6" r="1.5"/>
+                                                    <circle cx="8" cy="12" r="1.5"/>
+                                                    <circle cx="8" cy="18" r="1.5"/>
+                                                    <circle cx="16" cy="6" r="1.5"/>
+                                                    <circle cx="16" cy="12" r="1.5"/>
+                                                    <circle cx="16" cy="18" r="1.5"/>
+                                                </svg>
+                                            </div>
+
+                                            {/* Content Icon & Title */}
+                                            <div className={`flex items-center justify-center w-8 h-8 rounded ${getContentColor(content.content_type_name)}`}>
+                                                {getContentIcon(content.content_type_name)}
+                                            </div>
+
+                                            <span className="text-sm text-gray-700">{content.content_type_name}</span>
+                                        </div>
+
+                                        {/* Content Actions */}
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={() => onEditContent(course.id_course, content.id_course_content,content.id_content_type)}
+                                                className="p-1.5 text-gray-500 hover:bg-gray-200 rounded transition-colors">
+                                                <Edit className="w-4 h-4" />
+                                            </button>
+                                            <button className="p-1.5 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded transition-colors">
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Empty State */}
+                        {expandedCourse === course.id_course && (!course.contents || course.contents.length === 0) && (
+                            <div className="border-t border-gray-100 bg-gray-50 px-4 py-8 text-center">
+                                <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-3">
+                                    <FileText className="w-6 h-6 text-gray-400" />
+                                </div>
+                                <p className="text-sm text-gray-600 mb-3">No content added yet</p>
+                                <button 
+                                    onClick={() => onAddContent && onAddContent(course.id_course)}
+                                    className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+                                >
+                                    Add Content
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                ))}
+
+                {/* Empty State - No Results */}
+                {filteredCourses.length === 0 && (
+                    <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
+                        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <FileText className="w-8 h-8 text-gray-400" />
+                        </div>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">No courses found</h3>
+                        <p className="text-gray-600 mb-4">Try adjusting your search or filter criteria</p>
+                        {searchTerm && (
+                            <button
+                                onClick={() => setSearchTerm('')}
+                                className="text-blue-600 hover:text-blue-700 font-medium"
+                            >
+                                Clear search
+                            </button>
+                        )}
+                    </div>
+                )}
+            </div>
+
             {/* Modal for Adding New Course */}
-            
             {isModalOpen && (
-                <div className="absolute top-0 left-0 w-full h-full bg-black bg-opacity-50 flex items-center justify-center" >
-                    <div className="rounded-xl border border-gray-200 bg-white shadow-xl w-full max-w-4xl">
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
                         {/* Header */}
-                        <div className="flex items-center gap-2 rounded-t-xl border-b bg-gradient-to-b from-gray-50 to-white px-4 py-3">
-                        {/* plus icon */}
-                            <CirclePlus className="h-6 w-6 text-green-600" />
-                            <h3 className="text-base font-semibold text-gray-900">Add New Course</h3>
+                        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                            <h3 className="text-xl font-semibold text-gray-900">Add New Course</h3>
+                            <button 
+                                onClick={handleCancel}
+                                className="text-gray-400 hover:text-gray-600 transition-colors"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
                         </div>
 
                         {/* Body */}
-                        <div className="space-y-4 px-6 py-5 relative">
-                            <div className="flex items-center gap-6">
-                                <label className="block text-sm font-medium text-gray-700 w-40">Course Name</label>
+                        <div className="p-6 space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Course Name <span className="text-red-500">*</span>
+                                </label>
                                 <input
                                     type="text"
                                     value={courseName}
                                     onChange={(e) => setCourseName(e.target.value)}
-                                    className="flex-1 rounded-md border border-gray-300 px-12 py-2 text-gray-900
+                                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg
                                             focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-                                    placeholder="Type course name..."
+                                    placeholder="Enter course name..."
+                                    autoFocus
                                 />
                             </div>
-                        {/* Actions */}
-                            <div className="flex items-center justify-center gap-6 pt-2">
-                                <button
-                                onClick={handleSave}
-                                className="rounded-full bg-green-600 px-6 py-1.5 text-sm font-semibold text-white
-                                            shadow hover:bg-green-700"
-                                >
-                                Save
-                                </button>
-                                <button
-                                onClick={() => { handleCancel?.(); setCourseName(""); }}
-                                className="rounded-full bg-red-600 px-6 py-1.5 text-sm font-semibold text-white
-                                            shadow hover:bg-red-700"
-                                >
+                        </div>
+
+                        {/* Footer */}
+                        <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 bg-gray-50 rounded-b-lg">
+                            <button
+                                onClick={handleCancel}
+                                className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg
+                                        hover:bg-gray-50 transition-colors font-medium"
+                            >
                                 Cancel
-                                </button>
-                            </div>
+                            </button>
+                            <button
+                                onClick={handleSave}
+                                disabled={!courseName.trim()}
+                                className="px-4 py-2 bg-blue-600 text-white rounded-lg
+                                        hover:bg-blue-700 transition-colors font-medium
+                                        disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Save Course
+                            </button>
                         </div>
                     </div>
                 </div>
