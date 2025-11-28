@@ -59,6 +59,17 @@
 
     --radius: 0.5rem
   }
+
+  .no-seek::-webkit-media-controls-timeline {
+  pointer-events: none;
+}
+
+.no-seek::-webkit-media-controls-seek-back-button,
+.no-seek::-webkit-media-controls-seek-forward-button,
+.no-seek::-webkit-media-controls-fast-forward-button,
+.no-seek::-webkit-media-controls-rewind-button {
+  display: none;
+}
   .dark {
 
     --background: 0 0% 3.9%;

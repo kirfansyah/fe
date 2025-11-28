@@ -1,18 +1,93 @@
 "use client";
+import { useRef, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
+
 const ReactPlayer = dynamic(() => import("react-player"), { ssr: false });
 
-export default function VideoPlayer({ url }) {
+export default function VideoPlayer({ url, videoId }) {
   const isLocal = url.endsWith(".mp4");
+  const videoRef = useRef(null);
 
-  return isLocal ? (
-    <video
-      src={url}
-      controls
-      controlsList="nodownload"
-      className="w-full aspect-video rounded-xl bg-black"
-    />
-  ) : (
-    <ReactPlayer url={url} width="100%" height="100%" controls />
+  const [lastTime, setLastTime] = useState(0);
+
+  // Load progress on first mount
+  useEffect(() => {
+    const saved = localStorage.getItem(`video-progress-${videoId}`);
+    if (saved) setLastTime(parseFloat(saved));
+  }, [videoId]);
+
+  // --- Anti Skip + Save Progress ---
+  useEffect(() => {
+    if (!isLocal || !videoRef.current) return;
+
+    const video = videoRef.current;
+
+    // Di-set start time setelah video siap
+    video.onloadedmetadata = () => {
+      video.currentTime = lastTime;
+      video.playbackRate = 1;
+    };
+
+    const preventSeek = () => {
+      // save time always
+      localStorage.setItem(`video-progress-${videoId}`, video.currentTime);
+
+      // If user tries skipping forward
+      if (video.currentTime > lastTime + 1) {
+        video.currentTime = lastTime;
+      } else {
+        setLastTime(video.currentTime);
+      }
+
+      // lock speed
+      video.playbackRate = 1;
+    };
+
+    video.addEventListener("timeupdate", preventSeek);
+
+    return () => video.removeEventListener("timeupdate", preventSeek);
+  }, [isLocal, lastTime, videoId]);
+
+  // Play / pause custom button
+  const togglePlayPause = () => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.paused ? video.play() : video.pause();
+  };
+
+  return (
+    <div className="relative w-full aspect-video rounded-xl bg-black overflow-hidden">
+      {/* LOCAL VIDEO (NO SKIP) */}
+      {isLocal && (
+        <video
+          ref={videoRef}
+          src={url}
+          className="w-full h-full"
+          controls={false}
+          disablePictureInPicture
+        />
+      )}
+
+      {/* ONLINE VIDEO FALLBACK */}
+      {!isLocal && (
+        <ReactPlayer
+          url={url}
+          width="100%"
+          height="100%"
+          controls={false}
+          playing
+        />
+      )}
+
+      {/* Custom control button */}
+      <div className="absolute bottom-3 left-0 right-0 flex justify-center">
+        <button
+          onClick={togglePlayPause}
+          className="bg-black/70 text-white px-4 py-2 rounded-lg"
+        >
+          Play / Pause
+        </button>
+      </div>
+    </div>
   );
 }

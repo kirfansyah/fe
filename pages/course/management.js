@@ -1,3 +1,4 @@
+"use client";
 import { useState,useContext } from "react";
 import Admin from "layouts/Admin.js";
 import CoursesListView from "../../components/Course/Course";

@@ -1,4 +1,5 @@
-import API from "contexts/api";
+// import API from "contexts/api";
+import API from "./api";
 
 class EmployeesService {
   /**
@@ -13,9 +14,9 @@ class EmployeesService {
           search ? `&search=${encodeURIComponent(search)}` : ""
         }`,
         {
-          headers: {
-            Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_TOKEN}`,
-          },
+          //   headers: {
+          //     Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_TOKEN}`,
+          //   },
           validateStatus: (status) => status >= 200 && status < 500,
         }
       );
@@ -29,10 +30,12 @@ class EmployeesService {
           pagination: { totalCount: 0 },
         };
       }
+      console.log("✅ EmployeesService.getAllData response.data:", response);
 
       return {
         success: response.data.success,
         data: response.data.data || [],
+        result: response.data || [],
         message: response.data.message,
         pagination: response.data.pagination,
       };
@@ -51,9 +54,9 @@ class EmployeesService {
   static async getCourseContent(id) {
     try {
       const response = await API.get(`/learner/course/content/${id}`, {
-        headers: {
-          Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_TOKEN}`,
-        },
+        // headers: {
+        //   Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_TOKEN}`,
+        // },
         validateStatus: (status) => status >= 200 && status < 500,
       });
 
@@ -93,9 +96,9 @@ class EmployeesService {
   static async getCourseDetail(id) {
     try {
       const response = await API.get(`/learner/course/content/detail/${id}`, {
-        headers: {
-          Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_TOKEN}`,
-        },
+        // headers: {
+        //   Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_TOKEN}`,
+        // },
         validateStatus: (status) => status >= 200 && status < 500,
       });
 
@@ -138,9 +141,9 @@ class EmployeesService {
         "/learner/course/content/complete",
         courseData,
         {
-          headers: {
-            Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_TOKEN}`,
-          },
+          //   headers: {
+          //     Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_TOKEN}`,
+          //   },
           validateStatus: (status) => status >= 200 && status < 500,
         }
       );
@@ -158,9 +161,9 @@ class EmployeesService {
   static async sendAnswers(answers) {
     try {
       const response = await API.post("/learner/course/assessment", answers, {
-        headers: {
-          Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_TOKEN}`,
-        },
+        // headers: {
+        //   Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_TOKEN}`,
+        // },
         validateStatus: (status) => status >= 200 && status < 500,
       });
 
@@ -177,9 +180,9 @@ class EmployeesService {
   static async sendEnrollment(data) {
     try {
       const response = await API.post("/learner/course/enrollment", data, {
-        headers: {
-          Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_TOKEN}`,
-        },
+        // headers: {
+        //   Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_TOKEN}`,
+        // },
         validateStatus: (status) => status >= 200 && status < 500,
       });
 
@@ -196,9 +199,9 @@ class EmployeesService {
   static async sendFeedback(data) {
     try {
       const response = await API.post("/learner/course/review", data, {
-        headers: {
-          Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_TOKEN}`,
-        },
+        // headers: {
+        //   Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_TOKEN}`,
+        // },
         validateStatus: (status) => status >= 200 && status < 500,
       });
 

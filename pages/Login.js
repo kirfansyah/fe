@@ -1,4 +1,3 @@
-
 import { useState, useContext, React } from "react";
 import { AuthContext } from "../contexts/AuthContext";
 import Auth from "../layouts/Auth";
@@ -15,17 +14,10 @@ const Login = () => {
   const { stateLanguage } = useContext(LanguageContext);
   const { listLanguage } = stateLanguage;
 
-  function handleChange(event) {
-    // const valPassword = event.target.value;
-    // setPassword(valPassword);
-
-    // if (valPassword.length < 8) {
-    //   isError = true;
-    // } else {
-    //   isError = false;
-    // }
-    // validatePassword(isError);
-  }
+  const handleSubmit = (e) => {
+    e.preventDefault(); // supaya tidak reload
+    Login({ username, password }); // trigger login
+  };
 
   return (
     <Auth>
@@ -33,70 +25,91 @@ const Login = () => {
         <div className="flex content-center items-center justify-center h-full">
           <div className="w-full xl:w-4/12 lg:w-5/12 md:w-6/12 px-4">
             <div className="relative border-1 flex flex-col min-w-0 break-words w-full mb-6 shadow-lg rounded-lg bg-slate-200 glass">
-
-              <div className="flex-auto px-4 pt-0  mt-5">
-                <div className="text-blueGray-400 mb-3 font-bold">
-                </div>
-                <div className='flex flex-col mb-2 py-2'>
-                  <label className='text-gray-600 text-left text-base font-normal mb-0'>
+              {/* FORM START */}
+              <form
+                onSubmit={handleSubmit}
+                className="flex-auto px-4 pt-0 mt-5"
+              >
+                <div className="flex flex-col mb-2 py-2">
+                  <label className="text-gray-600 text-left text-base font-normal mb-0">
                     {listLanguage.username}*
                   </label>
                   <input
-                    className='px-3 py-2 placeholder-slate-400 text-black border border-gray-300 bg-white rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full ease-linear transition-all duration-150'
-                    name='username'
-                    type='username'
+                    className="px-3 py-2 placeholder-slate-400 text-black border border-gray-300 bg-white rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full ease-linear transition-all duration-150"
+                    name="username"
+                    type="text"
                     placeholder={listLanguage.username_placeholder}
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                   />
                 </div>
-                <div className='flex flex-col mb-2 py-2 px-0'>
-                  <label className='text-gray-600 text-left text-base font-normal mb-0'>
+
+                <div className="flex flex-col mb-2 py-2 px-0">
+                  <label className="text-gray-600 text-left text-base font-normal mb-0">
                     {listLanguage.password}*
                   </label>
-                  <div className='relative flex justify-end items-center w-full'>
+
+                  <div className="relative flex justify-end items-center w-full">
                     <input
-                      className='px-3 py-2 placeholder-slate-400 text-black border border-gray-300 bg-white rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full ease-linear transition-all duration-150'
+                      className="px-3 py-2 placeholder-slate-400 text-black border border-gray-300 bg-white rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full ease-linear transition-all duration-150"
                       type={showPassword ? "text" : "password"}
-                      name='password'
+                      name="password"
                       value={password}
                       placeholder={listLanguage.password_placeholder}
-                       onChange={(e) => setPassword(e.target.value)}
+                      onChange={(e) => setPassword(e.target.value)}
                     />
+
                     <button
-                      className={isError ? 'absolute text-red-600 p-2 mr-2 outline-none border-none focus:border-none' : 'absolute text-gray-600 p-2 mr-2 outline-none border-none  focus:border-none'}
-                      onClick={() => setShowPassword(!showPassword)}>
+                      type="button"
+                      className={`absolute p-2 mr-2 outline-none border-none ${
+                        isError ? "text-red-600" : "text-gray-600"
+                      }`}
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
                       {showPassword ? (
-                        <FaEyeSlash className='w-6 h-6' />
+                        <FaEyeSlash className="w-6 h-6" />
                       ) : (
-                        <FaEye className='w-6 h-6' />
+                        <FaEye className="w-6 h-6" />
                       )}
                     </button>
                   </div>
 
-                  {isError ? (<label className='text-red-600 text-xs font-thin mb-0'>{listLanguage.password_to_short}</label>) : (<label className='text-gray-600 text-base font-small mb-0'></label>)}
-                </div>
-                <div className='flex flex-col mb-2 py-2'>
-                  <p className='text-blue-800 font-bold'><Link href='/forgot_password'>{listLanguage.forgot_password}</Link> ?</p>
+                  {isError ? (
+                    <label className="text-red-600 text-xs font-thin mb-0">
+                      {listLanguage.password_to_short}
+                    </label>
+                  ) : (
+                    <label className="text-gray-600 text-base font-small mb-0"></label>
+                  )}
                 </div>
 
+                <div className="flex flex-col mb-2 py-2">
+                  <p className="text-blue-800 font-bold">
+                    <Link href="/forgot_password">
+                      {listLanguage.forgot_password}
+                    </Link>{" "}
+                    ?
+                  </p>
+                </div>
+
+                {/* BUTTON SUBMIT */}
                 <button
-                  disabled={
-                    !username || !password || stateAuth.isLoading ? true : false
-                  }
-                  className={`bg-blue-900 text-white active:bg-blueGray-600 text-sm font-bold uppercase px-6 py-3 rounded-full shadow mr-1 mb-1 w-full ease-linear transition-all disabled:bg-gray-500 ${stateAuth.isLoading ? "animate-pulse " : ""
-                    }`}
-                  onClick={() => Login({ username, password })}>
-                  {stateAuth.isLoading
-                    ? "Loading..."
-                    : `${listLanguage.sign_in}`}
+                  type="submit"
+                  disabled={!username || !password || stateAuth.isLoading}
+                  className={`bg-blue-900 text-white active:bg-blueGray-600 text-sm font-bold uppercase px-6 py-3 rounded-full shadow mr-1 mb-1 w-full ease-linear transition-all disabled:bg-gray-500 ${
+                    stateAuth.isLoading ? "animate-pulse " : ""
+                  }`}
+                >
+                  {stateAuth.isLoading ? "Loading..." : listLanguage.sign_in}
                 </button>
-              </div>
+              </form>
+              {/* FORM END */}
             </div>
           </div>
         </div>
       </div>
-      </Auth>
+    </Auth>
   );
-}
+};
+
 export default Login;
