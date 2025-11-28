@@ -12,13 +12,6 @@ export default async function handler(req, res) {
   //   console.log("🧩 Method:", req.method);
   //   console.log("📦 Body:", req.body);
 
-  // 👉 Ambil cookie token dari header (server-side)
-  let token = null;
-  if (req.headers.cookie) {
-    const match = req.headers.cookie.match(/(?:^|;\s*)token=([^;]+)/);
-    token = match ? match[1] : null;
-  }
-
   console.log("🔑 Token from cookie:", token);
 
   // 👉 Ambil cookie token dari header (server-side)
