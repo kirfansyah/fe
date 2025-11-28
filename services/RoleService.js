@@ -28,7 +28,7 @@ class RoleService {
     */
     static async getRoleById(roleId) {
         try {
-            const response = await API.get(`/roles/${roleId}`); 
+            const response = await API.get(`/roles/${roleId}/menus`); 
             return {
                 success: response.data.success,
                 data: response.data.data || null,
@@ -78,6 +78,25 @@ class RoleService {
         }
     }
 
+    /**
+     * Update existing course content
+     * @param {Object} rolesData - Course content data
+     * @returns {Promise} API response
+     */
+    static async updateRolesConfig(rolesData) {
+        try {
+            const response = await API.put("roles/menus/update", rolesData);
+            return {
+                success: response.data.success,
+                data: response.data.data,
+                message: response.data.message
+            };
+        } catch (error) {
+            console.error('RoleService.updateRoles Error:', error);
+            throw new Error(error.response?.data?.message || 'Failed to update roles');
+        }
+    }
+
      /**
      * Get all menu
      * @returns {Promise} API response
@@ -95,6 +114,25 @@ class RoleService {
         } catch (error) {
             console.error('RoleService.getAllMenus Error:', error);
             throw new Error(error.response?.data?.message || 'Failed to fetch courses');
+        }
+    }
+
+    /**
+     * Create new menus
+     * @param {Object} menusData - Course data
+     * @returns {Promise} API response
+     */
+    static async createMenus(menusData) {
+        try {
+            const response = await API.post("menus", menusData);
+            return {
+                success: response.data.success,
+                data: response.data.data,
+                message: response.data.message
+            };
+        } catch (error) {
+            console.error('RoleService.createMenus Error:', error);
+            throw new Error(error.response?.data?.message || 'Failed to create roles');
         }
     }
 

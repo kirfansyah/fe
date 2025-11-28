@@ -1,10 +1,8 @@
 import { useState, useEffect, useCallback, use} from "react";
 import API from '../services/RoleService';
 
-export function useRoles(contentId = null){
+export function useRoles(){
     const [roles, setRoles] = useState([]);
-    const [rolesData, setRolesData] = useState(null);
-
     const [menus, setMenus] = useState([]);
     const [menuData, setMenuData] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -54,7 +52,7 @@ export function useRoles(contentId = null){
         setError(null);
         try {
             const res = await API.getRoleById(roleId);
-            setRolesData(res.data);    
+            return res
         } catch (err) {
             setError(err.message || 'Failed to fetch roles');
             console.error('Error fetching roles:', err);
@@ -79,6 +77,43 @@ export function useRoles(contentId = null){
         }
     }, []);
 
+    // save data roles
+    const handleCreateMenus = useCallback(async (menusData) => {    
+        setLoading(true);
+        setError(null);
+        
+        try {
+            let response;
+            if (menusData.id_menu) {
+                response = await API.updateRoles(menusData);
+            } else {
+                response = await API.createMenus(menusData);
+            }
+            await fetchMenus();
+            return response;
+        } catch (err) {
+            setError(err.message);
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    }, [fetchMenus]);
+
+    const handleUpdateRolePermissions = useCallback(async (permissionsData) => {
+        setLoading(true);
+        setError(null);
+        try {
+            const response = await API.updateRolesConfig(permissionsData);
+            await fetchRoles();
+            return response;
+        } catch (err) {
+            setError(err.message);
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    }, [fetchRoles]);
+
 
     useEffect(() => {
         Promise.all([fetchRoles(), fetchMenus()]);
@@ -87,12 +122,13 @@ export function useRoles(contentId = null){
   return {
     roles, 
     menus,
-    rolesData,
     loading, 
     error,           
     fetchRoles, 
     handleCreateRoles,
     fetchRoleByID,
-    fetchMenus
+    fetchMenus,
+    handleCreateMenus,
+    handleUpdateRolePermissions,
   };
 }
