@@ -9,6 +9,7 @@ export function useEmployees() {
         return {
           data: result.data || [],
           pagination: result.pagination || 0,
+          result: result || [],
         };
       } catch (err) {
         console.error("❌ fetchEmployees error:", err);
