@@ -7,7 +7,7 @@ import { useCourses } from "../../hooks/useCourses";
 import { ChevronRight, BookOpen, Users, Home } from 'lucide-react';
 import { useRouter } from "next/router";
 import { ProfileContext } from "../../contexts/profile/ProfileContext";
-export default function ModernManagement() {
+export default function Management() {
     const [activeTab, setActiveTab] = useState('courses-list');
     const [currentPage, setCurrentPage] = useState('main');
     const [selectedCourseId, setSelectedCourseId]= useState('');
@@ -152,13 +152,6 @@ export default function ModernManagement() {
             contentId={null}
         />
     );
-
-  const AddContentPage = () => (
-    <ContentAdditionView
-      onBack={() => setCurrentPage("main")}
-      contentTypes={contentTypes}
-    />
-  );
 
   return (
     <div>

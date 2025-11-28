@@ -35,7 +35,7 @@ export default function EnrollmentFormModal({
                            enrollment.id_enrollment_type === 2 ? 'Specific' : '');
     const statusCourse = enrollment.course_status_name || 
                        (enrollment.id_course_status === 1 ? 'Mandatory' : 
-                        enrollment.id_course_status === 2 ? 'Recommended' : '');
+                        enrollment.id_course_status === 2 ? 'Non Mandatory' : '');
     const publishDate = enrollment.publish_date ? 
                       new Date(enrollment.publish_date).toISOString().split('T')[0] : '';
     const endDate = enrollment.end_date ? 
@@ -357,15 +357,15 @@ export default function EnrollmentFormModal({
                                     </button>
                                     <button
                                         type="button"
-                                        onClick={() => !isReadOnly && onUpdateField(courseId, enrollmentIndex, 'course_status_name', 'Recommended')}
+                                        onClick={() => !isReadOnly && onUpdateField(courseId, enrollmentIndex, 'course_status_name', 'Non Mandatory')}
                                         disabled={isReadOnly}
                                         className={`p-4 rounded-xl border-2 transition-all ${
-                                            statusCourse === 'Recommended'
+                                            statusCourse === 'Non Mandatory'
                                                 ? 'border-green-500 bg-green-50'
                                                 : 'border-gray-200 hover:border-gray-300'
                                         } ${isReadOnly ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
                                     >
-                                        <div className="font-bold text-gray-900 mb-1">Recommended</div>
+                                        <div className="font-bold text-gray-900 mb-1">Non Mandatory</div>
                                         <div className="text-xs text-gray-600">Not required</div>
                                     </button>
                                 </div>

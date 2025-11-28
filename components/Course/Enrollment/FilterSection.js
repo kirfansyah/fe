@@ -63,14 +63,14 @@ export default function FilterSection({
                         Search Courses
                     </label>
                     <div className="relative">
-                        <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                         <input
                             id="search-courses"
                             type="text"
                             placeholder="Search by course title, description..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-12 pr-12 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
                         {searchQuery && (
                             <button
@@ -107,11 +107,6 @@ export default function FilterSection({
                                 <option value="enrolled">Has Enrollments</option>
                                 <option value="not-enrolled">No Enrollments</option>
                             </select>
-                            <div className="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                </svg>
-                            </div>
                         </div>
                     </div>
 
@@ -135,17 +130,12 @@ export default function FilterSection({
                                     </option>
                                 ))}
                             </select>
-                            <div className="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                </svg>
-                            </div>
                         </div>
                     </div>
                 </div>
 
                 {/* Results Summary Bar */}
-                <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                <div className="flex items-center justify-between pt-4">
                     <div className="flex items-center gap-2">
                         <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
                         <p className="text-sm text-gray-600">
