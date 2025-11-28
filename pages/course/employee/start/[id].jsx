@@ -8,10 +8,12 @@ import CourseProvider from "@/contexts/CourseContext";
 export default function StartCoursePage() {
   const router = useRouter();
   const { id } = router.query;
+  const exitCourse = `/course/employee/detail/`;
+  const mainCourse = `/course/employee/course/`;
   if (!id) return <div>Loading course...</div>;
   return (
     <CourseProvider courseId={id}>
-      <CoursePlayer />
+      <CoursePlayer exitCourse={exitCourse} mainCourse={mainCourse} />
     </CourseProvider>
   );
 }

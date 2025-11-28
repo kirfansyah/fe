@@ -64,9 +64,13 @@ class ManagementService {
      * @param {Object} courseData - Course data
      * @returns {Promise} API response
      */
-    static async createCourse(courseData) {
+    static async createCourse(formData) {
         try {
-            const response = await API.post("course", courseData);
+            const response = await API.post("/trainer/course", formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
             return {
                 success: response.data.success,
                 data: response.data.data,
@@ -111,7 +115,7 @@ class ManagementService {
      */
     static async savePreTest(pretestData) {
         try {
-            const response = await API.post("course/content", pretestData);
+            const response = await API.post("trainer/course/content", pretestData);
             return {
                 success: response.data.success,
                 data: response.data.data,
@@ -130,7 +134,7 @@ class ManagementService {
      */
     static async updatePreTest(contentId, pretestData) {
         try {
-            const response = await API.put("course/content", pretestData);
+            const response = await API.put("trainer/course/content", pretestData);
             return {
                 success: response.data.success,
                 data: response.data.data,
@@ -148,7 +152,7 @@ class ManagementService {
     */
     static async getContentById(contentId) {
         try {
-            const response = await API.get(`/course/content/${contentId}`); 
+            const response = await API.get(`trainer/course/content/${contentId}`); 
             return {
                 success: response.data.success,
                 data: response.data.data || null,
@@ -170,6 +174,8 @@ class ManagementService {
             const formData = new FormData();
             formData.append('File', fileData.file);
             formData.append('FolderType', ManagementService.getFolderTypeByContentType(fileData.contentTypeId));
+            formData.append('idCourse', fileData.courseId);
+            formData.append('Section', fileData.section);
             const response = await API.post("/course/content/upload-file", formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data'
@@ -218,7 +224,27 @@ class ManagementService {
                 message: response.data.message
             };
         } catch (error) {
-            throw new Error(error.response?.data?.message || 'Failed to create Pre Test');
+            console.error('ManagementService.saveEnrollCourse Error:', error);
+            throw new Error(error.response?.data?.message || 'Failed to save enroll course');
+        }
+    }
+
+    /**
+     * Update Enroll Data
+     * @param {Object} enrollData - Course data
+     * @returns {Promise} API response
+     */
+    static async updateEnrollCourse(enrollData) {
+        try {
+            const response = await API.put("trainer/course/enrollment/update", enrollData);
+            return {
+                success: response.data.success,
+                data: response.data.data,
+                message: response.data.message
+            };
+        } catch (error) {
+            console.error('ManagementService.updateEnrollCourse Error:', error);
+            throw new Error(error.response?.data?.message || 'Failed to save enroll course');
         }
     }
 
@@ -284,6 +310,51 @@ class ManagementService {
         } catch (error) {
             console.error('ManagementService.getProfileInfo Error:', error);
             throw new Error(error.response?.data?.message || 'Failed to fetch profile info');
+        }
+    }
+
+    /**
+     * get Company Units
+     * @returns {Promise} API response
+     * /
+     */
+    static async getCompanyUnits() {
+        try {
+            const response = await API.get("/master/company");
+            return {
+                success: response.data.success,
+                data: response.data.data || [],
+                message: response.data.message
+            };
+        } catch (error) {
+            console.error('ManagementService.getCompanyUnits Error:', error);
+            throw new Error(error.response?.data?.message || 'Failed to fetch company units');
+        }
+    }
+
+    /**
+     * Get enrollment 
+     * @returns {Promise} API response
+     * /
+    */
+    static async getEnrollments(page = 1, pageSize = 10){
+        try {
+            const response = await API.get("/trainer/course/enrollment", {
+                params: {
+                    page,
+                    limit : pageSize
+                }
+            });
+            return {
+                success: response.data.success,
+                data: response.data.data || [],
+                message: response.data.message,
+                pagination: response.data.pagination
+            };
+        }
+        catch (error) {
+            console.error('ManagementService.getEnrollments Error:', error);
+            throw new Error(error.response?.data?.message || 'Failed to fetch enrollments');
         }
     }
 

@@ -1,5 +1,5 @@
 "use client";
-import { useContext, useState, useEffect } from "react";
+import { useContext, useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import {
   AlertDialog,
@@ -20,6 +20,8 @@ import PdfViewer from "@/components/Course/PdfViewer";
 import PptViewer from "@/components/Course/PptViewer";
 import dynamic from "next/dynamic";
 import { useEmployees } from "@/hooks/useEmployees";
+import { useRouter } from "next/navigation";
+// import VideoPlayer from "@/components/VideoPlayer";
 
 const VideoPlayer = dynamic(() => import("@/components/Course/VideoPlayer"), {
   ssr: false,
@@ -31,25 +33,58 @@ export default function ContentArea() {
   const { flow, currentStep, answers, courseData } = state;
   const { completeCourse, sendAswers } = useEmployees();
 
-  const allSteps = Object.values(flow)
-    .flat()
-    .map((s) => {
-      let type = "text"; // default
+  const orderedKeys = [
+    "courseGuide",
+    "courseOutline",
+    "preTest",
+    "courseContent",
+    "postTest",
+  ];
 
-      if (s.content_url) {
-        if (s.content_url.endsWith(".mp4")) type = "video";
-        else if (s.content_url.endsWith(".pdf")) type = "pdf";
-        else if (s.content_url.endsWith(".pptx")) type = "pptx";
-      } else if (s.questions) {
-        type = "quiz";
-      }
+  const allSteps = Object.entries(flow)
+    .sort(
+      (a, b) => orderedKeys.indexOf(a[0]) - orderedKeys.indexOf(b[0]) // urut berdasarkan orderedKeys
+    )
+    .flatMap(([key, items]) =>
+      items.map((s) => {
+        let type = "text";
 
-      return {
-        ...s,
-        id: s.id_course_content,
-        type,
-      };
-    });
+        if (s.content_url) {
+          if (s.content_url.endsWith(".mp4")) type = "video";
+          else if (s.content_url.endsWith(".pdf")) type = "pdf";
+          else if (s.content_url.endsWith(".pptx")) type = "pptx";
+        } else if (s.questions) {
+          type = "quiz";
+        }
+
+        return {
+          ...s,
+          id: s.id_course_content,
+          type,
+          section: key, // optional kalau mau track section origin
+        };
+      })
+    );
+
+  //   const allSteps = Object.values(flow)
+  //     .flat()
+  //     .map((s) => {
+  //       let type = "text"; // default
+
+  //       if (s.content_url) {
+  //         if (s.content_url.endsWith(".mp4")) type = "video";
+  //         else if (s.content_url.endsWith(".pdf")) type = "pdf";
+  //         else if (s.content_url.endsWith(".pptx")) type = "pptx";
+  //       } else if (s.questions) {
+  //         type = "quiz";
+  //       }
+
+  //       return {
+  //         ...s,
+  //         id: s.id_course_content,
+  //         type,
+  //       };
+  //     });
   let idx = allSteps.findIndex((s) => s.id === currentStep);
   if (idx === -1) idx = 0;
   const step = allSteps[idx];
@@ -63,12 +98,51 @@ export default function ContentArea() {
   const [pendingStep, setPendingStep] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [contentCompleted, setContentCompleted] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [courseId, setCourseId] = useState(null);
+  const [timeLeft, setTimeLeft] = useState(null);
+  const [autoSubmitting, setAutoSubmitting] = useState(false);
+  const router = useRouter();
+  //   console.log("currentStep: ", courseData);
+  useEffect(() => {
+    if (!step) return;
+
+    if (step.type === "quiz" && !step.is_completed) {
+      const totalTime = (step.questions?.length || 0) * 60;
+      setTimeLeft(totalTime);
+    } else {
+      setTimeLeft(null);
+    }
+  }, [step?.id]);
+
+  // Hitung mundur timer
+  useEffect(() => {
+    if (!step || step.type !== "quiz" || step.is_completed) return;
+    if (timeLeft === null) return;
+
+    const interval = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          handleAutoSubmit();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [step]);
 
   useEffect(() => {
     if (!currentStep && allSteps.length > 0) {
       setStep(allSteps[0].id_course_content);
     }
+    setCourseId(courseData?.id_course);
+    // console.log("courseId useEffect: ", courseId);
   }, [currentStep, allSteps, setStep]);
+
+  //   console.log(courseId);
 
   //   console.log("allSteps: ", allSteps);
   //   console.log("idx: ", idx);
@@ -85,10 +159,38 @@ export default function ContentArea() {
     );
   }
 
+  const handleFinishLogic = async () => {
+    // console.log("User finished course!");
+
+    const navigate = router.push(`/course/employee/detail/${courseId}`);
+
+    if (document.fullscreenElement) {
+      Promise.race([
+        document.exitFullscreen(),
+        new Promise((resolve) => setTimeout(resolve, 200)),
+      ])
+        .then(() => setIsFullscreen(false))
+        .catch((err) => console.warn("Gagal keluar fullscreen:", err));
+    }
+
+    setOpen(false);
+    // console.log("courseId di handleFinishLogic: ", courseId);
+
+    // await navigate;
+  };
+
+  const handleAutoSubmit = async () => {
+    if (autoSubmitting || step.is_completed) return;
+
+    setAutoSubmitting(true);
+    await submitQuiz(); // ⬅️ auto submit seperti Ruangguru
+    setAutoSubmitting(false);
+  };
+
   const handleCompleteContent = async (stepId) => {
     try {
       setIsSubmitting(true);
-      console.log("stepid : ", stepId);
+      //   console.log("stepid : ", stepId);
 
       const payload = {
         id_user_enrollment: courseData.id_user_enrollment,
@@ -210,6 +312,17 @@ export default function ContentArea() {
             />
           </div>
         )}
+
+        {step.type === "quiz" && !step.is_completed && (
+          <div className="p-3 bg-red-50 border border-red-300 rounded text-center text-red-700 font-semibold">
+            ⏱ Waktu Tersisa:{" "}
+            {Math.floor(timeLeft / 60)
+              .toString()
+              .padStart(2, "0")}
+            :{(timeLeft % 60).toString().padStart(2, "0")}
+          </div>
+        )}
+
         {step.type === "quiz" && (
           <Quiz
             questions={step.questions}
@@ -223,8 +336,8 @@ export default function ContentArea() {
               {step.content_title}
             </h2>
             <div className="w-full flex justify-center ">
-              <PdfViewer file={step.content_url} />
-              {/* <PdfViewer file={`/Pecahan.pdf`} /> */}
+              {/* <PdfViewer file={step.content_url} /> */}
+              <PdfViewer file={`/uploads/pdf/komunikasi-efektif.pdf`} />
             </div>
           </div>
         )}
@@ -234,9 +347,16 @@ export default function ContentArea() {
             <h2 className="text-xl font-semibold text-gray-800">
               {step.content_title}
             </h2>
-            <VideoPlayer url={step.content_url || "/videos/default.mp4"} />
-            {/* <VideoPlayer url={`/vidtest.mp4`} /> */}
-            {/* <video src="/vidtest.mp4" controls width="100%" /> */}
+            {/* <VideoPlayer url={step.content_url || "/videos/default.mp4"} /> */}
+            <VideoPlayer
+              url={`/uploads/video/komunikasi-efektif.mp4`}
+              videoId={`${step.id}`}
+            />
+            {/* <video
+              src={`/uploads/video/komunikasi-efektif.mp4`}
+              controls
+              width="100%"
+            /> */}
           </div>
         )}
 
@@ -252,8 +372,8 @@ export default function ContentArea() {
               {/* <PptViewer
                 fileUrl={`https://docs.google.com/presentation/d/1qar5wJ9SEmlBTl-TS3z2GwKldOb4Cjyz/edit?usp=sharing&ouid=107324705590480170219&rtpof=true&sd=true`}
               /> */}
-              {/* <PptViewer fileUrl="https://docs.google.com/presentation/d/1qar5wJ9SEmlBTl-TS3z2GwKldOb4Cjyz/edit?usp=sharing" /> */}
-              <PptViewer fileUrl={step.content_url} />
+              <PptViewer fileUrl="https://docs.google.com/presentation/d/1jsjVVdCjlVd5uAM3e_nlyPVoNUKid07A/edit?usp=sharing" />
+              {/* <PptViewer fileUrl={step.content_url} /> */}
             </div>
           </div>
         )}
@@ -323,14 +443,40 @@ export default function ContentArea() {
           </AlertDialogContent>
         </AlertDialog>
 
+        <AlertDialog open={open} onOpenChange={setOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                Anda akan mengakhiri course ini ?
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                Setelah menekan selesai, progress kamu akan disimpan dan tidak
+                dapat diubah.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="flex-row justify-center gap-2 sm:justify-end">
+              <AlertDialogCancel
+                className="w-2 sm:w-auto"
+                onClick={() => {
+                  setOpen(false);
+                }}
+              >
+                Batal
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleFinishLogic}
+                className="bg-blue-600 text-white hover:bg-blue-700"
+              >
+                Ya, Selesai
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
         {/* Hasil quiz */}
-        {score !== null && (
+        {/* {score !== null && (
           <div className="mt-4 p-4 border rounded-lg bg-blue-50 text-center">
-            {/* <h2 className="text-xl font-bold">Hasil Quiz</h2>
-            <p className="text-lg mt-2">
-              Skor Anda:{" "}
-              <span className="font-bold text-blue-700">{score}</span>%
-            </p> */}
+          
             {nextStep && (
               <Button
                 onClick={() => {
@@ -344,11 +490,11 @@ export default function ContentArea() {
               </Button>
             )}
           </div>
-        )}
+        )} */}
       </CardContent>
 
       <CardFooter className="flex justify-between mt-auto space-x-2">
-        {(step.type === "quiz" && currentQuiz > 0) || prevStep ? (
+        {/* {(step.type === "quiz" && currentQuiz > 0) || prevStep ? (
           <Button
             onClick={handlePrevious}
             variant="outline"
@@ -357,18 +503,21 @@ export default function ContentArea() {
             Previous
           </Button>
         ) : (
-          <div />
+          <></>
         )}
 
-        {step.type !== "quiz" && nextStep && (
-          <Button
-            onClick={handleNext}
-            className="bg-blue-900 text-white"
-            // disabled={step.is_completed}
-          >
+        {step.type !== "quiz" && nextStep ? (
+          <Button onClick={handleNext} className="bg-blue-900 text-white">
             Next: {nextStep.content_title}
           </Button>
-        )}
+        ) : step.section === "postTest" ? (
+          <Button
+            onClick={() => setOpen(true)}
+            className="bg-blue-900 text-white"
+          >
+            Selesai
+          </Button>
+        ) : null}
 
         {step.type === "quiz" && !showConfirm && (
           <>
@@ -394,6 +543,64 @@ export default function ContentArea() {
                 </Button>
               )
             )}
+          </>
+        )} */}
+
+        {/* ===== PREVIOUS BUTTON ===== */}
+        {((step.type === "quiz" && currentQuiz > 0) || prevStep) && (
+          <Button
+            onClick={handlePrevious}
+            variant="outline"
+            className="bg-gray-200 text-gray-800"
+          >
+            Previous
+          </Button>
+        )}
+
+        {/* ===== NEXT / SUBMIT / FINISH LOGIC ===== */}
+        {step.type !== "quiz" ? (
+          // ===================== Non-Quiz Content =====================
+          nextStep ? (
+            <Button onClick={handleNext} className="bg-blue-900 text-white">
+              Next: {nextStep.content_title}
+            </Button>
+          ) : step.section === "postTest" && step.is_completed ? (
+            <Button
+              onClick={() => setOpen(true)}
+              className="bg-blue-900 text-white"
+            >
+              Selesai
+            </Button>
+          ) : null
+        ) : (
+          // ===================== Quiz Content =====================
+          <>
+            {score === null && !step.is_completed ? (
+              <Button
+                onClick={() => setShowConfirm(true)}
+                className="bg-blue-900 text-white"
+              >
+                Submit Quiz
+              </Button>
+            ) : nextStep ? (
+              <Button
+                onClick={() => {
+                  goNext(currentStep, nextStep.id_course_content);
+                  setScore(null);
+                  setCurrentQuiz(0);
+                }}
+                className="bg-blue-900 text-white"
+              >
+                Next: {nextStep.content_title}
+              </Button>
+            ) : step.section === "postTest" && step.is_completed ? (
+              <Button
+                onClick={() => setOpen(true)}
+                className="bg-blue-900 text-white"
+              >
+                Selesai
+              </Button>
+            ) : null}
           </>
         )}
       </CardFooter>

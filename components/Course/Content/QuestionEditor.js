@@ -2,6 +2,7 @@ import React from 'react';
 import dynamic from "next/dynamic";
 import { CustomSelect } from './CustomSelect';
 import { ANSWER_KEYS, POINTS } from './constants';
+import { AlertCircle } from 'lucide-react';
 
 const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });
 
@@ -13,154 +14,150 @@ export const QuestionEditor = ({
     quillFormats,
     autoCalculatedPoints,
     pointDistribution,
-    pointsRemaining,
-    isEditMode = false, // ✅ Tambahkan prop ini
+    isEditMode = false,
     onQuestionChange,
     onOptionChange,
     onAnswerKeyChange,
     onPointsChange
 }) => {
-    // ✅ Generate points options yang smart untuk Equal Distribution
     const getPointsOptions = () => {
         if (pointDistribution === 'Equal Distribution') {
             if (!autoCalculatedPoints) {
                 return [];
             }
             
-            // ✅ Di edit mode, include both auto-calculated DAN current value
             if (isEditMode && formData.correctAnswerPoints && 
                 formData.correctAnswerPoints !== autoCalculatedPoints.toString()) {
-                // Include both: current value dan auto-calculated value
                 const currentValue = formData.correctAnswerPoints;
                 const autoValue = autoCalculatedPoints.toString();
-                
-                // Remove duplicates dan sort
                 const uniqueValues = [...new Set([currentValue, autoValue])].sort((a, b) => b - a);
                 return uniqueValues;
             }
             
-            // Default: hanya auto-calculated
             return [autoCalculatedPoints.toString()];
         }
         
-        // Custom/Weighted: semua points available
         return POINTS.map(p => p.toString());
     };
 
-    // ✅ Determine if points select should be disabled
     const isPointsDisabled = () => {
-        // Di add mode dengan Equal Distribution → disabled (auto)
         if (!isEditMode && pointDistribution === 'Equal Distribution') {
             return true;
         }
-        
-        // Di edit mode → always editable
         if (isEditMode) {
             return false;
         }
-        
-        // Custom/Weighted → editable
         return false;
     };
 
     const pointsOptions = getPointsOptions();
 
     return (
-        <>
+        <div className="space-y-6">
             {/* Question */}
-            <div className="mt-6 grid grid-cols-1 gap-2">
-                <label className="text-gray-700 font-medium mb-2 block">
-                    Question [{currentQuestionNumber}]
+            <div>
+                <label className="text-sm font-bold text-gray-700 mb-3 block flex items-center gap-2">
+                    <span className="w-6 h-6 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center text-xs font-bold">
+                        Q
+                    </span>
+                    Question Text
                 </label>
-                <ReactQuill
-                    value={formData.question || ''}
-                    key={`question-${editorKey}`}
-                    theme="snow"
-                    modules={quillModules}
-                    formats={quillFormats}
-                    placeholder="Start writing your question here..."
-                    style={{ height: '70px' }}
-                    onChange={onQuestionChange}
-                />
-            </div>
-
-            {/* Options */}
-            {formData.options.map((option, index) => (
-                <div key={index} className="mt-12">
-                    <label className="text-gray-700 font-medium mb-2 block">
-                        Option [{String.fromCharCode(97 + index)}]
-                    </label>
+                <div className="border-2 border-gray-200 rounded-xl overflow-hidden focus-within:border-blue-500 transition-colors">
                     <ReactQuill
-                        key={`option-${index}-${editorKey}`}
+                        value={formData.question || ''}
+                        key={`question-${editorKey}`}
                         theme="snow"
                         modules={quillModules}
                         formats={quillFormats}
-                        placeholder="Start writing your option here..."
-                        style={{ height: '70px' }}
-                        value={option || ''}
-                        onChange={(content) => onOptionChange(index, content)}
+                        placeholder="Enter your question here... You can use rich text formatting."
+                        style={{ minHeight: '120px' }}
+                        onChange={onQuestionChange}
                     />
                 </div>
-            ))}
+            </div>
+
+            {/* Options */}
+            <div className="space-y-4">
+                <div className="flex items-center gap-2 mb-2">
+                    <span className="w-6 h-6 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-xs font-bold">
+                        A
+                    </span>
+                    <span className="text-sm font-bold text-gray-700">Answer Options</span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {formData.options.map((option, index) => (
+                        <div key={index}>
+                            <label className="text-xs font-semibold text-gray-600 mb-2 block">
+                                Option {String.fromCharCode(65 + index)}
+                            </label>
+                            <div className="border-2 border-gray-200 rounded-xl overflow-hidden focus-within:border-blue-500 transition-colors">
+                                <ReactQuill
+                                    key={`option-${index}-${editorKey}`}
+                                    theme="snow"
+                                    modules={quillModules}
+                                    formats={quillFormats}
+                                    placeholder={`Enter option ${String.fromCharCode(65 + index)}...`}
+                                    style={{ minHeight: '80px' }}
+                                    value={option || ''}
+                                    onChange={(content) => onOptionChange(index, content)}
+                                />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
 
             {/* Answer Key & Points */}
-            <div className="mt-12 flex items-center gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-5 bg-blue-50 border-2 border-blue-200 rounded-xl">
                 <CustomSelect
-                    label="Answer Key"
+                    label="Correct Answer Key"
                     value={formData.answerKey}
                     options={ANSWER_KEYS}
-                    placeholder="Select answer key"
-                    onChange={(val) => {
-                        onAnswerKeyChange(val);
-                    }}
+                    placeholder="Select correct answer"
+                    onChange={(val) => onAnswerKeyChange(val)}
+                    tooltip="Select which option (A, B, C, or D) is the correct answer"
                 />
                 
-                <div className="flex-1">
+                <div>
                     <CustomSelect
-                        label="Correct Answer Points"
+                        label="Points for Correct Answer"
                         value={formData.correctAnswerPoints}
                         options={pointsOptions}
                         placeholder={
                             pointDistribution === 'Equal Distribution' 
                                 ? (autoCalculatedPoints 
                                     ? `Auto: ${autoCalculatedPoints}` 
-                                    : 'Select total points first')
+                                    : 'Configure total points first')
                                 : 'Select points'
                         }
-                        onChange={(val) => {
-                            onPointsChange(val);
-                        }}
+                        onChange={(val) => onPointsChange(val)}
                         disabled={isPointsDisabled()}
+                        tooltip={
+                            pointDistribution === 'Equal Distribution'
+                                ? 'Points are automatically distributed equally'
+                                : 'Manually set points for this question'
+                        }
                     />
                     
-                    {/* ✅ Helper text untuk Equal Distribution di edit mode */}
+                    {/* Helper Messages */}
                     {isEditMode && pointDistribution === 'Equal Distribution' && (
-                        <p className="text-xs text-gray-500 mt-1">
-                            💡 In edit mode, you can manually adjust points if needed
+                        <p className="text-xs text-blue-600 mt-2 flex items-center gap-1">
+                            <AlertCircle className="w-3 h-3" />
+                            Edit mode: You can adjust points manually if needed
                         </p>
                     )}
                     
-                    {/* ✅ Warning jika points berbeda dari auto-calculated */}
                     {pointDistribution === 'Equal Distribution' && 
                      formData.correctAnswerPoints && 
                      formData.correctAnswerPoints !== autoCalculatedPoints.toString() && (
-                        <p className="text-xs text-orange-600 mt-1">
-                            ⚠️ Points differ from auto-calculated ({autoCalculatedPoints})
+                        <p className="text-xs text-orange-600 mt-2 flex items-center gap-1">
+                            <AlertCircle className="w-3 h-3" />
+                            Points differ from auto-calculated ({autoCalculatedPoints})
                         </p>
                     )}
                 </div>
-
-                {/* ✅ Points Remaining Display (conditional render) */}
-                {pointsRemaining !== undefined && (
-                    <div className="text-gray-700 font-medium">
-                        Remaining: <span className={`font-bold text-xl ${
-                            pointsRemaining > 0 ? 'text-blue-600' : 
-                            pointsRemaining === 0 ? 'text-orange-600' : 
-                            'text-red-600'
-                        }`}>{pointsRemaining}</span>
-                    </div>
-                )}
             </div>
-        </>
+        </div>
     );
 };
