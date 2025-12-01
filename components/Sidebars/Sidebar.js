@@ -42,7 +42,7 @@ export default function Sidebar() {
       label: listLanguage.employee_course,
       link: "/course/employee/course",
     },
-    { icon: Users, label: listLanguage.user_management, link: "/course/5" },
+    { icon: Users, label: listLanguage.user_management, link: "/master/user" },
     { icon: UserLock, label: listLanguage.role_management, link: "/master/role" },
     { icon: BrickWallShield, label: listLanguage.menu_management, link: "/master/role-menu" },
     { icon: GraduationCap, label: listLanguage.mastering, link: "/course/6" },
@@ -51,7 +51,7 @@ export default function Sidebar() {
 
   return (
     <aside className="w-64 bg-white shadow-sm min-h-screen rounded-lg">
-      <nav className="p-4 space-y-1">
+      <nav className="p-1 space-y-1">
         {sidebarItems.map((item, index) => {
           const router = useRouter();
           const isActive = router.pathname === item.link; // berdasarkan URL
@@ -60,7 +60,7 @@ export default function Sidebar() {
               href={item.link || "#"}
               key={index}
               onClick={() => setCurrentPage(item.label)}
-              className={`w-full flex items-center px-1 py-4 rounded-lg text-left transition-colors duration-1000 ${
+              className={`w-full flex items-center px-1 py-3 rounded-lg text-left transition-colors duration-1000 ${
                 isActive
                   ? "bg-slate-300 font-medium"
                   : "hover:bg-gray-100 hover:text-gray-900"
