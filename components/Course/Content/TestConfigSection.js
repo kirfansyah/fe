@@ -61,7 +61,7 @@ export const TestConfigSection = ({ testConfig, onChange, disabled }) => {
             {/* Time Duration */}
             <div className="relative md:col-span-2 lg:col-span-2">
                 <CustomSelect
-                    label="Time Duration"
+                    label="Time Duration (Minutes)"
                     value={testConfig.timeDuration}
                     options={DURATIONS}
                     placeholder="Select duration"

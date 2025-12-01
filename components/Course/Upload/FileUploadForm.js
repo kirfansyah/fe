@@ -98,7 +98,7 @@ const FileUploadForm = ({
         
         // Construct full URL dari relative path
         // Remove /api/v1 jika ada, karena content_url sudah include /uploads
-        const cleanBaseUrl = 'http://192.168.12.73:5000/';
+        const cleanBaseUrl = process.env.NEXT_PUBLIC_API_BASE;
         
         return `${cleanBaseUrl}${relativePath}`;
     };

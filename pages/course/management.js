@@ -8,7 +8,6 @@ import { useCourses } from "../../hooks/useCourses";
 import { ChevronRight, BookOpen, Users, Home } from 'lucide-react';
 import { useRouter } from "next/router";
 import { ProfileContext } from "../../contexts/profile/ProfileContext";
-
 export default function Management() {
     const [activeTab, setActiveTab] = useState('courses-list');
     const [currentPage, setCurrentPage] = useState('main');
@@ -154,7 +153,7 @@ export default function Management() {
             contentId={null}
         />
     );
- 
+
   return (
     <div>
       {currentPage === "main" && <MainPage />}
