@@ -33,6 +33,17 @@ export default function CoursePage({ link }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterCategory, setFilterCategory] = useState("All");
+  const [showSkeleton, setShowSkeleton] = useState(true);
+
+  useEffect(() => {
+    // ganti skeleton ke "Data Not Found" setelah 4 detik
+    const timer = setTimeout(() => {
+      setShowSkeleton(false);
+    }, 4000);
+
+    // clear timeout kalau component unmount
+    return () => clearTimeout(timer);
+  }, []);
   //   console.log("fetchEmployees:", fetchEmployees);
 
   // tampilkan 2 item per halaman di UI
@@ -407,7 +418,8 @@ export default function CoursePage({ link }) {
             ))}
           </div>
         </>
-      ) : (
+      ) : showSkeleton ? (
+        // skeleton muncul setelah 4 detik
         <div
           className={
             viewMode === "tiles"
@@ -419,6 +431,9 @@ export default function CoursePage({ link }) {
             <CourseCardSkeleton key={idx} viewMode={viewMode} />
           ))}
         </div>
+      ) : (
+        // tampil "Data Not Found" dulu
+        <div className="text-center mt-5 text-gray-500">Data Not Found</div>
       )}
     </div>
   );
