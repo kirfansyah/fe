@@ -43,6 +43,8 @@
   "welcome_back": "Selamat Datang Kembali!",
   "enter_your_credentials": "Masukkan kredensial Anda untuk mengakses akun Anda.",
   "invalid_credentials": "Nama pengguna atau kata sandi tidak valid.",
-  "reset_link_sent": "Tautan pengaturan ulang telah dikirim ke email Anda."
+  "reset_link_sent": "Tautan pengaturan ulang telah dikirim ke email Anda.",
+  "role_management": "Manajemen Akses",
+  "menu_management": "Manajemen Menu"
   
 }
