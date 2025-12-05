@@ -26,7 +26,7 @@ import { toast } from "sonner";
 
 const api = axios.create({
   //   baseURL: "/api/v1/",
-  baseURL: "/api/proxy",
+  baseURL: "/api/v1",
   headers: {
     "Content-Type": "application/json",
   },

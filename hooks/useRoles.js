@@ -114,15 +114,16 @@ export function useRoles(){
         }
     }, [fetchRoles]);
 
-    const fetchAnalytics = useCallback(async () => {
+    const fetchAnalytics = useCallback(async (filters = {}) => {
         setLoading(true);
         setError(null); 
         
         try {
-            const res = await API.getAnalytics();
+            const res = await API.getAnalytics(filters);
             return res;
         } catch (err) {
-            setError(err.message || 'Failed to fetch courses');
+            setError(err.message || 'Failed to fetch analytics');
+            throw err;
         } finally {
             setLoading(false);
         }
@@ -130,7 +131,7 @@ export function useRoles(){
 
 
     useEffect(() => {
-        Promise.all([fetchRoles(), fetchMenus(), fetchAnalytics()]);
+        Promise.all([fetchRoles(), fetchMenus()]);
     }, [fetchRoles, fetchMenus]);
     
   return {

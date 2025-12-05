@@ -88,7 +88,7 @@ export default function CourseCard({
                     <div className="flex items-center gap-4 flex-1 min-w-0">
                         {/* Order Number Badge */}
                         <div className="relative flex-shrink-0">
-                            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+                            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
                                 <span className="text-lg font-bold text-white">{index + 1}</span>
                             </div>
                             {newEnrollments.length > 0 && (
