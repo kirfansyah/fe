@@ -1,5 +1,6 @@
 // import API from "contexts/api";
 import API from "./api";
+// console.log("API is:", API);
 
 class EmployeesService {
   /**
@@ -7,11 +8,28 @@ class EmployeesService {
    * @returns {Promise} API response
    */
 
-  static async getAllData(page = 1, limit = 8, search = "") {
+  static async getAllData(
+    page = 0,
+    limit = 8,
+    search = "",
+    status = "",
+    categories = ""
+  ) {
+    // console.log(
+    //   "URL Request getAllData:",
+    //   `/learner/course?page=${page}&limit=${limit}${
+    //     search ? `&search=${encodeURIComponent(search)}` : ""
+    //   }${status ? `&status=${encodeURIComponent(status)}` : ""}`
+    // );
+
+    // console.log("test");
+
     try {
       const response = await API.get(
         `/learner/course?page=${page}&limit=${limit}${
           search ? `&search=${encodeURIComponent(search)}` : ""
+        }${status ? `&status=${encodeURIComponent(status)}` : ""}${
+          categories ? `&categories=${encodeURIComponent(categories)}` : ""
         }`,
         {
           //   headers: {
@@ -21,6 +39,7 @@ class EmployeesService {
         }
       );
 
+      console.log("✅ EmployeesService.getAllData response.data:", response);
       // jika 404 / tidak ada data
       if (response.status === 404 || !response.data.data?.length) {
         return {
@@ -30,7 +49,6 @@ class EmployeesService {
           pagination: { totalCount: 0 },
         };
       }
-      console.log("✅ EmployeesService.getAllData response.data:", response);
 
       return {
         success: response.data.success,
@@ -60,7 +78,7 @@ class EmployeesService {
         validateStatus: (status) => status >= 200 && status < 500,
       });
 
-      //   console.log("✅ response.data.data:", response.data?.data);
+      console.log("✅ response:", response);
 
       const content = response.data?.data;
       // jika 404 / tidak ada data

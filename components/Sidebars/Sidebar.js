@@ -60,7 +60,7 @@ export default function Sidebar() {
               href={item.link || "#"}
               key={index}
               onClick={() => setCurrentPage(item.label)}
-              className={`w-full flex items-center px-1 py-3 rounded-lg text-left transition-colors duration-1000 ${
+              className={`w-full flex items-center px-3 py-4 rounded-lg text-left transition-colors duration-1000 ${
                 isActive
                   ? "bg-slate-300 font-medium"
                   : "hover:bg-gray-100 hover:text-gray-900"

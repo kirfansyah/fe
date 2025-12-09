@@ -21,12 +21,13 @@ import PptViewer from "@/components/Course/PptViewer";
 import dynamic from "next/dynamic";
 import { useEmployees } from "@/hooks/useEmployees";
 import { useRouter } from "next/navigation";
+// import VideoPlayer from "@/components/VideoPlayer";
 
 const VideoPlayer = dynamic(() => import("@/components/Course/VideoPlayer"), {
   ssr: false,
 });
 
-export default function ContentArea({ exitCourse }) {
+export default function ContentArea() {
   const { state, goNext, setStep, completeStep, refreshCourseProgress } =
     useContext(CourseContext);
   const { flow, currentStep, answers, courseData } = state;
@@ -102,70 +103,6 @@ export default function ContentArea({ exitCourse }) {
   const [timeLeft, setTimeLeft] = useState(null);
   const [autoSubmitting, setAutoSubmitting] = useState(false);
   const [pdfFinished, setPdfFinished] = useState(false);
-  const [videoFinished, setVideoFinished] = useState(false);
-  const [pdfFile, setPdfFile] = useState(null);
-  const [videoFile, setVideoFile] = useState(null);
-  const [pptFile, setPptFile] = useState(null);
-
-  const defaultPDF = "/uploads/pdf/default.pdf";
-  const defaultVideo = "/uploads/video/komunikasi-efektif-2.mp4";
-  const defaultPpt =
-    "https://docs.google.com/presentation/d/1jsjVVdCjlVd5uAM3e_nlyPVoNUKid07A/edit?usp=sharing";
-
-  //docs.google.com/presentation/d/16Q2rtFTCRZuzWLoq9c1qmIzvHX6gcUvM/edit?usp=sharing&ouid=107324705590480170219&rtpof=true&sd=true
-  https: useEffect(() => {
-    // ❗ Jangan lakukan apa pun kalau step belum siap
-    if (!step) return;
-
-    async function checkFiles() {
-      const baseURL = window.location.origin;
-
-      // ===== PDF =====
-      if (step.content_url && step.content_url.endsWith(".pdf")) {
-        const pdfUrl = `${baseURL}/${step.content_url}`;
-
-        try {
-          const res = await fetch(pdfUrl, { method: "HEAD" });
-          setPdfFile(res.ok ? pdfUrl : defaultPDF);
-        } catch {
-          setPdfFile(defaultPDF);
-        }
-      } else {
-        setPdfFile(defaultPDF);
-      }
-
-      // ===== VIDEO =====
-      if (step.content_url && step.content_url.endsWith(".mp4")) {
-        const videoUrl = `${baseURL}/${step.content_url}`;
-
-        try {
-          const res = await fetch(videoUrl, { method: "HEAD" });
-          setVideoFile(res.ok ? videoUrl : defaultVideo);
-        } catch {
-          setVideoFile(defaultVideo);
-        }
-      } else {
-        setVideoFile(defaultVideo);
-      }
-
-      // ===== PPT =====
-      if (step.content_url && step.content_url.endsWith(".pptx")) {
-        const pptUrl = `${baseURL}/${step.content_url}`;
-
-        try {
-          const res = await fetch(pptUrl, { method: "HEAD" });
-          setPptFile(res.ok ? pptUrl : defaultPpt);
-        } catch {
-          setPptFile(defaultPpt);
-        }
-      } else {
-        setPptFile(defaultPpt);
-      }
-      //   console.log("ppt :", pptFile);
-    }
-
-    checkFiles();
-  }, [step]);
 
   const router = useRouter();
   //   console.log("currentStep: ", courseData);
@@ -227,7 +164,7 @@ export default function ContentArea({ exitCourse }) {
   const handleFinishLogic = async () => {
     // console.log("User finished course!");
 
-    const navigate = router.push(`${exitCourse}${courseId}`);
+    const navigate = router.push(`/course/employee/detail/${courseId}`);
 
     if (document.fullscreenElement) {
       Promise.race([
@@ -241,7 +178,7 @@ export default function ContentArea({ exitCourse }) {
     setOpen(false);
     // console.log("courseId di handleFinishLogic: ", courseId);
 
-    await navigate;
+    // await navigate;
   };
 
   const handleAutoSubmit = async () => {
@@ -259,14 +196,11 @@ export default function ContentArea({ exitCourse }) {
 
       const payload = {
         id_user_enrollment: courseData.id_user_enrollment,
-        // id_user_enrollment: 8,
         id_course_content: stepId,
         updated_at: new Date().toISOString(),
         updated_by: "system",
         updated_device: "web",
       };
-      //   console.log("payload complete course : ", payload);
-
       await completeCourse(payload);
       completeStep(stepId);
       setContentCompleted((prev) => !prev);
@@ -392,6 +326,19 @@ export default function ContentArea({ exitCourse }) {
         )}
 
         {step.type === "quiz" && (
+          //   <Quiz
+          //     questions={step.questions}
+          //     score={step.earned_points}
+          //     isCompleted={step.is_completed}
+          //   />
+
+          //   <Quiz
+          //     questions={step.questions}
+          //     score={step.earned_points}
+          //     isCompleted={step.is_completed}
+          //     currentQuiz={currentQuiz} // 🔥 masuk sini
+          //   />
+
           <Quiz
             questions={step.questions}
             score={step.earned_points}
@@ -406,10 +353,11 @@ export default function ContentArea({ exitCourse }) {
               {step.content_title}
             </h2>
             <div className="w-full flex justify-center ">
+              {/* <PdfViewer file={step.content_url} /> */}
+              {/* <PdfViewer file={`/uploads/pdf/komunikasi-efektif.pdf`} /> */}
               <PdfViewer
-                file={pdfFile}
+                file={`/uploads/pdf/komunikasi-efektif.pdf`}
                 onPageChange={(isLastPage) => setPdfFinished(isLastPage)}
-                // onError={() => setPdfFile(defaultPDF)}
               />
             </div>
           </div>
@@ -420,11 +368,10 @@ export default function ContentArea({ exitCourse }) {
             <h2 className="text-xl font-semibold text-gray-800">
               {step.content_title}
             </h2>
+            {/* <VideoPlayer url={step.content_url || "/videos/default.mp4"} /> */}
             <VideoPlayer
-              //   url={`/uploads/video/komunikasi-efektif.mp4`}
-              url={videoFile}
+              url={`/uploads/video/komunikasi-efektif.mp4`}
               videoId={`${step.id}`}
-              onVideoEnd={() => setVideoFinished(true)}
             />
             {/* <video
               src={`/uploads/video/komunikasi-efektif.mp4`}
@@ -446,8 +393,8 @@ export default function ContentArea({ exitCourse }) {
               {/* <PptViewer
                 fileUrl={`https://docs.google.com/presentation/d/1qar5wJ9SEmlBTl-TS3z2GwKldOb4Cjyz/edit?usp=sharing&ouid=107324705590480170219&rtpof=true&sd=true`}
               /> */}
-              {/* <PptViewer fileUrl="https://docs.google.com/presentation/d/1jsjVVdCjlVd5uAM3e_nlyPVoNUKid07A/edit?usp=sharing" /> */}
-              <PptViewer fileUrl={pptFile} />
+              <PptViewer fileUrl="https://docs.google.com/presentation/d/1jsjVVdCjlVd5uAM3e_nlyPVoNUKid07A/edit?usp=sharing" />
+              {/* <PptViewer fileUrl={step.content_url} /> */}
             </div>
           </div>
         )}
@@ -621,7 +568,7 @@ export default function ContentArea({ exitCourse }) {
         )} */}
 
         {/* ===== PREVIOUS BUTTON ===== */}
-        {/* {((step.type === "quiz" && currentQuiz > 0) || prevStep) && (
+        {((step.type === "quiz" && currentQuiz > 0) || prevStep) && (
           <Button
             onClick={handlePrevious}
             variant="outline"
@@ -629,64 +576,36 @@ export default function ContentArea({ exitCourse }) {
           >
             Previous
           </Button>
-        )} */}
-
-        {step.type === "quiz" && currentQuiz > 0 ? (
-          <Button
-            onClick={() => setCurrentQuiz(currentQuiz - 1)}
-            variant="outline"
-            className="bg-gray-200 text-gray-800"
-          >
-            Previous
-          </Button>
-        ) : prevStep ? (
-          <Button
-            onClick={handlePrevious}
-            variant="outline"
-            className="bg-gray-200 text-gray-800"
-          >
-            Previous
-          </Button>
-        ) : null}
+        )}
 
         {/* ===== NEXT / SUBMIT / FINISH LOGIC ===== */}
-        {step.type === "quiz" ? (
+        {step.type !== "quiz" ? (
+          // ===================== Non-Quiz Content =====================
+          nextStep ? (
+            <Button
+              onClick={handleNext}
+              className="bg-blue-900 text-white"
+              disabled={step.type === "pdf" && !pdfFinished}
+            >
+              Next: {nextStep.content_title}
+            </Button>
+          ) : step.section === "postTest" && step.is_completed ? (
+            <Button
+              onClick={() => setOpen(true)}
+              className="bg-blue-900 text-white"
+            >
+              Selesai
+            </Button>
+          ) : null
+        ) : (
           // ===================== Quiz Content =====================
           <>
-            {step.is_completed && step.section !== "postTest" ? (
+            {score === null && !step.is_completed ? (
               <Button
-                onClick={() => {
-                  // Kalau masih ada soal berikutnya
-                  if (currentQuiz < step.questions.length - 1) {
-                    setCurrentQuiz(currentQuiz + 1);
-                  } else {
-                    goNext(currentStep, nextStep.id_course_content);
-                    setScore(null);
-                    setCurrentQuiz(0);
-                  }
-                }}
+                onClick={() => setShowConfirm(true)}
                 className="bg-blue-900 text-white"
               >
-                {currentQuiz < step.questions.length - 1
-                  ? "Next Soal"
-                  : `Next: ${nextStep?.content_title}`}
-              </Button>
-            ) : !step.is_completed ? (
-              <Button
-                onClick={() => {
-                  // Kalau masih ada soal berikutnya
-                  if (currentQuiz < step.questions.length - 1) {
-                    setCurrentQuiz(currentQuiz + 1);
-                  } else {
-                    // Quiz terakhir → show confirm submit
-                    setShowConfirm(true);
-                  }
-                }}
-                className="bg-blue-900 text-white"
-              >
-                {currentQuiz < step.questions.length - 1
-                  ? "Next Soal"
-                  : "Submit Quiz"}
+                Submit Quiz
               </Button>
             ) : nextStep ? (
               <Button
@@ -701,43 +620,14 @@ export default function ContentArea({ exitCourse }) {
               </Button>
             ) : step.section === "postTest" && step.is_completed ? (
               <Button
-                // onClick={() => setOpen(true)}
-                onClick={() => {
-                  // Kalau masih ada soal berikutnya
-                  if (currentQuiz < step.questions.length - 1) {
-                    setCurrentQuiz(currentQuiz + 1);
-                  } else {
-                    setOpen(true);
-                  }
-                }}
+                onClick={() => setOpen(true)}
                 className="bg-blue-900 text-white"
               >
-                {currentQuiz < step.questions.length - 1
-                  ? "Next Soal"
-                  : "Selesai"}
+                Selesai
               </Button>
             ) : null}
           </>
-        ) : // ===================== Non-Quiz Content =====================
-        nextStep ? (
-          <Button
-            onClick={handleNext}
-            className="bg-blue-900 text-white"
-            disabled={
-              (step.type === "pdf" && !pdfFinished) ||
-              (step.type === "video" && !videoFinished)
-            }
-          >
-            Next: {nextStep.content_title}
-          </Button>
-        ) : step.section === "postTest" && step.is_completed ? (
-          <Button
-            onClick={() => setOpen(true)}
-            className="bg-blue-900 text-white"
-          >
-            Selesai
-          </Button>
-        ) : null}
+        )}
       </CardFooter>
     </Card>
   );

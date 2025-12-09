@@ -3,9 +3,17 @@ import API from "../services/EmployeesService";
 
 export function useEmployees() {
   const fetchEmployees = useCallback(
-    async (page = 1, limit = 8, search = "") => {
+    async (page = 1, limit = 8, search = "", status = "", categories = "") => {
       try {
-        const result = await API.getAllData(page, limit, search);
+        const result = await API.getAllData(
+          page,
+          limit,
+          search,
+          status,
+          categories
+        );
+        // console.log("useEmployees: ", result);
+        // console.log("categories: ", categories);
         return {
           data: result.data || [],
           pagination: result.pagination || 0,
