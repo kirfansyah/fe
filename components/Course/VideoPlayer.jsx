@@ -4,8 +4,8 @@ import dynamic from "next/dynamic";
 
 const ReactPlayer = dynamic(() => import("react-player"), { ssr: false });
 
-export default function VideoPlayer({ url, videoId }) {
-  const isLocal = url.endsWith(".mp4");
+export default function VideoPlayer({ url, videoId, onVideoEnd }) {
+  const isLocal = typeof url === "string" && url.endsWith(".mp4");
   const videoRef = useRef(null);
 
   const [lastTime, setLastTime] = useState(0);
@@ -24,7 +24,9 @@ export default function VideoPlayer({ url, videoId }) {
 
     // Di-set start time setelah video siap
     video.onloadedmetadata = () => {
-      video.currentTime = lastTime;
+      const safeTime = Number.isFinite(lastTime) ? lastTime : 0;
+      const finalTime = Math.min(safeTime, video.duration || 0);
+      video.currentTime = finalTime;
       video.playbackRate = 1;
     };
 
@@ -65,6 +67,10 @@ export default function VideoPlayer({ url, videoId }) {
           className="w-full h-full"
           controls={false}
           disablePictureInPicture
+          onEnded={() => {
+            localStorage.setItem(`video-progress-${videoId}`, "COMPLETED");
+            if (onVideoEnd) onVideoEnd(); // 🔥 kirim event ke atas
+          }}
         />
       )}
 

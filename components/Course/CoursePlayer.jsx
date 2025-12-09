@@ -56,6 +56,7 @@ export default function CoursePlayer({ ...props }) {
           stepId={currentStep}
           flow={flow}
           onNext={(nextId) => goNext(currentStep, nextId)}
+          exitCourse={exitCourse}
         />
       </div>
     </div>

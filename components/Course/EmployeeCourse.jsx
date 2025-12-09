@@ -23,6 +23,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useEmployees } from "@/hooks/useEmployees";
 import { BookOpen, Clock, Star } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function CoursePage({ link }) {
   const { fetchEmployees } = useEmployees();
@@ -33,6 +34,7 @@ export default function CoursePage({ link }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterCategory, setFilterCategory] = useState("All");
+  const [filterStatus, setFilterStatus] = useState("");
   const [showSkeleton, setShowSkeleton] = useState(true);
 
   useEffect(() => {
@@ -55,11 +57,13 @@ export default function CoursePage({ link }) {
         const res = await fetchEmployees(
           currentPage,
           itemsPerPage,
-          searchQuery
+          searchQuery,
+          filterStatus,
+          filterCategory
         );
         setCourses(res.data || []);
         setCourseData(res.result || []);
-        // console.log("courseData:", res.result);
+        // console.log("filterStatus:", filterStatus);
 
         // console.log("courses data:", res.data);
 
@@ -70,23 +74,33 @@ export default function CoursePage({ link }) {
     };
 
     loadData();
-  }, [fetchEmployees, currentPage, searchQuery, itemsPerPage]);
+  }, [
+    fetchEmployees,
+    currentPage,
+    searchQuery,
+    itemsPerPage,
+    filterStatus,
+    filterCategory,
+  ]);
 
-  const filteredCourses = courses.filter((course) => {
-    const matchSearch = course.course_title
-      ?.toLowerCase()
-      .includes(searchQuery.toLowerCase());
+  //   const filteredCourses = courses.filter((course) => {
+  //     const matchSearch = course.course_title
+  //       ?.toLowerCase()
+  //       .includes(searchQuery.toLowerCase());
 
-    const matchFilter =
-      filterCategory === "All" ||
-      (course.enrollment_categories || [])
-        .filter(Boolean) // buang null, undefined, ""
-        .some(
-          (cat) => (cat ?? "").toLowerCase() === filterCategory.toLowerCase()
-        );
+  //     const matchFilter =
+  //       filterCategory === "All" ||
+  //       (course.enrollment_categories || [])
+  //         .filter(Boolean) // buang null, undefined, ""
+  //         .some(
+  //           (cat) => (cat ?? "").toLowerCase() === filterCategory.toLowerCase()
+  //         );
 
-    return matchSearch && matchFilter;
-  });
+  //     return matchSearch && matchFilter;
+  //   });
+  //   console.log("courses : ", courses);
+
+  const filteredCourses = [...courses];
 
   const handleSearch = (e) => {
     setSearchQuery(e.target.value);
@@ -95,6 +109,12 @@ export default function CoursePage({ link }) {
 
   const handleFilter = (cat) => {
     setFilterCategory(cat);
+    setCurrentPage(1);
+  };
+
+  const handleFilterStatus = (status) => {
+    const fixedStatus = status === "All" ? "" : status;
+    setFilterStatus(fixedStatus);
     setCurrentPage(1);
   };
 
@@ -126,7 +146,9 @@ export default function CoursePage({ link }) {
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="flex items-center gap-2">
                   <Filter className="w-4 h-4" />
-                  {filterCategory === "All" ? "Filter" : filterCategory}
+                  {filterCategory === "All"
+                    ? "Filter Category"
+                    : filterCategory}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -141,6 +163,27 @@ export default function CoursePage({ link }) {
                     {cat}
                   </DropdownMenuItem>
                 ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="flex items-center gap-2">
+                  <Filter className="w-4 h-4" />
+                  {filterStatus === "" ? "Filter Status" : filterStatus}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {["All", "Not Started", "In Progress", "Passed", "Failed"].map(
+                  (cat) => (
+                    <DropdownMenuItem
+                      key={cat}
+                      onClick={() => handleFilterStatus(cat)}
+                    >
+                      {cat}
+                    </DropdownMenuItem>
+                  )
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
 
@@ -190,106 +233,133 @@ export default function CoursePage({ link }) {
 
       {filteredCourses.length > 0 ? (
         <>
-          <div
+          {/* <div
             className={
               viewMode === "tiles"
                 ? "flex flex-wrap gap-5 mt-5 justify-start"
                 : "flex flex-col gap-3 mt-5"
             }
-          >
-            {filteredCourses.map((course) => (
-              <div key={course.id_course}>
-                {/* ================= LIST MODE ================= */}
-                {viewMode === "list" ? (
-                  <Card className="w-full relative hover:shadow-lg transition-all duration-300 border-l-4 border-blue-600">
-                    <div className="flex items-center gap-4 p-4">
-                      {/* Thumbnail */}
-                      <div className="w-32 flex-shrink-0">
-                        <img
-                          src={course.thumbnail || "/img/course/k3.jpg"}
-                          className="w-32 h-20 object-cover rounded-lg shadow-sm"
-                        />
-                      </div>
+          > */}
 
-                      {/* Middle Content */}
-                      <div className="flex flex-col justify-between flex-1">
-                        <div className="flex flex-col gap-1">
-                          <Link href={`${link}${course.id_course}`}>
-                            <span className="text-xl font-semibold text-blue-700 hover:underline cursor-pointer">
-                              {course.course_title}
-                            </span>
-                          </Link>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={viewMode}
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: -10 }}
+              transition={{ duration: 0.25 }}
+              className={
+                viewMode === "tiles"
+                  ? "flex flex-wrap gap-5 mt-5 justify-start"
+                  : "flex flex-col gap-3 mt-5"
+              }
+            >
+              {filteredCourses.map((course, index) => (
+                <motion.div
+                  key={course.id_course}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.25, delay: index * 0.07 }}
+                >
+                  {/* ================= LIST MODE ================= */}
+                  {viewMode === "list" ? (
+                    <Card className="w-full relative hover:shadow-lg transition-all duration-300 border-l-4 border-blue-600">
+                      <div className="flex items-center gap-4 p-4">
+                        {/* Thumbnail */}
+                        <div className="w-32 flex-shrink-0">
+                          <img
+                            src={
+                              course?.thumbnail ||
+                              "/img/course/Course app-bro.png"
+                            }
+                            onError={(e) =>
+                              (e.target.src = "/img/course/Course app-bro.png")
+                            }
+                            className="w-32 h-20 object-cover rounded-lg shadow-sm"
+                          />
+                        </div>
 
-                          {/* Badges */}
-                          <div className="flex gap-2 mt-1 flex-wrap">
-                            {course.enrollment_categories?.map((cat, i) => (
-                              <Badge key={i} variant="secondary">
-                                {cat}
-                              </Badge>
-                            ))}
+                        {/* Middle Content */}
+                        <div className="flex flex-col justify-between flex-1">
+                          <div className="flex flex-col gap-1">
+                            <Link href={`${link}${course.id_course}`}>
+                              <span className="text-xl font-semibold text-blue-700 hover:underline cursor-pointer">
+                                {course.course_title}
+                              </span>
+                            </Link>
+
+                            {/* Badges */}
+                            <div className="flex gap-2 mt-1 flex-wrap">
+                              {course.enrollment_categories?.map((cat, i) => (
+                                <Badge key={i} variant="secondary">
+                                  {cat}
+                                </Badge>
+                              ))}
+                            </div>
                           </div>
+                          {/* Stats */}
+                          <div className="flex items-center gap-4 text-sm text-gray-700">
+                            <span className="flex items-center gap-1">
+                              <BookOpen size={16} />
+                              {course.total_lessons} Lessons
+                            </span>
+
+                            <span className="flex items-center gap-1">
+                              <Clock size={16} />
+                              {course.total_duration}
+                            </span>
+
+                            <span className="flex items-center gap-1">
+                              <Star
+                                size={16}
+                                className="text-yellow-500 fill-yellow-500"
+                              />
+                              {course.average_rating || "No review"}
+                            </span>
+                          </div>
+                          {/* Status or Progress */}
+                          <Badge
+                            className={`mt-2 px-3 py-1 w-24 text-center justify-center ${
+                              course.status === "Passed"
+                                ? "bg-green-600"
+                                : course.status === "Failed"
+                                ? "bg-red-600"
+                                : course.status === "Not Started"
+                                ? "bg-blue-500 text-white"
+                                : course.status === "In Progress"
+                                ? "bg-gray-500"
+                                : ""
+                            }`}
+                          >
+                            {course.status}
+                          </Badge>
                         </div>
-                        {/* Stats */}
-                        <div className="flex items-center gap-4 text-sm text-gray-700">
-                          <span className="flex items-center gap-1">
-                            <BookOpen size={16} />
-                            {course.total_lessons} Lessons
-                          </span>
 
-                          <span className="flex items-center gap-1">
-                            <Clock size={16} />
-                            {course.total_duration}
-                          </span>
-
-                          <span className="flex items-center gap-1">
-                            <Star
-                              size={16}
-                              className="text-yellow-500 fill-yellow-500"
-                            />
-                            {course.average_rating || "No review"}
-                          </span>
-                        </div>
-                        {/* Status or Progress */}
-                        <Badge
-                          className={`mt-2 px-3 py-1 w-24 text-center justify-center ${
-                            course.status === "Completed"
-                              ? "bg-green-600"
-                              : course.status === "Not Enrolled"
-                              ? "bg-red-600"
-                              : course.status === "Not Started"
-                              ? "bg-yellow-500 text-black"
-                              : "bg-gray-500"
-                          }`}
-                        >
-                          {course.status}
-                        </Badge>
-                      </div>
-
-                      {/* Right Actions */}
-                      <div className="flex flex-col justify-center items-end gap-2">
-                        <DropdownMenu>
+                        {/* Right Actions */}
+                        <div className="flex flex-col justify-center items-end gap-2">
+                          {/* <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon">
                               <MoreVertical className="h-5 w-5" />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            {/* <DropdownMenuItem>Edit</DropdownMenuItem>
+                          <DropdownMenuContent align="end"> */}
+                          {/* <DropdownMenuItem>Edit</DropdownMenuItem>
                             <DropdownMenuItem>Delete</DropdownMenuItem> */}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                        <Link href={`${link}${course.id_course}`}>
-                          <Button className="bg-blue-900 hover:bg-blue-700">
-                            View
-                          </Button>
-                        </Link>
+                          {/* </DropdownMenuContent>
+                        </DropdownMenu> */}
+                          <Link href={`${link}${course.id_course}`}>
+                            <Button className="bg-blue-900 hover:bg-blue-700">
+                              View
+                            </Button>
+                          </Link>
+                        </div>
                       </div>
-                    </div>
-                  </Card>
-                ) : (
-                  /* ================= TILES MODE (ORIGINAL CARD) ================= */
-                  <Card className="w-96 relative">
-                    <DropdownMenu>
+                    </Card>
+                  ) : (
+                    /* ================= TILES MODE (ORIGINAL CARD) ================= */
+                    <Card className="w-96 relative">
+                      {/* <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
                           variant="ghost"
@@ -299,67 +369,87 @@ export default function CoursePage({ link }) {
                           <MoreVertical className="h-5 w-5" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        {/* <DropdownMenuItem>Edit</DropdownMenuItem>
+                      <DropdownMenuContent align="end"> */}
+                      {/* <DropdownMenuItem>Edit</DropdownMenuItem>
                         <DropdownMenuItem>Delete</DropdownMenuItem> */}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                      {/* </DropdownMenuContent>
+                    </DropdownMenu> */}
 
-                    <CardHeader className="mt-1">
-                      <CardTitle className="text-2xl text-blue-600">
-                        {course.course_title}
-                      </CardTitle>
-                      <CardDescription className="flex gap-2">
-                        {course.enrollment_categories?.map((cat, idx) => (
-                          <Badge key={idx} variant="secondary">
-                            {cat}
-                          </Badge>
-                        ))}
-                      </CardDescription>
-                    </CardHeader>
+                      <CardHeader className="mt-1">
+                        <CardTitle className="text-2xl text-blue-600">
+                          {(() => {
+                            const words =
+                              course.course_title?.trim().split(/\s+/) || [];
 
-                    <CardContent>
-                      <div className="flex flex-col md:flex-row gap-4">
-                        <div className="md:w-1/2 flex flex-col items-center">
-                          <img
-                            src={course.thumbnail || "/img/course/k3.jpg"}
-                            className="w-full h-40 object-cover rounded-md"
-                          />
-                          <Link href={`${link}${course.id_course}`} passHref>
-                            <Button className="mt-3 w-full bg-blue-900 hover:bg-blue-700 text-white">
-                              View Course
-                            </Button>
-                          </Link>
-                        </div>
+                            if (words.length === 3) {
+                              return (
+                                <>
+                                  {words[0]} {words[1]} <br /> {words[2]}
+                                </>
+                              );
+                            }
 
-                        <div className="md:w-1/2 flex flex-col justify-start space-y-2 text-gray-700">
-                          <div className="flex justify-between">
-                            <span className="font-semibold">Release</span>{" "}
-                            {course.release}
+                            return course.course_title;
+                          })()}
+                        </CardTitle>
+                        <CardDescription className="flex gap-2">
+                          {course.enrollment_categories?.map((cat, idx) => (
+                            <Badge key={idx} variant="secondary">
+                              {cat}
+                            </Badge>
+                          ))}
+                        </CardDescription>
+                      </CardHeader>
+
+                      <CardContent>
+                        <div className="flex flex-col md:flex-row gap-4">
+                          <div className="md:w-1/2 flex flex-col items-center">
+                            <img
+                              src={
+                                course?.thumbnail ||
+                                "/img/course/Course app-bro.png"
+                              }
+                              onError={(e) =>
+                                (e.target.src =
+                                  "/img/course/Course app-bro.png")
+                              }
+                              className="w-full h-40 object-cover rounded-md"
+                            />
+                            <Link href={`${link}${course.id_course}`} passHref>
+                              <Button className="mt-3 w-full bg-blue-900 hover:bg-blue-700 text-white">
+                                View Course
+                              </Button>
+                            </Link>
                           </div>
-                          <div className="flex justify-between">
-                            <span className="font-semibold">Lesson</span>{" "}
-                            {course.total_lessons}
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="font-semibold">Duration</span>{" "}
-                            {course.total_duration}
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="font-semibold">Reviews</span>{" "}
-                            {course.review ? course.review + "/5" : ""}
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="font-semibold">Status</span>
-                            <Badge
-                              className={`text-white 
+
+                          <div className="md:w-1/2 flex flex-col justify-start space-y-2 text-gray-700">
+                            <div className="flex justify-between">
+                              <span className="font-semibold">Release</span>{" "}
+                              {course.release}
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="font-semibold">Lesson</span>{" "}
+                              {course.total_lessons}
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="font-semibold">Duration</span>{" "}
+                              {course.total_duration}
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="font-semibold">Reviews</span>{" "}
+                              {course.review ? course.review + "/5" : ""}
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="font-semibold">Status</span>
+                              <Badge
+                                className={`text-white 
                           ${
-                            course.status === "Completed"
+                            course.status === "Passed"
                               ? "bg-green-500 hover:bg-green-600"
                               : ""
                           }
                           ${
-                            course.status === "Not Enrolled"
+                            course.status === "Failed"
                               ? "bg-red-500 hover:bg-red-600"
                               : ""
                           }
@@ -370,53 +460,59 @@ export default function CoursePage({ link }) {
                           }
                           ${
                             course.status === "Not Started"
-                              ? "bg-black-500 hover:bg-black-600 text-white"
+                              ? "bg-blue-500 hover:bg-black-600 text-white"
                               : ""
                           }
                         `}
-                            >
-                              {course.status}
-                            </Badge>
+                              >
+                                {course.status}
+                              </Badge>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </CardContent>
+                      </CardContent>
 
-                    <CardFooter className="border-t pt-4">
-                      <div className="w-full grid grid-cols-4 divide-x divide-gray-300 text-center">
-                        <div className="px-4">
-                          <div className="text-lg font-bold text-gray-800">
-                            {course.total_invited}
+                      <CardFooter className="border-t pt-4">
+                        <div className="w-full grid grid-cols-4 divide-x divide-gray-300 text-center">
+                          <div className="px-4">
+                            <div className="text-lg font-bold text-gray-800">
+                              {course.total_invited}
+                            </div>
+                            <div className="text-sm text-gray-500">Invited</div>
                           </div>
-                          <div className="text-sm text-gray-500">Invited</div>
-                        </div>
-                        <div className="px-4">
-                          <div className="text-lg font-bold text-gray-800">
-                            {course.total_ongoing}
+                          <div className="px-4">
+                            <div className="text-lg font-bold text-gray-800">
+                              {course.total_ongoing}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              On Going
+                            </div>
                           </div>
-                          <div className="text-sm text-gray-500">On Going</div>
-                        </div>
-                        <div className="px-4">
-                          <div className="text-lg font-bold text-gray-800">
-                            {course.total_finished}
+                          <div className="px-4">
+                            <div className="text-lg font-bold text-gray-800">
+                              {course.total_finished}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              Finished
+                            </div>
                           </div>
-                          <div className="text-sm text-gray-500">Finished</div>
-                        </div>
-                        <div className="px-4">
-                          <div className="text-lg font-bold text-gray-800">
-                            {course.total_invited +
-                              course.total_ongoing +
-                              course.total_finished}
+                          <div className="px-4">
+                            <div className="text-lg font-bold text-gray-800">
+                              {course.total_invited +
+                                course.total_ongoing +
+                                course.total_finished}
+                            </div>
+                            <div className="text-sm text-gray-500">Total</div>
                           </div>
-                          <div className="text-sm text-gray-500">Total</div>
                         </div>
-                      </div>
-                    </CardFooter>
-                  </Card>
-                )}
-              </div>
-            ))}
-          </div>
+                      </CardFooter>
+                    </Card>
+                  )}
+                </motion.div>
+              ))}
+              {/* </div> ini */}
+            </motion.div>
+          </AnimatePresence>
         </>
       ) : showSkeleton ? (
         // skeleton muncul setelah 4 detik
@@ -433,7 +529,17 @@ export default function CoursePage({ link }) {
         </div>
       ) : (
         // tampil "Data Not Found" dulu
-        <div className="text-center mt-5 text-gray-500">Data Not Found</div>
+        <div className="flex flex-col items-center justify-center py-14">
+          <img
+            src="https://cdn-icons-png.flaticon.com/512/4076/4076508.png"
+            alt="No Data"
+            className="w-32 h-32 opacity-70 mb-4"
+          />
+          <p className="text-xl font-semibold text-gray-700">No Data Found</p>
+          <p className="text-sm text-gray-500 mt-1">
+            Try changing search keywords or filters.
+          </p>
+        </div>
       )}
     </div>
   );

@@ -8,9 +8,9 @@ export default async function handler(req, res) {
     queryString ? "?" + queryString : ""
   }`;
 
-  console.log("➡️ Proxying to:", target);
-  console.log("🧩 Method:", req.method);
-  console.log("📦 Body:", req.body);
+  //   console.log("➡️ Proxying to:", target);
+  //   console.log("🧩 Method:", req.method);
+  //   console.log("📦 Body:", req.body);
   // 👉 Ambil cookie token dari header (server-side)
   let token = null;
   if (req.headers.cookie) {
