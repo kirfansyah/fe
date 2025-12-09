@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ArrowLeft, Download, Eye, BookOpen, FileText } from "lucide-react";
+import { ArrowLeft, Eye, BookOpen, FileText } from "lucide-react";
 import { useEbooks } from "../../hooks/useEbooks";
 
 export default function ViewEbook({ onBack, ebookId }) {
@@ -29,14 +29,6 @@ export default function ViewEbook({ onBack, ebookId }) {
 
   const handleCloseViewer = () => {
     setIsViewerOpen(false);
-  };
-
-  const handleDownload = () => {
-    if (ebook?.file_url) {
-      window.open(ebook.file_url, "_blank");
-    } else {
-      alert("eBook file not available");
-    }
   };
 
   if (loading) {
@@ -99,13 +91,6 @@ export default function ViewEbook({ onBack, ebookId }) {
               >
                 <Eye className="w-4 h-4" />
                 <span>Read eBook</span>
-              </button>
-              <button
-                onClick={handleDownload}
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-              >
-                <Download className="w-4 h-4" />
-                <span>Download</span>
               </button>
             </div>
           </div>
@@ -238,12 +223,6 @@ export default function ViewEbook({ onBack, ebookId }) {
                         </span>
                       </p>
                     </div>
-                    <div className="p-4 bg-gray-50 rounded-lg">
-                      <p className="text-sm text-gray-600 mb-1">Downloads</p>
-                      <p className="text-base font-medium text-gray-900">
-                        {ebook.download_count || 0} times
-                      </p>
-                    </div>
                   </div>
                 </div>
 
@@ -291,13 +270,6 @@ export default function ViewEbook({ onBack, ebookId }) {
               </button>
               <h3 className="text-lg font-semibold">{ebook.title}</h3>
             </div>
-            <button
-              onClick={handleDownload}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
-            >
-              <Download className="w-4 h-4" />
-              <span>Download</span>
-            </button>
           </div>
 
           {/* Viewer Content */}
