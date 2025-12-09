@@ -217,13 +217,6 @@ select {
 Correct the inability to style clickable types in iOS and Safari.
 */
 
-button,
-[type='button'],
-[type='reset'],
-[type='submit'] {
-  -webkit-appearance: button;
-}
-
 /**
 Remove the inner border and padding in Firefox.
 */
@@ -5983,3 +5976,17 @@ select {
 }
 
 @media (min-width: 1536px) {}
+
+.swal-cancel-style,
+.swal-cancel-style:focus,
+.swal-cancel-style:hover {
+  background-color: #1e3a8a !important;
+  box-shadow: none !important;
+}
+
+.swal-confirm-style,
+.swal-confirm-style:focus,
+.swal-confirm-style:hover {
+  background-color: #941d05 !important;
+  box-shadow: none !important;
+}
