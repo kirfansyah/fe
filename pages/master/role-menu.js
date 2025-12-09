@@ -357,22 +357,22 @@ export default function MenuManagement() {
 
     return (
         <div className="p-6 bg-gray-50 min-h-screen">
-            <div className="mb-8 p-6 rounded-2xl bg-gradient-to-r from-[#5577B5] via-[#6B8BC5] to-[#7B9DD8] shadow-lg">
+            <div className="mb-6 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 <div className="flex justify-between items-center">
                     <div>
-                        <h1 className="text-3xl font-bold text-white mb-2">Menu Management</h1>
-                        <p className="text-blue-100">Manage system navigation menus</p>
+                        <h1 className="text-2xl font-bold text-gray-900 mb-1">Course Management</h1>
+                        <p className="text-gray-600 text-sm">Manage your courses and enrollments</p>
                     </div>
                     
-                    <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-lg">
-                        <Home className="w-4 h-4 text-blue-100" />
-                        <span className="text-blue-100 text-sm">Home</span>
-                        <ChevronRight className="w-4 h-4 text-blue-100" />
-                        <span className="text-white text-sm font-medium">Menu Management</span>
+                    {/* ✅ FIXED: Minimalis Breadcrumb */}
+                    <div className="flex items-center gap-2 text-sm">
+                        <Home className="w-4 h-4 text-gray-400" />
+                        <span className="text-gray-500">Home</span>
+                        <ChevronRight className="w-4 h-4 text-gray-400" />
+                        <span className="text-gray-900 font-medium">Course Management</span>
                     </div>
                 </div>
             </div>
-
             {/* Main Container */}
             <div className="bg-white rounded-lg shadow-sm">
                 <div className="p-6">

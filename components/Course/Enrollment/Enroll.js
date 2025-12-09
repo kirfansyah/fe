@@ -53,21 +53,21 @@ export default function Enroll({
     }
     
     // Handle course changes from child components
-    const handleCourseChange = (courseId, field, value) => {
+    const handleCourseChange = async (courseId, field, value) => {
         console.log('📝 handleCourseChange:', { courseId, field, valueType: typeof value });
         
         if (field === 'save_single') {
             const { enrollment, index } = value;
             
-            // Save to backend
-            saveSingleEnrollment({
+            // ✅ Await save and return result
+            const result = await saveSingleEnrollment({
                 courseId: courseId,
                 enrollment: enrollment,
                 index: index
             });
             
-            // Update local state
-            updateLocalEnrollmentState(courseId, index, enrollment);
+            // ✅ Return result for modal to handle
+            return result;
             
         } else if (field === 'enrollments') {
             // Handle normal enrollment updates
@@ -141,28 +141,42 @@ export default function Enroll({
                 remedial_allowed: enrollmentData.enrollment.remedial_allowed === 'Yes' || 
                                 enrollmentData.enrollment.remedial_allowed === true,
                 remedial_limit: enrollmentData.enrollment.remedial_limit || 
-                            enrollmentData.enrollment.remedial_limit || 1,
+                            enrollmentData.enrollment.times || 1,
+                passing_grade: enrollmentData.enrollment.passing_grade ?? 0,
+                refreshment_months: enrollmentData.enrollment.refreshment_months || null,
                 created_by: dataKaryawans.nama,
-                    created_device: "system",
+                created_device: "system",
                 target_groupings: enrollmentData.enrollment.groupings?.map(g => g.id_grouping) || []
             };
             
-            // ✅ PENTING: Tambahkan ID untuk update
             if (isUpdate) {
                 transformedData.id_course_enrollment = enrollmentData.enrollment.id_course_enrollment;
             }
-            console.log('datatattatata', transformedData);
+            
+            console.log('📤 Sending enrollment data:', transformedData);
+            
             const response = await handleSaveEnroll(transformedData);
             
             if (response.success) {
-                showSuccess(isUpdate ? 'Enrollment updated successfully!' : 'Enrollment saved successfully!');
+                await showSuccess(isUpdate ? 'Enrollment updated successfully!' : 'Enrollment saved successfully!');
                 
-                // ✅ Refresh data dari backend
+                // ✅ CRITICAL: Refresh BEFORE returning
+                console.log('🔄 Refreshing enrollment data...');
                 await fetchEnrollData();
+                
+                // ✅ Small delay to ensure state propagates
+                await new Promise(resolve => setTimeout(resolve, 300));
+                
+                console.log('✅ Data refreshed successfully');
+                return { success: true };
             }
+            
+            return { success: false };
+            
         } catch (error) {
             console.error('❌ Save enrollment failed:', error);
-            showError('Failed to save enrollment: ' + error.message);
+            await showError('Failed to save enrollment: ' + error.message);
+            return { success: false };
         }
     };
 
@@ -200,7 +214,9 @@ export default function Enroll({
                         publish_date: publishDate.toISOString(),
                         end_date: endDate.toISOString(),
                         remedial_allowed: remedialAllowed,
-                        remedial_limit: remedialAllowed ? enrollment.remedial_limit : 0,
+                        remedial_limit: remedialAllowed ? (enrollment.remedial_limit || enrollment.times || 1) : 0,
+                        passing_grade: enrollment.passing_grade ?? 0, // ✅ New field
+                        refreshment_months: enrollment.refreshment_months || null, // ✅ New field
                         created_by: dataKaryawans.nama,
                         created_device: "System",
                         target_groupings: enrollment.groupings || []
@@ -240,6 +256,13 @@ export default function Enroll({
                     if (!enrollment.publish_date) {
                         errors.push(`${courseName} (Enrollment ${idx + 1}): Publish date is required`);
                     }
+
+                    // ✅ Validate passing_grade
+                    if (enrollment.passing_grade === undefined || enrollment.passing_grade === null) {
+                        errors.push(`${courseName} (Enrollment ${idx + 1}): Minimum score is required`);
+                    } else if (enrollment.passing_grade < 0 || enrollment.passing_grade > 100) {
+                        errors.push(`${courseName} (Enrollment ${idx + 1}): Minimum score must be between 0 and 100`);
+                    }
                     
                     if (enrollment.enroll_type_name === 'Specific' && 
                         (!enrollment.enrollment_group_ids || enrollment.enrollment_group_ids.length === 0)) {
@@ -253,7 +276,7 @@ export default function Enroll({
                     
                     if (enrollment.remedial_allowed === 'Yes' && 
                         (!enrollment.remedial_limit || isNaN(enrollment.remedial_limit) || enrollment.remedial_limit < 1)) {
-                        errors.push(`${courseName} (Enrollment ${idx + 1}): Remedial remedial_limit must be at least 1`);
+                        errors.push(`${courseName} (Enrollment ${idx + 1}): Remedial limit must be at least 1`);
                     }
                 }
             });
@@ -302,10 +325,10 @@ export default function Enroll({
             return;
         }
         
-        const result = await confirmAction(
-            'Confirm Enrollment',
-            `Are you sure you want to create ${newEnrollmentsCount} new enrollment(s)?`
-        );
+        const result = await confirmAction({
+            title: 'Confirm Enrollment',
+            text: `Are you sure you want to create ${newEnrollmentsCount} new enrollment(s)?`
+        });
         
         if (!result.isConfirmed) return;
         
