@@ -1,6 +1,6 @@
 import API from "./api";
 
-class RatingFeedbackService {
+class CourseRatingFeedbackService {
   /**
    * Get all ratings with pagination
    * @param {number} page - Page number (default: 1)
@@ -194,4 +194,4 @@ class RatingFeedbackService {
   }
 }
 
-export default RatingFeedbackService;
+export default CourseRatingFeedbackService;

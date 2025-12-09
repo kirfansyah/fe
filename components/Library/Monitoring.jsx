@@ -1,11 +1,5 @@
 import { useState } from "react";
-import {
-  Search,
-  SlidersHorizontal,
-  ChevronLeft,
-  ChevronRight,
-  FileDown,
-} from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, FileDown } from "lucide-react";
 
 export default function Monitoring({ employees }) {
   const [selectedEmployees, setSelectedEmployees] = useState([]);
@@ -201,23 +195,6 @@ export default function Monitoring({ employees }) {
             </body>
             </html>
                     `;
-
-    // Create blob and download
-    const blob = new Blob([pdfContent], { type: "text/html" });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `employee-ebook-report-${
-      new Date().toISOString().split("T")[0]
-    }.html`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
-
-    alert(
-      `Exported ${selectedData.length} employee(s) successfully! Open the HTML file and print to PDF.`
-    );
   };
 
   return (

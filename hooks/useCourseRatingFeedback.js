@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import RatingFeedbackService from "../services/RatingFeedbackService";
+import CourseRatingFeedbackService from "../services/CourseRatingFeedbackService";
 
 export function useRatingFeedback() {
   const [ratings, setRatings] = useState([]);
@@ -18,7 +18,10 @@ export function useRatingFeedback() {
     setLoading(true);
     setError(null);
     try {
-      const response = await RatingFeedbackService.getAllRatings(page, limit);
+      const response = await CourseRatingFeedbackService.getAllRatings(
+        page,
+        limit
+      );
 
       if (response.success) {
         setRatings(response.data);
@@ -47,7 +50,10 @@ export function useRatingFeedback() {
     setLoading(true);
     setError(null);
     try {
-      const response = await RatingFeedbackService.getAllFeedbacks(page, limit);
+      const response = await CourseRatingFeedbackService.getAllFeedbacks(
+        page,
+        limit
+      );
 
       if (response.success) {
         setFeedbacks(response.data);
@@ -76,7 +82,7 @@ export function useRatingFeedback() {
     setLoading(true);
     setError(null);
     try {
-      const response = await RatingFeedbackService.getRatingById(id);
+      const response = await CourseRatingFeedbackService.getRatingById(id);
       if (response.success) {
         return response.data;
       } else {
@@ -96,7 +102,7 @@ export function useRatingFeedback() {
     setLoading(true);
     setError(null);
     try {
-      const response = await RatingFeedbackService.getFeedbackById(id);
+      const response = await CourseRatingFeedbackService.getFeedbackById(id);
       if (response.success) {
         return response.data;
       } else {
