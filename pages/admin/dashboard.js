@@ -23,9 +23,17 @@ export default function DashboardAnalytics() {
     const { fetchAnalytics } = useRoles();
     const { companies } = useCourses();
     
-    // Filter states
-    const [yearFilter, setYearFilter] = useState('All');
-    const [monthFilter, setMonthFilter] = useState('All');
+    // Get current year and month
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const currentMonthIndex = currentDate.getMonth() + 1; // 0-11 to 1-12
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                        'July', 'August', 'September', 'October', 'November', 'December'];
+    const currentMonthName = monthNames[currentDate.getMonth()];
+    
+    // Filter states - Set to current year and month
+    const [yearFilter, setYearFilter] = useState(currentYear);
+    const [monthFilter, setMonthFilter] = useState(currentMonthName);
     const [companyFilter, setCompanyFilter] = useState('All');
     const [courseFilterPassPercentage, setCourseFilterPassPercentage] = useState('All');
     
@@ -51,7 +59,7 @@ export default function DashboardAnalytics() {
     const [error, setError] = useState(null);
 
     // Year options (you can make this dynamic)
-    const currentYear = new Date().getFullYear();
+    // const currentYear = new Date().getFullYear();
     const yearOptions = ['All', ...Array.from({length: 5}, (_, i) => currentYear - i)];
 
     // Month options
@@ -398,8 +406,14 @@ export default function DashboardAnalytics() {
     };
 
     const clearFilters = () => {
-        setYearFilter('All');
-        setMonthFilter('All');
+        const currentDate = new Date();
+        const currentYear = currentDate.getFullYear();
+        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                            'July', 'August', 'September', 'October', 'November', 'December'];
+        const currentMonthName = monthNames[currentDate.getMonth()];
+        
+        setYearFilter(currentYear);
+        setMonthFilter(currentMonthName);
         setCompanyFilter('All');
     };
 
@@ -469,7 +483,7 @@ export default function DashboardAnalytics() {
                             <div className="flex items-center gap-2">
                                 <Filter className="w-4 h-4 text-gray-600" />
                                 <span className="text-sm font-medium text-gray-700">
-                                    {yearFilter === 'All' ? 'Year: All' : yearFilter}
+                                    Year: {yearFilter}
                                 </span>
                             </div>
                             <ChevronDown className={`w-4 h-4 text-gray-600 transition-transform ${showYearDropdown ? 'rotate-180' : ''}`} />
@@ -505,7 +519,7 @@ export default function DashboardAnalytics() {
                             <div className="flex items-center gap-2">
                                 <Filter className="w-4 h-4 text-gray-600" />
                                 <span className="text-sm font-medium text-gray-700">
-                                    {monthFilter === 'All' ? 'Month: All' : monthFilter}
+                                    Month: {monthFilter}
                                 </span>
                             </div>
                             <ChevronDown className={`w-4 h-4 text-gray-600 transition-transform ${showMonthDropdown ? 'rotate-180' : ''}`} />
@@ -568,37 +582,61 @@ export default function DashboardAnalytics() {
                     </div>
 
                     {/* Clear Filters Button */}
-                    {(yearFilter !== 'All' || monthFilter !== 'All' || companyFilter !== 'All') && (
-                        <button
-                            onClick={clearFilters}
-                            className="px-4 py-2.5 text-sm font-medium text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-lg transition-colors"
-                        >
-                            Clear Filters
-                        </button>
-                    )}
+                    {(() => {
+                        const currentDate = new Date();
+                        const currentYear = currentDate.getFullYear();
+                        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                                            'July', 'August', 'September', 'October', 'November', 'December'];
+                        const currentMonthName = monthNames[currentDate.getMonth()];
+                        
+                        const hasActiveFilters = yearFilter !== currentYear || 
+                                                monthFilter !== currentMonthName || 
+                                                companyFilter !== 'All';
+                        
+                        return hasActiveFilters && (
+                            <button
+                                onClick={clearFilters}
+                                className="px-4 py-2.5 text-sm font-medium text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-lg transition-colors"
+                            >
+                                Clear Filters
+                            </button>
+                        );
+                    })()}
 
                     {/* Active Filters Badge */}
-                    {(yearFilter !== 'All' || monthFilter !== 'All' || companyFilter !== 'All') && (
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                            <span className="font-medium">Active filters:</span>
-                            {yearFilter !== 'All' && (
-                                <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded-md text-xs font-medium">
-                                    {yearFilter}
-                                </span>
-                            )}
-                            {monthFilter !== 'All' && (
-                                <span className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded-md text-xs font-medium">
-                                    {monthFilter}
-                                </span>
-                            )}
-                            {companyFilter !== 'All' && (
-                                <span className="px-2 py-1 bg-teal-100 text-teal-700 rounded-md text-xs font-medium max-w-[200px] truncate" 
-                                    title={companiesList.find(c => c.id === companyFilter)?.company_name || companyFilter}>
-                                    {companiesList.find(c => c.id === companyFilter)?.company_name || companyFilter}
-                                </span>
-                            )}
-                        </div>
-                    )}
+                    {(() => {
+                        const currentDate = new Date();
+                        const currentYear = currentDate.getFullYear();
+                        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                                            'July', 'August', 'September', 'October', 'November', 'December'];
+                        const currentMonthName = monthNames[currentDate.getMonth()];
+                        
+                        const hasActiveFilters = yearFilter !== currentYear || 
+                                                monthFilter !== currentMonthName || 
+                                                companyFilter !== 'All';
+                        
+                        return hasActiveFilters && (
+                            <div className="flex items-center gap-2 text-sm text-gray-600">
+                                <span className="font-medium">Active filters:</span>
+                                {yearFilter !== currentYear && (
+                                    <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded-md text-xs font-medium">
+                                        {yearFilter}
+                                    </span>
+                                )}
+                                {monthFilter !== currentMonthName && (
+                                    <span className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded-md text-xs font-medium">
+                                        {monthFilter}
+                                    </span>
+                                )}
+                                {companyFilter !== 'All' && (
+                                    <span className="px-2 py-1 bg-teal-100 text-teal-700 rounded-md text-xs font-medium max-w-[200px] truncate" 
+                                        title={companiesList.find(c => c.id === companyFilter)?.company_name || companyFilter}>
+                                        {companiesList.find(c => c.id === companyFilter)?.company_name || companyFilter}
+                                    </span>
+                                )}
+                            </div>
+                        );
+                    })()}
                 </div>
             </div>
 

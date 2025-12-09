@@ -35,6 +35,7 @@ export default function Management() {
     
     const CONTENT_TYPE_ROUTES = {
         3: '/course/content/pre-test-edit',
+        7: '/course/content/pre-test-edit',
         8: '/course/content/pre-test-edit',
         4: '/course/upload/edit-content',
         5: '/course/upload/edit-content',
@@ -178,10 +179,22 @@ export default function Management() {
         />
     );
 
+    const EditContentPage = () => (
+        <ContentAdditionView 
+            onBack={() => setCurrentPage('main')}
+            onSuccess={handleSaveSuccess}
+            courseId={selectedCourseId}   
+            contentTypes={contentTypes}
+            mode="edit"
+            contentId={selectedContentId}
+        />
+    );
+
     return (
         <div>
             {currentPage === "main" && <MainPage />}
             {currentPage === "addContent" && <AddContentPage />}
+            {currentPage === 'editContent' && <EditContentPage />}
         </div>
     );
 }

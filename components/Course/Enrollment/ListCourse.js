@@ -21,8 +21,8 @@ export default function ListCourses({
     groupEnroll = [],
     companyUnits = [],
     onCourseChange,
-    loading = false, // ✅ Add loading prop
-    error = null,     // ✅ Add error prop
+    loading = false,
+    error = null,
 }) {
     const [expanded, setExpanded] = useState(null);
     const [searchQuery, setSearchQuery] = useState("");
@@ -49,17 +49,14 @@ export default function ListCourses({
     // Filter courses
     const filteredCourses = useMemo(() => {
         return courses.filter(course => {
-            // Search filter
             if (searchQuery && !course.course_title.toLowerCase().includes(searchQuery.toLowerCase())) {
                 return false;
             }
 
-            // Status filter
             const hasEnrollments = course.enrollments && course.enrollments.length > 0;
             if (filterStatus === "enrolled" && !hasEnrollments) return false;
             if (filterStatus === "not-enrolled" && hasEnrollments) return false;
 
-            // Company filter
             if (filterCompany !== "all") {
                 const hasCompany = course.enrollments?.some(e => 
                     e.company_id === parseInt(filterCompany)
@@ -75,7 +72,6 @@ export default function ListCourses({
         setExpanded(expanded === id ? null : id);
     };
 
-    // ✅ Enhanced: Add validation
     const addEnrollment = (courseId) => {
         console.log('🔍 Adding enrollment for course:', courseId);
         const currentData = enrollmentData[courseId];
@@ -85,7 +81,6 @@ export default function ListCourses({
             return;
         }
         
-        // ✅ Check if all companies are used
         const usedCompanyIds = (currentData.enrollments || [])
             .map(e => e.company_id)
             .filter(id => id !== null);
@@ -106,6 +101,8 @@ export default function ListCourses({
             end_date: '',
             remedial_allowed: 'Yes',
             remedial_limit: 1,
+            passing_grade: 0,
+            refreshment_months: null,
             groupings: [],
             is_new: true
         };
@@ -113,12 +110,10 @@ export default function ListCourses({
         const updatedEnrollments = [...(currentData.enrollments || []), newEnrollment];
         onCourseChange(courseId, 'enrollments', updatedEnrollments);
         
-        // ✅ Auto-expand untuk show new enrollment
         setExpanded(courseId);
         showSuccess('New enrollment added. Please fill in the details.');
     };
 
-    // ✅ Enhanced: Add confirmation
     const removeEnrollment = async (courseId, index) => {
         const currentData = enrollmentData[courseId] || {};
         const enrollments = currentData.enrollments || [];
@@ -129,7 +124,6 @@ export default function ListCourses({
             return;
         }
         
-        // ✅ Confirmation dialog
         const result = await confirmAction({
             title: 'Delete Enrollment?',
             text: `Remove enrollment for ${enrollment.company_name || 'this company'}?`,
@@ -144,7 +138,6 @@ export default function ListCourses({
         showSuccess('Enrollment removed successfully.');
     };
 
-    // ✅ Enhanced: Add validation
     const duplicateEnrollment = async (courseId, index) => {
         const currentData = enrollmentData[courseId] || {};
         const enrollments = currentData.enrollments || [];
@@ -155,7 +148,6 @@ export default function ListCourses({
             return;
         }
         
-        // ✅ Check available companies
         const usedCompanyIds = enrollments.map(e => e.company_id).filter(id => id !== null);
         const availableCompanies = companyUnits.filter(c => !usedCompanyIds.includes(c.id));
         
@@ -164,7 +156,6 @@ export default function ListCourses({
             return;
         }
         
-        // ✅ Confirmation
         const result = await confirmAction({
             title: 'Duplicate Enrollment?',
             text: 'Create a copy of this enrollment configuration?',
@@ -186,7 +177,6 @@ export default function ListCourses({
         showSuccess('Enrollment duplicated. Please select a company.');
     };
 
-    // ✅ Enhanced: Use constants
     const updateEnrollmentField = (courseId, enrollmentIndex, field, value) => {
         const currentData = enrollmentData[courseId] || {};
         const enrollments = [...(currentData.enrollments || [])];
@@ -200,7 +190,6 @@ export default function ListCourses({
         const isExisting = !!enrollment.id_course_enrollment;
         
         if (isExisting) {
-            // ✅ Use constants instead of magic numbers
             if (field === 'enroll_type_name') {
                 enrollment.enroll_type_name = value;
                 enrollment.id_enrollment_type = value === 'General' 
@@ -222,7 +211,6 @@ export default function ListCourses({
         
         enrollments[enrollmentIndex] = enrollment;
         
-        // ✅ Clear groups when switching to General
         if (field === 'enroll_type_name' && value === 'General') {
             enrollments[enrollmentIndex].groupings = [];
         }
@@ -263,53 +251,74 @@ export default function ListCourses({
         return companyUnits.filter(company => !usedCompanyIds.includes(company.id));
     };
 
+    // ✅ Make async and return result
     const handleSaveEnrollment = async (courseId, enrollmentIndex) => {
         const currentData = enrollmentData[courseId] || {};
         const enrollments = currentData.enrollments || [];
         const enrollment = enrollments[enrollmentIndex];
-        console.log('dssdsdfafaf',enrollment);
+        
+        console.log('💾 Saving enrollment:', enrollment);
+        
         if (!enrollment) {
-            showError('Enrollment not found.');
-            return;
+            await showError('Enrollment not found.');
+            return { success: false };
         }
         
         // ✅ Client-side validation
         if (!enrollment.company_id) {
-            showWarning('Please select a company.');
-            return;
+            await showWarning('Please select a company.');
+            return { success: false };
         }
         
         if (!enrollment.enroll_type_name) {
-            showWarning('Please select enrollment type.');
-            return;
+            await showWarning('Please select enrollment type.');
+            return { success: false };
         }
         
         if (!enrollment.course_status_name) {
-            showWarning('Please select course status.');
-            return;
+            await showWarning('Please select course status.');
+            return { success: false };
         }
         
         if (!enrollment.publish_date) {
-            showWarning('Please select start date.');
-            return;
+            await showWarning('Please select start date.');
+            return { success: false };
+        }
+        
+        // ✅ Validate passing_grade
+        if (enrollment.passing_grade === undefined || enrollment.passing_grade === null) {
+            await showWarning('Please enter minimum score.');
+            return { success: false };
+        }
+        
+        if (enrollment.passing_grade < 0 || enrollment.passing_grade > 100) {
+            await showWarning('Minimum score must be between 0 and 100.');
+            return { success: false };
         }
         
         if (enrollment.enroll_type_name === 'Specific' && 
             (!enrollment.groupings || enrollment.groupings.length === 0)) {
-            showWarning('Please select at least one group for specific enrollment.');
-            return;
+            await showWarning('Please select at least one group for specific enrollment.');
+            return { success: false };
         }
         
+        // ✅ Call parent handler and await result
         if (onCourseChange) {
-            onCourseChange(courseId, 'save_single', {
+            const result = await onCourseChange(courseId, 'save_single', {
                 course: currentData,
                 enrollment: enrollment,
                 index: enrollmentIndex
             });
+            
+            console.log('📥 Save result from parent:', result);
+            
+            // ✅ Return the result to modal
+            return result || { success: false };
         }
+        
+        return { success: false };
     };
 
-    // ✅ Loading State
     if (loading) {
         return (
             <div className="flex items-center justify-center py-16">
@@ -321,7 +330,6 @@ export default function ListCourses({
         );
     }
 
-    // ✅ Error State
     if (error) {
         return (
             <div className="bg-red-50 border-2 border-red-200 rounded-xl p-8 text-center">
@@ -340,7 +348,6 @@ export default function ListCourses({
         );
     }
 
-    // ✅ No Data State (different from filtered empty)
     if (courses.length === 0) {
         return (
             <div className="bg-gray-50 border-2 border-gray-200 rounded-xl p-12 text-center">
@@ -363,7 +370,6 @@ export default function ListCourses({
 
     return (
         <div className="space-y-4">
-            {/* Filter Section */}
             <FilterSection
                 searchQuery={searchQuery}
                 setSearchQuery={setSearchQuery}
@@ -376,7 +382,6 @@ export default function ListCourses({
                 totalCount={courses.length}
             />
 
-            {/* Courses List */}
             <div className="space-y-3">
                 {filteredCourses.map((course, index) => (
                     <CourseCard
@@ -398,7 +403,6 @@ export default function ListCourses({
                 ))}
             </div>
 
-            {/* ✅ Enhanced Empty State - Filtered */}
             {filteredCourses.length === 0 && courses.length > 0 && (
                 <div className="text-center py-12 bg-white rounded-xl border-2 border-gray-200">
                     <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">

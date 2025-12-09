@@ -87,6 +87,7 @@ export default function AddContent({
         const routes = {
             'Multiple Choice Test': '/course/content/pre-test',
             'PRE TEST': '/course/content/pre-test',
+            'Post Test': '/course/content/pre-test',
             'PDF Content': '/course/upload/upload-content',
             'Video Content': '/course/upload/upload-content',
             'PPT Content': '/course/upload/upload-content'

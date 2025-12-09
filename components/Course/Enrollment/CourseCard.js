@@ -55,9 +55,11 @@ export default function CourseCard({
     };
 
     const handleAddNew = () => {
-        const newEnrollmentIndex = enrollments.length; 
+        // ✅ Add new enrollment first
+        const newEnrollmentIndex = enrollments.length;
         onAddEnrollment(course.id_course);
-        // Create temporary enrollment
+        
+        // ✅ Create temporary enrollment object with all required fields
         const newEnrollment = {
             temp_id: Date.now(),
             is_new: true,
@@ -68,13 +70,24 @@ export default function CourseCard({
             end_date: '',
             remedial_allowed: true,
             remedial_limit: 1,
+            times: 1,
+            passing_grade: 0, // ✅ New field with default
+            refreshment_months: null, // ✅ New field with default
             groupings: []
         };
         
+        // ✅ Use setTimeout to ensure state updates before opening modal
+        setTimeout(() => {
+            openModal(newEnrollment, newEnrollmentIndex);
+        }, 100);
+    };
+
+    const handleSaveEnrollment = async (courseId, enrollmentIndex) => {
+        // ✅ Await the save operation from parent
+        const result = await onSave(courseId, enrollmentIndex);
         
-        
-        // Open modal with the new enrollment (last item)
-        
+        // ✅ Return result to modal
+        return result;
     };
 
     return (
@@ -325,7 +338,7 @@ export default function CourseCard({
                     availableCompanies={availableCompanies(course.id_course, modalState.enrollmentIndex)}
                     onUpdateField={onUpdateField}
                     onToggleGroup={onToggleGroup}
-                    onSave={onSave}
+                    onSave={handleSaveEnrollment}
                 />
             )}
         </>
