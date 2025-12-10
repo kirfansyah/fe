@@ -120,7 +120,28 @@ export default function Enroll({
             };
         });
     };
-
+    const extractGroupingIds = (groupings) => {
+            if (!Array.isArray(groupings) || groupings.length === 0) {
+                return [];
+            }
+            
+            return groupings.map(item => {
+                
+                if (typeof item === 'number') {
+                    return item;
+                }
+                
+                if (item && typeof item === 'object' && item.id_grouping !== undefined) {
+                    return parseInt(item.id_grouping);
+                }
+                
+                if (typeof item === 'string') {
+                    const num = parseInt(item);
+                    return isNaN(num) ? null : num;
+                }
+                return null;
+            }).filter(id => id !== null && !isNaN(id) && id > 0);
+        };
     // Save single enrollment to backend
     const saveSingleEnrollment = async (enrollmentData) => {
         try {
@@ -146,7 +167,7 @@ export default function Enroll({
                 refreshment_months: enrollmentData.enrollment.refreshment_months || null,
                 created_by: dataKaryawans.nama,
                 created_device: "system",
-                target_groupings: enrollmentData.enrollment.groupings?.map(g => g.id_grouping) || []
+                target_groupings: extractGroupingIds(enrollmentData.enrollment.groupings)
             };
             
             if (isUpdate) {
@@ -160,14 +181,57 @@ export default function Enroll({
             if (response.success) {
                 await showSuccess(isUpdate ? 'Enrollment updated successfully!' : 'Enrollment saved successfully!');
                 
-                // ✅ CRITICAL: Refresh BEFORE returning
-                console.log('🔄 Refreshing enrollment data...');
-                await fetchEnrollData();
+                const updatedEnrollment = {
+                    // Keep all form data
+                    ...enrollmentData.enrollment,
+                    
+                    // Add/update from API response
+                    id_course_enrollment: response.data,
+                    
+                    // Mark as saved (not new anymore)
+                    is_new: false,
+                    
+                    // Update other fields from response if available
+                    company_name: enrollmentData.enrollment.company_name || 
+                                companyUnits.find(c => c.id === enrollmentData.enrollment.company_id)?.company_name,
+                    
+                    enroll_type_name: enrollmentData.enrollment.enroll_type_name,
+                    id_enrollment_type: transformedData.id_enrollment_type,
+                    
+                    course_status_name: enrollmentData.enrollment.course_status_name,
+                    id_course_status: transformedData.id_course_status,
+                    
+                    publish_date: enrollmentData.enrollment.publish_date,
+                    end_date: enrollmentData.enrollment.end_date,
+                    
+                    remedial_allowed: transformedData.remedial_allowed,
+                    remedial_limit: transformedData.remedial_limit,
+                    
+                    passing_grade: transformedData.passing_grade,
+                    refreshment_months: transformedData.refreshment_months,
+                    
+                    // Keep groupings as clean array
+                    groupings: extractGroupingIds(enrollmentData.enrollment.groupings),
+                    
+                    // Add timestamps if in response
+                    created_at: response.data.created_at || new Date().toISOString(),
+                    created_by: transformedData.created_by,
+                    updated_at: response.data.updated_at || null,
+                    updated_by: response.data.updated_by || null
+                };
                 
-                // ✅ Small delay to ensure state propagates
-                await new Promise(resolve => setTimeout(resolve, 300));
                 
-                console.log('✅ Data refreshed successfully');
+                console.log('💾 Updating state, is_new:', updatedEnrollment);
+                // ✅ Update local state immediately
+                updateLocalEnrollmentState(
+                    enrollmentData.courseId, 
+                    enrollmentData.index, 
+                    updatedEnrollment
+                );
+
+                 fetchEnrollData();
+                
+                
                 return { success: true };
             }
             
@@ -179,6 +243,8 @@ export default function Enroll({
             return { success: false };
         }
     };
+
+    
 
     // Transform enrollment data for bulk API call
     const transformEnrollmentData = (data) => {

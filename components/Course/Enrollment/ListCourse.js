@@ -218,6 +218,29 @@ export default function ListCourses({
         onCourseChange(courseId, 'enrollments', enrollments);
     };
 
+    const extractGroupingIds = (groupings) => {
+        if (!Array.isArray(groupings) || groupings.length === 0) {
+            return [];
+        }
+        
+        return groupings.map(item => {
+           
+            if (typeof item === 'number') {
+                return item;
+            }
+           
+            if (item && typeof item === 'object' && item.id_grouping !== undefined) {
+                return parseInt(item.id_grouping);
+            }
+           
+            if (typeof item === 'string') {
+                const num = parseInt(item);
+                return isNaN(num) ? null : num;
+            }
+            return null;
+        }).filter(id => id !== null && !isNaN(id) && id > 0);
+    };
+
     const toggleEnrollmentGroup = (courseId, enrollmentIndex, groupId) => {
         const currentData = enrollmentData[courseId] || {};
         const enrollments = currentData.enrollments || [];
@@ -228,7 +251,7 @@ export default function ListCourses({
             return;
         }
         
-        const currentGroups = enrollment?.groupings || [];
+        const currentGroups = extractGroupingIds(enrollment.groupings);
         
         let newGroups;
         if (currentGroups.includes(groupId)) {

@@ -25,8 +25,29 @@ export default function EnrollmentForm({
 
     const isExisting = !!enrollment.id_course_enrollment;
     const isSpecific = enrollment.enroll_type_name === 'Specific' || enrollment.id_enrollment_type === 2;
-    const selectedGroups = enrollment.groupings || 
-                          (enrollment.groupings?.map(g => g.id_grouping)) || [];
+    const extractGroupingIds = (groupings) => {
+        if (!Array.isArray(groupings) || groupings.length === 0) {
+            return [];
+        }
+        
+        return groupings.map(item => {
+           
+            if (typeof item === 'number') {
+                return item;
+            }
+           
+            if (item && typeof item === 'object' && item.id_grouping !== undefined) {
+                return parseInt(item.id_grouping);
+            }
+           
+            if (typeof item === 'string') {
+                const num = parseInt(item);
+                return isNaN(num) ? null : num;
+            }
+            return null;
+        }).filter(id => id !== null && !isNaN(id) && id > 0);
+    };
+    const selectedGroups = extractGroupingIds(enrollment.groupings);
     const selectedCompany = companyUnits.find(c => c.id === enrollment.company_id);
 
     // Format values
@@ -42,7 +63,7 @@ export default function EnrollmentForm({
                    new Date(enrollment.end_date).toISOString().split('T')[0] : '';
     const remedialAllowed = enrollment.remedial_allowed !== undefined ? 
                           (enrollment.remedial_allowed ? 'Yes' : 'No') : 'Yes';
-    const times = enrollment.remedial_limit || enrollment.times || 1;
+    const remedial_limit = enrollment.remedial_limit || 1;
     
     // Reset step when modal opens
     useEffect(() => {
@@ -118,6 +139,7 @@ export default function EnrollmentForm({
             
             // ✅ Close only if successful
             if (result?.success) {
+                await new Promise(resolve => setTimeout(resolve, 800));
                 onClose();
             }
         } catch (error) {
@@ -492,7 +514,15 @@ export default function EnrollmentForm({
                                     <div className="grid grid-cols-2 gap-3">
                                         <button
                                             type="button"
-                                            onClick={() => !isReadOnly && onUpdateField(courseId, enrollmentIndex, 'remedial_allowed', 'Yes')}
+                                            onClick={() => {
+                                                if (!isReadOnly) {
+                                                    onUpdateField(courseId, enrollmentIndex, 'remedial_allowed', 'Yes');
+                                                    // ✅ Set default remedial_limit to 1 when enabling remedial
+                                                    if (remedial_limit === 0) {
+                                                        onUpdateField(courseId, enrollmentIndex, 'remedial_limit', 1);
+                                                    }
+                                                }
+                                            }}
                                             disabled={isReadOnly}
                                             className={`p-4 rounded-xl border-2 transition-all ${
                                                 remedialAllowed === 'Yes'
@@ -505,7 +535,13 @@ export default function EnrollmentForm({
                                         </button>
                                         <button
                                             type="button"
-                                            onClick={() => !isReadOnly && onUpdateField(courseId, enrollmentIndex, 'remedial_allowed', 'No')}
+                                            onClick={() => {
+                                                if (!isReadOnly) {
+                                                    onUpdateField(courseId, enrollmentIndex, 'remedial_allowed', 'No');
+                                                    // ✅ Set remedial_limit to 0 when disabling remedial
+                                                    onUpdateField(courseId, enrollmentIndex, 'remedial_limit', 0);
+                                                }
+                                            }}
                                             disabled={isReadOnly}
                                             className={`p-4 rounded-xl border-2 transition-all ${
                                                 remedialAllowed === 'No'
@@ -526,17 +562,25 @@ export default function EnrollmentForm({
                                     </label>
                                     <input
                                         type="number"
-                                        value={times}
-                                        onChange={(e) => onUpdateField(courseId, enrollmentIndex, 'times', parseInt(e.target.value) || 1)}
-                                        min="1"
+                                        value={remedialAllowed === 'No' ? 0 : remedial_limit}
+                                        onChange={(e) => {
+                                            let value = parseInt(e.target.value, 10);
+                                            if (isNaN(value) || value < 1) value = 0;
+                                            if (value > 10) value = 10;
+                                            onUpdateField(courseId, enrollmentIndex, 'remedial_limit', value);
+                                        }}
+                                        min="0"
                                         max="10"
-                                        disabled={isReadOnly}
+                                        disabled={isReadOnly || remedialAllowed === 'No'} // ✅ Disable when remedial not allowed
                                         className={`w-full px-4 py-3 border-2 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                                            isReadOnly ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'
+                                            isReadOnly || remedialAllowed === 'No' ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'
                                         }`}
                                     />
                                     <p className="text-xs text-gray-500 mt-2">
-                                        Number of times employee can attempt this course
+                                        {remedialAllowed === 'No' 
+                                            ? 'Remedial not allowed - Only one attempt available'
+                                            : 'Number of times employee can attempt this course'
+                                        }
                                     </p>
                                 </div>
 
@@ -548,11 +592,31 @@ export default function EnrollmentForm({
                                     <div className="relative">
                                         <input
                                             type="number"
-                                            value={enrollment.passing_grade ?? 0}
-                                            onChange={(e) => onUpdateField(courseId, enrollmentIndex, 'passing_grade', parseInt(e.target.value) || 0)}
+                                            value={enrollment.passing_grade === 0 ? '' : enrollment.passing_grade}
+                                            onChange={(e) => {
+                                                const inputValue = e.target.value;
+                                                
+                                                // ✅ Allow empty input
+                                                if (inputValue === '') {
+                                                    onUpdateField(courseId, enrollmentIndex, 'passing_grade', 0);
+                                                    return;
+                                                }
+                                                
+                                                // ✅ Parse and validate
+                                                let value = parseInt(inputValue, 10);
+                                                if (isNaN(value) || value < 0) value = 0;
+                                                if (value > 100) value = 100;
+                                                
+                                                onUpdateField(courseId, enrollmentIndex, 'passing_grade', value);
+                                            }}
+                                            onFocus={(e) => {
+                                                // ✅ Auto select all text on focus
+                                                e.target.select();
+                                            }}
                                             min="0"
                                             max="100"
                                             disabled={isReadOnly}
+                                            placeholder="0"
                                             className={`w-full px-4 py-3 pr-12 border-2 rounded-xl transition-all focus:outline-none focus:ring-2 ${
                                                 validationErrors.passing_grade
                                                     ? 'border-red-300 focus:ring-red-500'
@@ -725,7 +789,7 @@ export default function EnrollmentForm({
                                 </div>
                                 <div>
                                     <p className="text-blue-700 font-medium mb-1">Max Attempts:</p>
-                                    <p className="text-blue-900 font-bold">{times}</p>
+                                    <p className="text-blue-900 font-bold">{remedial_limit}</p>
                                 </div>
                                 {isSpecific && (
                                     <div className="col-span-2">
