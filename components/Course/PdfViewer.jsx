@@ -48,9 +48,18 @@ export default function PdfViewer({ file, onPageChange, onError = null }) {
           onLoadSuccess={({ numPages }) => setTotalPages(numPages)}
           onLoadError={(err) => {
             console.error("PDF failed:", err);
-            if (onError) onError();
+            // if (onError) onError();
+
+            if (onError) {
+              onError("Path File tidak ditemukan");
+            }
           }}
           loading={<div className="text-center p-4">Loading PDF...</div>}
+          error={
+            <div className="text-center p-4 text-red-600">
+              Path File tidak ditemukan
+            </div>
+          }
         >
           <Page
             pageNumber={page}

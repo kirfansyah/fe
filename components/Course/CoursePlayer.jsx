@@ -21,17 +21,46 @@ export default function CoursePlayer({ ...props }) {
     }
   }, []);
   // 1️⃣ LOAD LAST SAVED STEP
+  //   useEffect(() => {
+  //     if (!courseId) return;
+
+  //     const savedStep = localStorage.getItem(`lastStep_${courseId}`);
+  //     if (savedStep !== null) {
+  //       const saved = Number(savedStep);
+
+  //       // cegah loop: hanya setStep jika berbeda
+  //       if (saved !== currentStep) {
+  //         setStep(saved);
+  //       }
+  //     }
+  //   }, [courseId]);
+
   useEffect(() => {
     if (!courseId) return;
 
-    const savedStep = localStorage.getItem(`lastStep_${courseId}`);
-    if (savedStep !== null) {
-      const saved = Number(savedStep);
+    const raw = localStorage.getItem(`lastStep_${courseId}`);
+    if (!raw) return;
 
-      // cegah loop: hanya setStep jika berbeda
-      if (saved !== currentStep) {
-        setStep(saved);
-      }
+    let data;
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      localStorage.removeItem(`lastStep_${courseId}`);
+      return;
+    }
+
+    const EXPIRATION = 30 * 60 * 1000; // 30 menit
+
+    if (Date.now() - data.savedAt > EXPIRATION) {
+      // expired → reset
+      localStorage.removeItem(`lastStep_${courseId}`);
+      console.log("lastStep expired & reset otomatis");
+      return;
+    }
+
+    // masih valid → load
+    if (data.step !== currentStep) {
+      setStep(data.step);
     }
   }, [courseId]);
 
