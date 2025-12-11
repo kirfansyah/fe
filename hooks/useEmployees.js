@@ -12,8 +12,7 @@ export function useEmployees() {
           status,
           categories
         );
-        // console.log("useEmployees: ", result);
-        // console.log("categories: ", categories);
+
         return {
           data: result.data || [],
           pagination: result.pagination || 0,
@@ -43,8 +42,6 @@ export function useEmployees() {
   const getCourseDetailById = useCallback(async (id) => {
     try {
       const result = await API.getCourseDetail(id);
-      //   console.log("result getCourseById:", result);
-
       return {
         data: result,
       };
@@ -57,18 +54,8 @@ export function useEmployees() {
   //   complete course
   const completeCourse = useCallback(async (courseData) => {
     try {
-      const payload = {
-        id_user_enrollment: "0",
-        id_course_content: "0",
-        updated_at: "2025-11-05T02:11:11.453Z",
-        updated_by: "system",
-        updated_device: "system",
-      };
-
       const commpletedCourse = await API.completeContent(courseData);
-      console.log("commpletedCourse :", commpletedCourse);
-
-      return commpletedCourse.data;
+      return commpletedCourse;
     } catch (err) {
       //   setError(err.message || "Failed to complete course");
       console.error("Error complete course:", err);
@@ -80,9 +67,7 @@ export function useEmployees() {
   const sendAswers = useCallback(async (answers) => {
     try {
       const sendedAnswers = await API.sendAnswers(answers);
-      console.log("sendAswers :", sendedAnswers);
-
-      return sendedAnswers.data;
+      return sendedAnswers;
     } catch (err) {
       //   setError(err.message || "Failed to complete course");
       console.error("Error answers:", err);
@@ -94,9 +79,7 @@ export function useEmployees() {
   const sendEnrollment = useCallback(async (data) => {
     try {
       const sendedEnrollment = await API.sendEnrollment(data);
-      console.log("sendEnrollment :", sendedEnrollment);
-
-      return sendedEnrollment.data;
+      return sendedEnrollment;
     } catch (err) {
       //   setError(err.message || "Failed to complete course");
       console.error("Error sendEnrollment:", err);
@@ -108,7 +91,6 @@ export function useEmployees() {
   const sendFeedback = useCallback(async (data) => {
     try {
       const sendedFeedback = await API.sendFeedback(data);
-      console.log("sendFeedback :", sendedFeedback);
 
       return sendedFeedback;
     } catch (err) {

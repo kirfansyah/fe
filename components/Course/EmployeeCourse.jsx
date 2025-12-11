@@ -24,6 +24,7 @@ import Link from "next/link";
 import { useEmployees } from "@/hooks/useEmployees";
 import { BookOpen, Clock, Star } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
 
 export default function CoursePage({ link }) {
   const { fetchEmployees } = useEmployees();
@@ -108,6 +109,7 @@ export default function CoursePage({ link }) {
   };
 
   const handleFilter = (cat) => {
+    const fixedCategory = cat === "All" ? "" : cat;
     setFilterCategory(cat);
     setCurrentPage(1);
   };
