@@ -43,6 +43,8 @@
   "welcome_back": "Welcome Back!",
   "enter_your_credentials": "Enter your credentials to access your account.",
   "invalid_credentials": "Invalid username or password.",
-  "reset_link_sent": "Reset link has been sent to your email."
+  "reset_link_sent": "Reset link has been sent to your email.",
+  "role_management": "Role Management",
+  "menu_management": "Menu Management"
 
 }
