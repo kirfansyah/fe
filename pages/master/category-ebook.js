@@ -14,6 +14,7 @@ import Admin from "layouts/Admin.js";
 import { ProfileContext } from '@/contexts/profile/ProfileContext';
 import { useSweetAlert } from '@/hooks/useSweetAlert';
 import { useEbooks } from "@/hooks/useEbooks";
+import { useRoles } from "@/hooks/useRoles";
 export default function MasterCategory() {
     const [loading, setLoading] = useState(true);
     const [entriesPerPage, setEntriesPerPage] = useState(10);
@@ -31,7 +32,8 @@ export default function MasterCategory() {
         id_category: ''
     });
 
-    const { categorys, subCategorys } = useEbooks();
+    const { categorys, subCategorys,fetchCategory,fetchSubCategory } = useEbooks();
+    const { handleCreateCategory,handleCreateSubCategory } = useRoles();
 
     const categories = categorys || [];
     const subcategories = subCategorys || [];
@@ -45,38 +47,9 @@ export default function MasterCategory() {
         getKaryawan();
     }, []);
 
-    // Fetch Categories
-    const fetchCategories = async () => {
-        try {
-            setLoading(true);
-            const response = await fetch("/api/master/category");
-            const result = await response.json();
-            
-            if (result.success) {
-                setCategories(result.data);
-            }
-        } catch (error) {
-            console.error("Error fetching categories:", error);
-            showError('Failed to load categories');
-        } finally {
-            setLoading(false);
-        }
-    };
+    
 
-    // Fetch Subcategories
-    const fetchSubcategories = async () => {
-        try {
-            const response = await fetch("/api/master/subcategory");
-            const result = await response.json();
-            
-            if (result.success) {
-                setSubcategories(result.data);
-            }
-        } catch (error) {
-            console.error("Error fetching subcategories:", error);
-        }
-    };
-
+    
     // Get subcategories for a category
     const getSubcategoriesForCategory = (categoryId) => {
         return subcategories.filter(sub => sub.id_category === categoryId);
@@ -189,7 +162,7 @@ export default function MasterCategory() {
     // Handle Submit
     const handleSubmit = async (e) => {
         e.preventDefault();
-        
+        console.log('Submitting form with data:', modalType);
         if (modalType === 'category') {
             if (modalMode === 'add') {
                 const categoryData = {
@@ -200,25 +173,14 @@ export default function MasterCategory() {
                 
                 const result = await confirmAction('Are you sure you want to add this category?');
                 if (!result.isConfirmed) return;
-                
+                console.log('Adding category with data:', categoryData);
                 showLoading('Adding new category...');
                 try {
-                    const response = await fetch("/api/master/category", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify(categoryData)
-                    });
-
-                    const responseData = await response.json();
-
-                    if (responseData.success) {
-                        await fetchCategories();
-                        showSuccess('Category added successfully');
-                        setShowModal(false);
-                        setFormData({ category_name: '', subcategory_name: '', id_category: '' });
-                    } else {
-                        showError('Failed to add category');
-                    }
+                    await handleCreateCategory(categoryData);
+                    await fetchCategory();
+                    showSuccess('Subcategory added successfully');
+                    setShowModal(false);
+                    setFormData({ category_name: '', subcategory_name: '', id_category: '' });
                 } catch (error) {
                     showError(`Failed to add category: ${error.message}`);
                 }
@@ -234,21 +196,11 @@ export default function MasterCategory() {
                 
                 showLoading('Saving changes...');
                 try {
-                    const response = await fetch(`/api/master/category/${selectedItem.id_category}`, {
-                        method: "PUT",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify(categoryData)
-                    });
+                    await handleCreateCategory(categoryData);
+                    await fetchCategory();
+                    showSuccess('Category updated successfully');
+                    setShowModal(false);
 
-                    const responseData = await response.json();
-
-                    if (responseData.success) {
-                        await fetchCategories();
-                        showSuccess('Category updated successfully');
-                        setShowModal(false);
-                    } else {
-                        showError('Failed to update category');
-                    }
                 } catch (error) {
                     showError(`Failed to update category: ${error.message}`);
                 }
@@ -265,7 +217,7 @@ export default function MasterCategory() {
                     const responseData = await response.json();
 
                     if (responseData.success) {
-                        await fetchCategories();
+                        await fetchCategory();
                         showSuccess('Category deleted successfully');
                         setShowModal(false);
                     } else {
@@ -289,22 +241,11 @@ export default function MasterCategory() {
                 
                 showLoading('Adding new subcategory...');
                 try {
-                    const response = await fetch("/api/master/subcategory", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify(subcategoryData)
-                    });
-
-                    const responseData = await response.json();
-
-                    if (responseData.success) {
-                        await fetchSubcategories();
-                        showSuccess('Subcategory added successfully');
-                        setShowModal(false);
-                        setFormData({ category_name: '', subcategory_name: '', id_category: '' });
-                    } else {
-                        showError('Failed to add subcategory');
-                    }
+                    await handleCreateSubCategory(subcategoryData);
+                    await fetchSubCategory();
+                    showSuccess('Subcategory added successfully');
+                    setShowModal(false);
+                    setFormData({ category_name: '', subcategory_name: '', id_category: '' });
                 } catch (error) {
                     showError(`Failed to add subcategory: ${error.message}`);
                 }
@@ -321,21 +262,10 @@ export default function MasterCategory() {
                 
                 showLoading('Saving changes...');
                 try {
-                    const response = await fetch(`/api/master/subcategory/${selectedItem.id_subcategory}`, {
-                        method: "PUT",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify(subcategoryData)
-                    });
-
-                    const responseData = await response.json();
-
-                    if (responseData.success) {
-                        await fetchSubcategories();
-                        showSuccess('Subcategory updated successfully');
-                        setShowModal(false);
-                    } else {
-                        showError('Failed to update subcategory');
-                    }
+                    await handleCreateSubCategory(subcategoryData);
+                    await fetchSubCategory();
+                    showSuccess('Subcategory updated successfully');
+                    setShowModal(false);
                 } catch (error) {
                     showError(`Failed to update subcategory: ${error.message}`);
                 }
