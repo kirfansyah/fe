@@ -129,6 +129,34 @@ export function useRoles(){
         }
     }, []);
 
+    const handleCreateCategory = useCallback(async (categoryData) => {
+        setLoading(true);
+        setError(null);
+        try {
+            const response = await API.createCategory(categoryData);
+            return response;
+        } catch (err) {
+            setError(err.message);
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    },[]);
+
+    const handleCreateSubCategory = useCallback(async (subCategoryData) => {
+        setLoading(true);
+        setError(null);
+        try {
+            const response = await API.createSubCategory(subCategoryData);
+            return response;
+        } catch (err) {
+            setError(err.message);
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    },[]);
+
 
     useEffect(() => {
         Promise.all([fetchRoles(), fetchMenus()]);
@@ -145,6 +173,8 @@ export function useRoles(){
     fetchMenus,
     handleCreateMenus,
     handleUpdateRolePermissions,
-    fetchAnalytics
+    fetchAnalytics,
+    handleCreateCategory,
+    handleCreateSubCategory,
   };
 }

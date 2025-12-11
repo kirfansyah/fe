@@ -45,6 +45,7 @@ export function useCourses(contentId = null) {
         try {
             const newCourse = await API.createCourse(formData);
             await fetchCourses(); // Refresh courses list
+            await fetchEnrollData();
             return newCourse.data;
         } catch (err) {
             setError(err.message || 'Failed to create course');
@@ -78,6 +79,22 @@ export function useCourses(contentId = null) {
             setError(err.message || 'Failed to fetch groups');
         }
     }, []);
+
+    // ✅ GET all data content type
+    const addGroupEnroll = useCallback(async (GroupEnrollData) => {
+        setIsSaving(true); // ← Changed to setIsSaving
+        setError(null);
+        try {
+            const newCourse = await API.createGroupEnroll(GroupEnrollData);
+            await fetchGroupEnroll(); // Refresh courses list
+            return newCourse.data;
+        } catch (err) {
+            setError(err.message || 'Failed to create course');
+            throw err;
+        } finally {
+            setIsSaving(false); // ← Changed to setIsSaving
+        }
+    }, [fetchCourses]);
 
     // ✅ GET all data employee with paging
     const fetchEmployeeData = useCallback(async (page = 1, pageSize = 10) => {
@@ -284,6 +301,7 @@ export function useCourses(contentId = null) {
         fetchContentByID,
         fetchProfileInfo,
         fetchCompanyUnits,
-        fetchEnrollData
+        fetchEnrollData,
+        addGroupEnroll
     };
 }

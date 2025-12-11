@@ -170,6 +170,41 @@ class RoleService {
         }
     }
 
+    /**
+     * Create new roles
+     * @param {Object} categoryData - Course data
+     * @returns {Promise} API response
+     */
+    static async createCategory(categoryData) {
+        try {
+            const response = await API.post("master/ebook/category", categoryData);
+            return {
+                success: response.data.success
+            };
+        } catch (error) {
+            console.error('RoleService.createCategory Error:', error);
+            throw new Error(error.response?.data?.message || 'Failed to create category');
+        }
+    }
+
+    /**
+     * Create new roles
+     * @param {Object} subCategoryData - Course data
+     * @returns {Promise} API response
+     */
+    static async createSubCategory(subCategoryData) {
+        try {
+            const response = await API.post("master/ebook/subcategory", subCategoryData);
+            return {
+                success: response.data.success,
+                data: response.data.data,
+                message: response.data.message
+            };
+        } catch (error) {
+            console.error('RoleService.createSubCategory Error:', error);
+            throw new Error(error.response?.data?.message || 'Failed to create subcategory');
+        }
+    }
     
 
 

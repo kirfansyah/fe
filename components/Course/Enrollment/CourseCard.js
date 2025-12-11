@@ -8,7 +8,7 @@ import {
     Edit,
     Trash2
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import EnrollmentFormModal from "./EnrollmentForm";
 
 export default function CourseCard({ 
@@ -29,7 +29,7 @@ export default function CourseCard({
 }) {
     const [modalState, setModalState] = useState({
         isOpen: false,
-        enrollment: null,
+        
         enrollmentIndex: null
     });
 
@@ -37,7 +37,7 @@ export default function CourseCard({
     const existingEnrollments = enrollments.filter(e => e.id_course_enrollment);
     const newEnrollments = enrollments.filter(e => e.is_new);
     const totalCompaniesEnrolled = existingEnrollments.length;
-
+    const [pendingModalOpen, setPendingModalOpen] = useState(null);
     const openModal = (enrollment, index) => {
         setModalState({
             isOpen: true,
@@ -54,39 +54,22 @@ export default function CourseCard({
         });
     };
 
+     useEffect(() => {
+        if (pendingModalOpen !== null && enrollments.length > pendingModalOpen) {
+            const newEnrollment = enrollments[pendingModalOpen];
+            openModal(newEnrollment, pendingModalOpen);
+            setPendingModalOpen(null);
+        }
+    }, [enrollments.length]);
+
     const handleAddNew = () => {
-        // ✅ Add new enrollment first
         const newEnrollmentIndex = enrollments.length;
-        onAddEnrollment(course.id_course);
-        
-        // ✅ Create temporary enrollment object with all required fields
-        const newEnrollment = {
-            temp_id: Date.now(),
-            is_new: true,
-            company_id: null,
-            enroll_type_name: '',
-            course_status_name: '',
-            publish_date: '',
-            end_date: '',
-            remedial_allowed: true,
-            remedial_limit: 1,
-            times: 1,
-            passing_grade: 0, // ✅ New field with default
-            refreshment_months: null, // ✅ New field with default
-            groupings: []
-        };
-        
-        // ✅ Use setTimeout to ensure state updates before opening modal
-        setTimeout(() => {
-            openModal(newEnrollment, newEnrollmentIndex);
-        }, 100);
+        setPendingModalOpen(newEnrollmentIndex);
+        onAddEnrollment(course.id_course); 
     };
 
     const handleSaveEnrollment = async (courseId, enrollmentIndex) => {
-        // ✅ Await the save operation from parent
         const result = await onSave(courseId, enrollmentIndex);
-        
-        // ✅ Return result to modal
         return result;
     };
 

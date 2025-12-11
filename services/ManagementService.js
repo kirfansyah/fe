@@ -61,6 +61,25 @@ class ManagementService {
 
     /**
      * Create new course
+     * @param {Object} GroupEnrollData - Course data
+     * @returns {Promise} API response
+     */
+    static async createGroupEnroll(GroupEnrollData) {
+        try {
+            const response = await API.post("/master/course/grouping", GroupEnrollData);
+            return {
+                success: response.data.success,
+                data: response.data.data,
+                message: response.data.message
+            };
+        } catch (error) {
+            console.error('ManagementService.createGroupEnroll Error:', error);
+            throw new Error(error.response?.data?.message || 'Failed to create course');
+        }
+    }
+
+    /**
+     * Create new course
      * @param {Object} courseData - Course data
      * @returns {Promise} API response
      */
