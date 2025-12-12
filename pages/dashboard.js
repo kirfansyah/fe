@@ -2,7 +2,6 @@ import {useContext,useEffect} from "react";
 import WebLayout from "../layouts/WebLayout";
 import { ProfileContext } from "../contexts/profile/ProfileContext";
 import Link from "next/link";
-import { useCourses } from '../hooks/useCourses';
 import { LanguageContext } from "@/contexts/LanguageContext";
 
 const Dashboard = () => {
@@ -15,9 +14,9 @@ const Dashboard = () => {
     getKaryawan();
   }, []);
 
-  const {profileInfo} = useCourses();   
-  const profileData = profileInfo || dataKaryawans || {};
-
+  
+  const profileData = dataKaryawans || {};
+  
   const menuItems = [
     {
       label: listLanguage.training_portal || "Portal Pelatihan",
@@ -52,6 +51,9 @@ const Dashboard = () => {
       <div className="bg-gradient-to-r from-blue-800 to-blue-600 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
           <div className="text-center">
+            <h1 className="text-2xl sm:text-3xl font-semibold mb-4">
+              {profileData.name || ''}
+            </h1>
             {/* Position & Company */}
             <p className="text-sm sm:text-base text-blue-100 mb-2">
               {profileData.position_name || 'Programmer'} - {profileData.company_name || 'PT. Riau Sakti United Plantations (Industry)'}
@@ -59,12 +61,12 @@ const Dashboard = () => {
             
             {/* Date & Time */}
             <p className="text-xs sm:text-sm text-blue-200">
-              {new Date().toLocaleDateString("en-US", {
+              {new Date().toLocaleDateString("id-ID", {
                 weekday: "long",
                 month: "long",
                 day: "numeric",
                 year: "numeric",
-              })} | {new Date().toLocaleTimeString("en-US", {
+              })} | {new Date().toLocaleTimeString("id-ID", {
                 hour: "2-digit",
                 minute: "2-digit",
               })}
