@@ -276,7 +276,9 @@ export default function ViewEbook({ onBack, ebookId }) {
           <div className="flex-1 overflow-hidden">
             {ebook.file_url ? (
               <iframe
-                src={ebook.file_url}
+                src={`/api/proxy/proxy-pdf?url=${encodeURIComponent(
+                  ebook.file_url
+                )}`}
                 className="w-full h-full"
                 title={ebook.title}
                 style={{ border: "none" }}
