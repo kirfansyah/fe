@@ -91,7 +91,7 @@ export default function ContentArea({ exitCourse }) {
 
   const defaultPDF = "/uploads/pdf/default.pdf";
   //   const defaultPDF =
-  //     "https://api-lms.sambu.co.id/uploads/courses/15/content/others/08364cbc-948d-4ed4-8be9-71c06396cba0.pdf";
+  //     "http://api-lms.sambu.co.id/uploads/ebooks/files/a569a951-3311-451c-9338-89dad8d7595a.pdf";
   const defaultVideo = "/uploads/video/komunikasi-efektif-2.mp4";
   const defaultPpt =
     "https://docs.google.com/presentation/d/1jsjVVdCjlVd5uAM3e_nlyPVoNUKid07A/edit?usp=sharing";
@@ -102,7 +102,8 @@ export default function ContentArea({ exitCourse }) {
     if (!step) return;
 
     async function checkFiles() {
-      const baseURL = window.location.origin;
+      //   const baseURL = window.location.origin;
+      const baseURL = process.env.API_BASE || "https://api-lms.sambu.co.id";
 
       // ===== PDF =====
       if (step.content_url && step.content_url.endsWith(".pdf")) {
