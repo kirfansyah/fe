@@ -7,7 +7,7 @@ import { ProfileContext } from "../../../contexts/profile/ProfileContext";
 
 export default function PreTestPage() {
     const router = useRouter();
-    const { courseId } = router.query;
+     const { courseId,contentTypeId } = router.query;
 
     useEffect(() => {
         if (router.isReady && !courseId) {
@@ -51,6 +51,7 @@ export default function PreTestPage() {
     return (
         <PreTestForm 
             courseId={courseId}
+            contentTypeId={contentTypeId}
             onBack={handleBack}
             onSave={handleSave}
             createdBy={dataKaryawans.nama}

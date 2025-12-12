@@ -12,6 +12,7 @@ import { useSweetAlert } from '../../../hooks/useSweetAlert';
 
 export default function PreTestForm({ 
     courseId, 
+    contentTypeId,
     onBack, 
     onSave,
     createdBy = "System",
@@ -130,9 +131,9 @@ export default function PreTestForm({
 
         const finalTest = {
             id_course: courseId,
-            id_content_type: 3,
+            id_content_type: contentTypeId,
             random_type: testConfig.randomType,
-            content_title: isEditMode ? contentData?.content_title : "Pre Test",
+            content_title: contentTypeId === 7 ? "Post Test" : "Pre Test",
             total_points: parseInt(testConfig.totalPoints) || 0,
             total_number: parseInt(testConfig.totalNumber) || 0,
             point_distribution_type: testConfig.pointDistribution === 'Equal Distribution' ? 'equal' : 
