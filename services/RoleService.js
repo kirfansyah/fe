@@ -179,7 +179,9 @@ class RoleService {
         try {
             const response = await API.post("master/ebook/category", categoryData);
             return {
-                success: response.data.success
+                success: response.data.success,
+                data: response.data.data,
+                message: response.data.message
             };
         } catch (error) {
             console.error('RoleService.createCategory Error:', error);

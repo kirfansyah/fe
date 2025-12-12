@@ -102,12 +102,12 @@ const AuthContextProvider = (props) => {
     }
   };
 
-  const Login = async ({ username, password }) => {
+  const Login = async ({ nik, password, site_id, is_karyawan }) => {
     dispatch({ type: "loading" }); // loading
 
  
     try {
-      const response = await API.post("/auth/get_token", { username, password });
+      const response = await API.post("/auth/login", { nik, password, site_id, is_karyawan });
       const { status, message, data } = response.data;
 
       if (status === 200 && data.length > 0) {
