@@ -40,6 +40,7 @@ export default function ContentArea({ exitCourse }) {
     "courseContent",
     "postTest",
   ];
+  //   console.log("flow :", flow);
 
   const allSteps = Object.entries(flow)
     .sort(
@@ -90,6 +91,11 @@ export default function ContentArea({ exitCourse }) {
   const [pptFile, setPptFile] = useState(null);
 
   const defaultPDF = "/uploads/pdf/default.pdf";
+  //   const defaultPDF =
+  //     "/api/pdf-proxy?url=" +
+  //     encodeURIComponent(
+  //       "https://api-lms.sambu.co.id/uploads/ebooks/files/a569a951-3311-451c-9338-89dad8d7595a.pdf"
+  //     );
   //   const defaultPDF =
   //     "http://api-lms.sambu.co.id/uploads/ebooks/files/a569a951-3311-451c-9338-89dad8d7595a.pdf";
   const defaultVideo = "/uploads/video/komunikasi-efektif-2.mp4";
@@ -380,7 +386,10 @@ export default function ContentArea({ exitCourse }) {
             </h2>
             <div className="w-full flex justify-center ">
               <PdfViewer
-                file={pdfFile}
+                // file={step.content_url_full}
+                file={`/api/pdf-proxy?url=${encodeURIComponent(
+                  step.content_url_full
+                )}`}
                 onPageChange={(isLastPage) => setPdfFinished(isLastPage)}
                 // onError={() => setPdfFile(defaultPDF)}
               />
@@ -395,7 +404,10 @@ export default function ContentArea({ exitCourse }) {
             </h2>
             <VideoPlayer
               //   url={`/uploads/video/komunikasi-efektif.mp4`}
-              url={videoFile}
+              //   url={videoFile}
+              url={`/api/video-proxy?url=${encodeURIComponent(
+                step.content_url_full
+              )}`}
               videoId={`${step.id}`}
               onVideoEnd={() => setVideoFinished(true)}
             />
