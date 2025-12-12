@@ -72,7 +72,7 @@ const Login = () => {
                 <div className="flex flex-col mb-2 py-2" ref={dropdownRef}>
                   <label className="text-gray-600 text-left text-base font-normal mb-1 flex items-center gap-2">
                     <FaBuilding className="w-4 h-4" />
-                    Site*
+                    Unit Usaha*
                   </label>
                   
                   <div className="relative">
