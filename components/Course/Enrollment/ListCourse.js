@@ -1,28 +1,257 @@
-import { Users, ChevronDown, ChevronRight, Calendar, Settings, X } from "lucide-react";
-import { useState } from "react";
+import { Settings, Loader2, AlertCircle } from "lucide-react";
+import { useState, useMemo } from "react";
 import React from "react";
+import FilterSection from "./FilterSection";
+import CourseCard from "./CourseCard";
+import { useSweetAlert } from '../../../hooks/useSweetAlert';
+
+// ✅ Constants for type IDs
+const ENROLLMENT_TYPE_IDS = {
+    GENERAL: 1,
+    SPECIFIC: 2
+};
+
+const COURSE_STATUS_IDS = {
+    MANDATORY: 1,
+    OPTIONAL: 2
+};
 
 export default function ListCourses({ 
-    courses,
-    groupEnroll = [],   
-    onCourseChange,     
-    enrollmentData = {}
+    enrollmentData = {},  
+    groupEnroll = [],
+    companyUnits = [],
+    onCourseChange,
+    loading = false,
+    error = null,
 }) {
     const [expanded, setExpanded] = useState(null);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [filterCompany, setFilterCompany] = useState("all");
+    const [filterStatus, setFilterStatus] = useState("all");
+    
+    const { showSuccess, showError, showWarning, confirmAction } = useSweetAlert();
+
+    // Extract courses from enrollmentData
+    const courses = useMemo(() => {
+        if (!enrollmentData || typeof enrollmentData !== 'object') {
+            return [];
+        }
+        
+        return Object.values(enrollmentData).map(data => ({
+            id_course: data?.id_course,
+            course_title: data?.course_title || '',
+            course_description: data?.course_description || '',
+            is_active: data?.is_active !== undefined ? data.is_active : true,
+            enrollments: data?.enrollments || []
+        })).filter(course => course.id_course);
+    }, [enrollmentData]);
+
+    // Filter courses
+    const filteredCourses = useMemo(() => {
+        return courses.filter(course => {
+            if (searchQuery && !course.course_title.toLowerCase().includes(searchQuery.toLowerCase())) {
+                return false;
+            }
+
+            const hasEnrollments = course.enrollments && course.enrollments.length > 0;
+            if (filterStatus === "enrolled" && !hasEnrollments) return false;
+            if (filterStatus === "not-enrolled" && hasEnrollments) return false;
+
+            if (filterCompany !== "all") {
+                const hasCompany = course.enrollments?.some(e => 
+                    e.company_id === parseInt(filterCompany)
+                );
+                if (!hasCompany) return false;
+            }
+
+            return true;
+        });
+    }, [courses, searchQuery, filterStatus, filterCompany]);
 
     const toggleExpand = (id) => {
         setExpanded(expanded === id ? null : id);
     };
 
-    const handleFieldChange = (courseId, field, value) => {
-        if (onCourseChange) {
-            onCourseChange(courseId, field, value);
+    const addEnrollment = (courseId) => {
+        console.log('🔍 Adding enrollment for course:', courseId);
+        const currentData = enrollmentData[courseId];
+        
+        if (!currentData) {
+            showError('Course not found. Please refresh the page.');
+            return;
         }
+        
+        const usedCompanyIds = (currentData.enrollments || [])
+            .map(e => e.company_id)
+            .filter(id => id !== null);
+        
+        const availableCompanies = companyUnits.filter(c => !usedCompanyIds.includes(c.id));
+        
+        if (availableCompanies.length === 0) {
+            showWarning('All companies have been enrolled for this course.');
+            return;
+        }
+        
+        const newEnrollment = {
+            temp_id: `temp_${Date.now()}`,
+            company_id: null,
+            enroll_type_name: '',
+            course_status_name: '',
+            publish_date: '',
+            end_date: '',
+            remedial_allowed: 'Yes',
+            remedial_limit: 1,
+            passing_grade: 0,
+            refreshment_months: null,
+            groupings: [],
+            is_new: true
+        };
+
+        const updatedEnrollments = [...(currentData.enrollments || []), newEnrollment];
+        onCourseChange(courseId, 'enrollments', updatedEnrollments);
+        
+        setExpanded(courseId);
+        showSuccess('New enrollment added. Please fill in the details.');
     };
 
-    const toggleEnrollmentGroup = (courseId, groupId) => {
-        const courseData = getCourseData(courseId);
-        const currentGroups = courseData.enrollment_group_ids || [];
+    const removeEnrollment = async (courseId, index) => {
+        const currentData = enrollmentData[courseId] || {};
+        const enrollments = currentData.enrollments || [];
+        const enrollment = enrollments[index];
+        
+        if (!enrollment) {
+            showError('Enrollment not found.');
+            return;
+        }
+        
+        const result = await confirmAction({
+            title: 'Delete Enrollment?',
+            text: `Remove enrollment for ${enrollment.company_name || 'this company'}?`,
+            confirmButtonText: 'Yes, delete it!',
+            cancelButtonText: 'Cancel'
+        });
+        
+        if (!result.isConfirmed) return;
+        
+        const updated = enrollments.filter((_, i) => i !== index);
+        onCourseChange(courseId, 'enrollments', updated);
+        showSuccess('Enrollment removed successfully.');
+    };
+
+    const duplicateEnrollment = async (courseId, index) => {
+        const currentData = enrollmentData[courseId] || {};
+        const enrollments = currentData.enrollments || [];
+        const toCopy = enrollments[index];
+        
+        if (!toCopy) {
+            showError('Enrollment not found.');
+            return;
+        }
+        
+        const usedCompanyIds = enrollments.map(e => e.company_id).filter(id => id !== null);
+        const availableCompanies = companyUnits.filter(c => !usedCompanyIds.includes(c.id));
+        
+        if (availableCompanies.length === 0) {
+            showWarning('All companies have been enrolled. Cannot duplicate.');
+            return;
+        }
+        
+        const result = await confirmAction({
+            title: 'Duplicate Enrollment?',
+            text: 'Create a copy of this enrollment configuration?',
+            confirmButtonText: 'Yes, duplicate it!'
+        });
+        
+        if (!result.isConfirmed) return;
+        
+        const newEnrollment = {
+            ...toCopy,
+            temp_id: `temp_${Date.now()}`,
+            company_id: null,
+            company_name: null,
+            id_course_enrollment: null,
+            is_new: true
+        };
+        
+        onCourseChange(courseId, 'enrollments', [...enrollments, newEnrollment]);
+        showSuccess('Enrollment duplicated. Please select a company.');
+    };
+
+    const updateEnrollmentField = (courseId, enrollmentIndex, field, value) => {
+        const currentData = enrollmentData[courseId] || {};
+        const enrollments = [...(currentData.enrollments || [])];
+        
+        if (!enrollments[enrollmentIndex]) {
+            showError('Enrollment not found.');
+            return;
+        }
+        
+        const enrollment = enrollments[enrollmentIndex];
+        const isExisting = !!enrollment.id_course_enrollment;
+        
+        if (isExisting) {
+            if (field === 'enroll_type_name') {
+                enrollment.enroll_type_name = value;
+                enrollment.id_enrollment_type = value === 'General' 
+                    ? ENROLLMENT_TYPE_IDS.GENERAL 
+                    : ENROLLMENT_TYPE_IDS.SPECIFIC;
+            } else if (field === 'course_status_name') {
+                enrollment.course_status_name = value;
+                enrollment.id_course_status = value === 'Mandatory' 
+                    ? COURSE_STATUS_IDS.MANDATORY 
+                    : COURSE_STATUS_IDS.OPTIONAL;
+            } else if (field === 'remedial_allowed') {
+                enrollment.remedial_allowed = value === 'Yes';
+            } else {
+                enrollment[field] = value;
+            }
+        } else {
+            enrollment[field] = value;
+        }
+        
+        enrollments[enrollmentIndex] = enrollment;
+        
+        if (field === 'enroll_type_name' && value === 'General') {
+            enrollments[enrollmentIndex].groupings = [];
+        }
+        
+        onCourseChange(courseId, 'enrollments', enrollments);
+    };
+
+    const extractGroupingIds = (groupings) => {
+        if (!Array.isArray(groupings) || groupings.length === 0) {
+            return [];
+        }
+        
+        return groupings.map(item => {
+           
+            if (typeof item === 'number') {
+                return item;
+            }
+           
+            if (item && typeof item === 'object' && item.id_grouping !== undefined) {
+                return parseInt(item.id_grouping);
+            }
+           
+            if (typeof item === 'string') {
+                const num = parseInt(item);
+                return isNaN(num) ? null : num;
+            }
+            return null;
+        }).filter(id => id !== null && !isNaN(id) && id > 0);
+    };
+
+    const toggleEnrollmentGroup = (courseId, enrollmentIndex, groupId) => {
+        const currentData = enrollmentData[courseId] || {};
+        const enrollments = currentData.enrollments || [];
+        const enrollment = enrollments[enrollmentIndex];
+        
+        if (!enrollment) {
+            showError('Enrollment not found.');
+            return;
+        }
+        
+        const currentGroups = extractGroupingIds(enrollment.groupings);
         
         let newGroups;
         if (currentGroups.includes(groupId)) {
@@ -31,325 +260,193 @@ export default function ListCourses({
             newGroups = [...currentGroups, groupId];
         }
         
-        handleFieldChange(courseId, 'enrollment_group_ids', newGroups);
+        updateEnrollmentField(courseId, enrollmentIndex, 'groupings', newGroups);
     };
 
-    const getCourseData = (courseId) => {
-        const data = enrollmentData[courseId];
+    const getAvailableCompanies = (courseId, currentIndex) => {
+        const currentData = enrollmentData[courseId] || {};
+        const enrollments = currentData.enrollments || [];
         
-        return {
-            enrollment_type: data?.enrollment_type || '',
-            status_course: data?.status_course || '',
-            publish_date: data?.publish_date || '',
-            end_date: data?.end_date || '',
-            remedial_allowed: data?.remedial_allowed || 'Yes',
-            times: data?.times || 1,
-            enrollment_group_ids: data?.enrollment_group_ids || [],
-        };
+        const usedCompanyIds = enrollments
+            .map((e, i) => i !== currentIndex ? e.company_id : null)
+            .filter(id => id !== null);
+        
+        return companyUnits.filter(company => !usedCompanyIds.includes(company.id));
     };
-    
+
+    // ✅ Make async and return result
+    const handleSaveEnrollment = async (courseId, enrollmentIndex) => {
+        const currentData = enrollmentData[courseId] || {};
+        const enrollments = currentData.enrollments || [];
+        const enrollment = enrollments[enrollmentIndex];
+        
+        console.log('💾 Saving enrollment:', enrollment);
+        
+        if (!enrollment) {
+            await showError('Enrollment not found.');
+            return { success: false };
+        }
+        
+        // ✅ Client-side validation
+        if (!enrollment.company_id) {
+            await showWarning('Please select a company.');
+            return { success: false };
+        }
+        
+        if (!enrollment.enroll_type_name) {
+            await showWarning('Please select enrollment type.');
+            return { success: false };
+        }
+        
+        if (!enrollment.course_status_name) {
+            await showWarning('Please select course status.');
+            return { success: false };
+        }
+        
+        if (!enrollment.publish_date) {
+            await showWarning('Please select start date.');
+            return { success: false };
+        }
+        
+        // ✅ Validate passing_grade
+        if (enrollment.passing_grade === undefined || enrollment.passing_grade === null) {
+            await showWarning('Please enter minimum score.');
+            return { success: false };
+        }
+        
+        if (enrollment.passing_grade < 0 || enrollment.passing_grade > 100) {
+            await showWarning('Minimum score must be between 0 and 100.');
+            return { success: false };
+        }
+        
+        if (enrollment.enroll_type_name === 'Specific' && 
+            (!enrollment.groupings || enrollment.groupings.length === 0)) {
+            await showWarning('Please select at least one group for specific enrollment.');
+            return { success: false };
+        }
+        
+        // ✅ Call parent handler and await result
+        if (onCourseChange) {
+            const result = await onCourseChange(courseId, 'save_single', {
+                course: currentData,
+                enrollment: enrollment,
+                index: enrollmentIndex
+            });
+            
+            console.log('📥 Save result from parent:', result);
+            
+            // ✅ Return the result to modal
+            return result || { success: false };
+        }
+        
+        return { success: false };
+    };
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center py-16">
+                <div className="text-center">
+                    <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
+                    <p className="text-gray-600 font-medium">Loading courses...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="bg-red-50 border-2 border-red-200 rounded-xl p-8 text-center">
+                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <AlertCircle className="w-8 h-8 text-red-600" />
+                </div>
+                <h3 className="text-lg font-bold text-red-900 mb-2">Failed to Load Courses</h3>
+                <p className="text-red-700 mb-4">{error.message || 'An unexpected error occurred'}</p>
+                <button
+                    onClick={() => window.location.reload()}
+                    className="px-6 py-2.5 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-all"
+                >
+                    Reload Page
+                </button>
+            </div>
+        );
+    }
+
+    if (courses.length === 0) {
+        return (
+            <div className="bg-gray-50 border-2 border-gray-200 rounded-xl p-12 text-center">
+                <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Settings className="w-10 h-10 text-gray-400" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">No Courses Available</h3>
+                <p className="text-gray-600 mb-6">
+                    There are no courses in the system yet.
+                </p>
+                <button
+                    onClick={() => window.location.href = '/course/add'}
+                    className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all"
+                >
+                    Create First Course
+                </button>
+            </div>
+        );
+    }
+
     return (
         <div className="space-y-4">
+            <FilterSection
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                filterStatus={filterStatus}
+                setFilterStatus={setFilterStatus}
+                filterCompany={filterCompany}
+                setFilterCompany={setFilterCompany}
+                companyUnits={companyUnits}
+                filteredCount={filteredCourses.length}
+                totalCount={courses.length}
+            />
+
             <div className="space-y-3">
-                {courses.map((course, index) => {
-                    const courseData = getCourseData(course.id_course);
-                    const isSpecific = courseData.enrollment_type === 'Specific';
-                    const selectedGroups = courseData.enrollment_group_ids || [];
-                    const isEnrolled = course.id_course_enrollment !== null; // ⭐ Check enrolled
-
-                    return (
-                        <div
-                            key={course.id_course}
-                            className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden"
-                        >
-                            {/* Course Header */}
-                            <div
-                                className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors cursor-pointer"
-                                onClick={() => toggleExpand(course.id_course)}
-                            >
-                                <div className="flex items-center gap-4 flex-1">
-                                    <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                                        <span className="text-sm font-semibold text-blue-600">{index + 1}</span>
-                                    </div>
-
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-2">
-                                            <h4 className="text-base font-semibold text-gray-900">
-                                                {course.course_title}
-                                            </h4>
-                                            
-                                            {/* ⭐ Show enrolled badge */}
-                                            {isEnrolled && (
-                                                <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded">
-                                                    Enrolled
-                                                </span>
-                                            )}
-                                        </div>
-                                        
-                                        {/* Show selected groups badges */}
-                                        {isSpecific && selectedGroups.length > 0 && (
-                                            <div className="flex flex-wrap gap-1 mt-1">
-                                                {selectedGroups.map(groupId => {
-                                                    const group = groupEnroll.find(g => g.id === groupId);
-                                                    return group ? (
-                                                        <span 
-                                                            key={groupId}
-                                                            className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs font-medium rounded"
-                                                        >
-                                                            {group.name_group}
-                                                        </span>
-                                                    ) : null;
-                                                })}
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* Enroll Button */}
-                                <button 
-                                    type="button"
-                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors border ${
-                                        isEnrolled 
-                                            ? 'text-green-600 bg-green-50 border-green-200'
-                                            : 'text-blue-600 hover:bg-blue-50 border-blue-200'
-                                    }`}
-                                >
-                                    {expanded === course.id_course ? (
-                                        <ChevronDown className="w-4 h-4" />
-                                    ) : (
-                                        <ChevronRight className="w-4 h-4" />
-                                    )}
-                                    <span className="text-sm font-medium">
-                                        {isEnrolled ? 'Update' : 'Enroll'}
-                                    </span>
-                                </button>
-                            </div>
-
-                            {/* Expanded Details */}
-                            {expanded === course.id_course && (
-                                <div className="border-t border-gray-100 bg-gray-50 p-6">
-                                    {/* ⭐ Info untuk enrolled course */}
-                                    {isEnrolled && (
-                                        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                                            <p className="text-sm text-blue-800">
-                                                ℹ️ This course is already enrolled. You can update the settings below.
-                                            </p>
-                                        </div>
-                                    )}
-
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                        {/* Enrollment Type */}
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Enrollment Type <span className="text-red-500">*</span>
-                                            </label>
-                                            <select
-                                                value={courseData.enrollment_type}
-                                                onChange={(e) => handleFieldChange(course.id_course, 'enrollment_type', e.target.value)}
-                                                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
-                                            >
-                                                <option value="">Select</option>
-                                                <option value="General">General</option>
-                                                <option value="Specific">Specific</option>
-                                            </select>
-                                        </div>
-
-                                        {/* Status Course */}
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Status Course <span className="text-red-500">*</span>
-                                            </label>
-                                            <select
-                                                value={courseData.status_course}
-                                                onChange={(e) => handleFieldChange(course.id_course, 'status_course', e.target.value)}
-                                                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
-                                            >
-                                                <option value="">Select</option>
-                                                <option value="Mandatory">Mandatory</option>
-                                                <option value="Optional">Optional</option>
-                                            </select>
-                                        </div>
-
-                                        {/* MULTIPLE ENROLLMENT GROUPS */}
-                                        {isSpecific && (
-                                            <div className="md:col-span-2">
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                    <div className="flex items-center justify-between">
-                                                        <div className="flex items-center gap-2">
-                                                            <Users className="w-4 h-4 text-gray-500" />
-                                                            Enrollment Groups <span className="text-red-500">*</span>
-                                                            <span className="text-xs text-gray-500">
-                                                                ({selectedGroups.length} selected)
-                                                            </span>
-                                                        </div>
-                                                        {selectedGroups.length > 0 && (
-                                                            <button
-                                                                type="button"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleFieldChange(course.id_course, 'enrollment_group_ids', []);
-                                                                }}
-                                                                className="text-xs text-red-600 hover:text-red-700 font-medium"
-                                                            >
-                                                                Clear All
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                </label>
-
-                                                {/* Checkbox List */}
-                                                <div className="border border-gray-300 rounded-lg bg-white p-4 max-h-64 overflow-y-auto">
-                                                    {groupEnroll.length === 0 ? (
-                                                        <p className="text-sm text-gray-500 text-center py-4">
-                                                            No enrollment groups available
-                                                        </p>
-                                                    ) : (
-                                                        <div className="space-y-2">
-                                                            {groupEnroll.map(group => (
-                                                                <label
-                                                                    key={group.id}
-                                                                    className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded cursor-pointer transition-colors"
-                                                                    onClick={(e) => e.stopPropagation()}
-                                                                >
-                                                                    <input
-                                                                        type="checkbox"
-                                                                        checked={selectedGroups.includes(group.id)}
-                                                                        onChange={() => toggleEnrollmentGroup(course.id_course, group.id)}
-                                                                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                                                                    />
-                                                                    <div className="flex-1">
-                                                                        <p className="text-sm font-medium text-gray-900">
-                                                                            {group.name_group}
-                                                                        </p>
-                                                                        {group.description && (
-                                                                            <p className="text-xs text-gray-500">
-                                                                                {group.description}
-                                                                            </p>
-                                                                        )}
-                                                                    </div>
-                                                                </label>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                </div>
-
-                                                {/* Selected Groups Summary */}
-                                                {selectedGroups.length > 0 && (
-                                                    <div className="mt-2">
-                                                        <p className="text-xs text-gray-600 mb-1">Selected groups:</p>
-                                                        <div className="flex flex-wrap gap-2">
-                                                            {selectedGroups.map(groupId => {
-                                                                const group = groupEnroll.find(g => g.id === groupId);
-                                                                return group ? (
-                                                                    <div 
-                                                                        key={groupId}
-                                                                        className="flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-700 text-xs font-medium rounded"
-                                                                    >
-                                                                        <span>{group.name_group}</span>
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={(e) => {
-                                                                                e.stopPropagation();
-                                                                                toggleEnrollmentGroup(course.id_course, groupId);
-                                                                            }}
-                                                                            className="hover:bg-purple-200 rounded-full p-0.5"
-                                                                        >
-                                                                            <X className="w-3 h-3" />
-                                                                        </button>
-                                                                    </div>
-                                                                ) : null;
-                                                            })}
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-
-                                        {/* Date Publish */}
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                <div className="flex items-center gap-2">
-                                                    <Calendar className="w-4 h-4 text-gray-500" />
-                                                    Date Publish <span className="text-red-500">*</span>
-                                                </div>
-                                            </label>
-                                            <input
-                                                type="date"
-                                                value={courseData.publish_date}
-                                                onChange={(e) => handleFieldChange(course.id_course, 'publish_date', e.target.value)}
-                                                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
-                                            />
-                                        </div>
-
-                                        {/* End Date */}
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                <div className="flex items-center gap-2">
-                                                    <Calendar className="w-4 h-4 text-gray-500" />
-                                                    End Date
-                                                </div>
-                                            </label>
-                                            <input
-                                                type="date"
-                                                value={courseData.end_date}
-                                                onChange={(e) => handleFieldChange(course.id_course, 'end_date', e.target.value)}
-                                                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
-                                            />
-                                        </div>
-
-                                        {/* Remedial Allowed */}
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Remedial Allowed
-                                            </label>
-                                            <select
-                                                value={courseData.remedial_allowed}
-                                                onChange={(e) => handleFieldChange(course.id_course, 'remedial_allowed', e.target.value)}
-                                                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
-                                            >
-                                                <option value="Yes">Yes</option>
-                                                <option value="No">No</option>
-                                            </select>
-                                        </div>
-
-                                        {/* Times */}
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Times (Attempts)
-                                            </label>
-                                            <input
-                                                type="number"
-                                                value={courseData.times}
-                                                onChange={(e) => handleFieldChange(course.id_course, 'times', parseInt(e.target.value) || 1)}
-                                                min="1"
-                                                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {/* Validation Warning */}
-                                    {isSpecific && selectedGroups.length === 0 && (
-                                        <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                                            <p className="text-sm text-yellow-800">
-                                                ⚠️ Please select at least one enrollment group for specific enrollment type
-                                            </p>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    );
-                })}
+                {filteredCourses.map((course, index) => (
+                    <CourseCard
+                        key={course.id_course}
+                        course={course}
+                        index={index}
+                        isExpanded={expanded === course.id_course}
+                        onToggleExpand={toggleExpand}
+                        onAddEnrollment={addEnrollment}
+                        companyUnits={companyUnits}
+                        groupEnroll={groupEnroll}
+                        availableCompanies={getAvailableCompanies}
+                        onUpdateField={updateEnrollmentField}
+                        onToggleGroup={toggleEnrollmentGroup}
+                        onDuplicate={duplicateEnrollment}
+                        onRemove={removeEnrollment}
+                        onSave={handleSaveEnrollment}
+                    />
+                ))}
             </div>
 
-            {/* Empty State */}
-            {courses.length === 0 && (
-                <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
+            {filteredCourses.length === 0 && courses.length > 0 && (
+                <div className="text-center py-12 bg-white rounded-xl border-2 border-gray-200">
                     <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                         <Settings className="w-8 h-8 text-gray-400" />
                     </div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No courses available</h3>
-                    <p className="text-gray-600">There are no courses to enroll at this moment</p>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                        No courses found
+                    </h3>
+                    <p className="text-gray-600 mb-4">
+                        No courses match your current filters
+                    </p>
+                    <button
+                        onClick={() => {
+                            setSearchQuery("");
+                            setFilterCompany("all");
+                            setFilterStatus("all");
+                        }}
+                        className="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all"
+                    >
+                        Clear All Filters
+                    </button>
                 </div>
             )}
         </div>

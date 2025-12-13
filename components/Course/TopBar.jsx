@@ -8,7 +8,7 @@ import Link from "next/link";
 import { Maximize, LogOut, Home, Minimize } from "lucide-react";
 import { CourseContext } from "@/contexts/CourseContext";
 
-export default function TopBar() {
+export default function TopBar({ exitCourse, mainCourse }) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const { state } = useContext(CourseContext);
   const { courseId } = state;
@@ -22,6 +22,7 @@ export default function TopBar() {
     document.addEventListener("fullscreenchange", handler);
     return () => document.removeEventListener("fullscreenchange", handler);
   }, []);
+  //   console.log("exitCourse:", exitCourse + courseId);
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -38,7 +39,7 @@ export default function TopBar() {
   };
 
   const handleExitCourse = async () => {
-    const navigate = router.push(`/course/employee/detail/${courseId}`);
+    const navigate = router.push(`${exitCourse}${courseId}`);
 
     if (document.fullscreenElement) {
       Promise.race([
@@ -64,14 +65,19 @@ export default function TopBar() {
         console.warn("Gagal keluar dari fullscreen:", err);
       }
     }
-    router.push("/course/employee/course");
+    router.push(`${mainCourse}`);
   };
 
   return (
-    <Card>
-      <CardContent className="flex justify-between items-center p-3">
-        <div className="flex gap-3">
-          <Button variant="outline" size="sm" onClick={toggleFullscreen}>
+    <Card className="rounded-lg shadow-md bg-gradient-to-r from-blue-900 to-blue-500 text-white">
+      {/* <CardContent className="flex justify-between items-center p-3"> */}
+      <CardContent className="flex justify-end items-center p-3">
+        <div className="flex gap-3 ml-auto">
+          <Button
+            className="bg-blue-500 hover:bg-blue-600"
+            size="sm"
+            onClick={toggleFullscreen}
+          >
             {isFullscreen ? (
               <>
                 <Minimize className="w-4 h-4 mr-1" /> Exit Fullscreen
@@ -83,11 +89,21 @@ export default function TopBar() {
             )}
           </Button>
 
-          <Button variant="outline" size="sm" onClick={handleExitCourse}>
+          <Button
+            // variant="outline"
+            className="bg-blue-500 hover:bg-blue-600"
+            size="sm"
+            onClick={handleExitCourse}
+          >
             <LogOut className="w-4 h-4 mr-1" /> Exit Course
           </Button>
 
-          <Button variant="outline" size="sm" onClick={handleMainCourse}>
+          <Button
+            // variant="outline"
+            className="bg-blue-500 hover:bg-blue-600"
+            size="sm"
+            onClick={handleMainCourse}
+          >
             <Home className="w-4 h-4 mr-1" /> Main Course
           </Button>
         </div>

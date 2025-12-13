@@ -7,8 +7,8 @@
   "password_setting": "Pengaturan Kata Sandi",
   "email_address": "Alamat Email",
   "email_address_placeholder": "Silahkan masukan alamat email anda.",
-  "username": "Nama Pengguna",
-  "username_placeholder": "Silahkan masukan nama pengguna anda.", 
+  "username": "ID Karyawan",
+  "username_placeholder": "Silahkan masukan ID Karyawan anda.", 
   "password": "Kata Sandi",
   "password_placeholder": "Silahkan masukan password anda.",
   "remember_me": "Ingat saya",
@@ -43,6 +43,8 @@
   "welcome_back": "Selamat Datang Kembali!",
   "enter_your_credentials": "Masukkan kredensial Anda untuk mengakses akun Anda.",
   "invalid_credentials": "Nama pengguna atau kata sandi tidak valid.",
-  "reset_link_sent": "Tautan pengaturan ulang telah dikirim ke email Anda."
+  "reset_link_sent": "Tautan pengaturan ulang telah dikirim ke email Anda.",
+  "role_management": "Manajemen Akses",
+  "menu_management": "Manajemen Menu"
   
 }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, AlertCircle, CheckCircle, Info } from 'lucide-react';
 import 'react-quill/dist/quill.snow.css';
 
 import { NavigationBar } from './NavigationBar';
@@ -9,8 +9,10 @@ import { useQuillConfig } from './hooks/useQuillConfig';
 import { useQuestionManager } from './hooks/useQuestionManager';
 import { PreviewModal } from './PreviewModal';
 import { useSweetAlert } from '../../../hooks/useSweetAlert';
+
 export default function PreTestForm({ 
     courseId, 
+    contentTypeId,
     onBack, 
     onSave,
     createdBy = "System",
@@ -24,6 +26,7 @@ export default function PreTestForm({
         pointDistribution: '',
         timeDuration: ''
     });
+    
     const { showLoading, showSuccess, showError, showWarning, confirmAction } = useSweetAlert();
     const [autoCalculatedPoints, setAutoCalculatedPoints] = useState(0);
     const [pointsRemaining, setPointsRemaining] = useState(0);
@@ -68,19 +71,13 @@ export default function PreTestForm({
             
             if (total > 0 && number > 0) {
                 const pointsPerQuestion = Math.floor(total / number);
-                
-                console.log('🔢 Auto-calculating points:', pointsPerQuestion);
-                
                 setAutoCalculatedPoints(pointsPerQuestion);
                 
-                // ✅ Guard: only update if different
                 setFormData(prev => {
                     if (prev.correctAnswerPoints === pointsPerQuestion.toString()) {
-                        console.log('⏭️ Points already set, skipping update');
-                        return prev; // ✅ Prevent unnecessary update
+                        return prev;
                     }
                     
-                    console.log('📝 Setting points to:', pointsPerQuestion);
                     return {
                         ...prev,
                         correctAnswerPoints: pointsPerQuestion.toString()
@@ -90,9 +87,7 @@ export default function PreTestForm({
         } else if (testConfig.pointDistribution !== 'Equal Distribution' && !isEditMode) {
             setAutoCalculatedPoints(0);
         }
-    }, [testConfig.pointDistribution, testConfig.totalPoints, testConfig.totalNumber,currentQuestionNumber, isEditMode]);
-
-
+    }, [testConfig.pointDistribution, testConfig.totalPoints, testConfig.totalNumber, currentQuestionNumber, isEditMode]);
 
     // Calculate remaining points
     useEffect(() => {
@@ -116,8 +111,6 @@ export default function PreTestForm({
                 onBack();
             }   
         }
-
-        
     };
 
     const handlePreview = () => {
@@ -128,7 +121,6 @@ export default function PreTestForm({
         setShowPreviewModal(true);
     };
 
-   
     const handleSubmitTest = (questionsToSubmit) => {  
         const questionsToSave = questionsToSubmit || savedQuestions;
         
@@ -139,9 +131,9 @@ export default function PreTestForm({
 
         const finalTest = {
             id_course: courseId,
-            id_content_type: 3,
+            id_content_type: contentTypeId,
             random_type: testConfig.randomType,
-            content_title: isEditMode ? contentData?.content_title : "Pre Test",
+            content_title: contentTypeId === 7 ? "Post Test" : "Pre Test",
             total_points: parseInt(testConfig.totalPoints) || 0,
             total_number: parseInt(testConfig.totalNumber) || 0,
             point_distribution_type: testConfig.pointDistribution === 'Equal Distribution' ? 'equal' : 
@@ -155,7 +147,7 @@ export default function PreTestForm({
                 created_by: createdBy,
                 created_device: "system"
             }),
-            questions: questionsToSave.map((q, index) => ({  // ✅ Pakai questionsToSave
+            questions: questionsToSave.map((q, index) => ({
                 question_no: index + 1,
                 question_text: q.question,
                 correct_answer_points: parseInt(q.points) || 0,
@@ -178,7 +170,6 @@ export default function PreTestForm({
 
         try {
             showLoading('Saving Test...');  
-            // Simulate API call
             setTimeout(async () => {
                 showSuccess('Test saved successfully!');    
                 if (onSave) {
@@ -196,28 +187,57 @@ export default function PreTestForm({
 
     const isFormValid = () => {
         const filledOptions = formData.options.filter(opt => opt.trim() !== '');
-        
-        const isValid = formData.question.trim() !== '' && 
-                        filledOptions.length >= 2 && 
-                        formData.answerKey !== '' && 
-                        formData.correctAnswerPoints !== '';
-
-        
-        return isValid;
+        return formData.question.trim() !== '' && 
+               filledOptions.length >= 2 && 
+               formData.answerKey !== '' && 
+               formData.correctAnswerPoints !== '';
     };
+
+    // Calculate progress
+    const totalQuestions = parseInt(testConfig.totalNumber) || 0;
+    const progress = totalQuestions > 0 ? (savedQuestions.length / totalQuestions) * 100 : 0;
+    const isConfigComplete = testConfig.randomType && testConfig.totalNumber && testConfig.totalPoints && testConfig.pointDistribution && testConfig.timeDuration;
 
     const formTitle = isEditMode ? 'Edit Content' : 'Add New Content';
 
     return (
-        <div className="min-h-screen p-6">
-            {/* Header */}
-            <div className="flex justify-between items-center mb-6">
-                <h1 className="text-2xl font-bold text-gray-900">Course Management</h1>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <span>Home</span>
-                    <ChevronRight className="w-4 h-4" />
-                    <span className="text-gray-900 font-medium">Course Management</span>
+        <div className="min-h-screen bg-gray-50 p-6">
+            {/* ✅ Enhanced Header */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+                <div className="flex justify-between items-center mb-4">
+                    <div>
+                        <h1 className="text-2xl font-bold text-gray-900">{formTitle}</h1>
+                        <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
+                            <span>Course Management</span>
+                            <ChevronRight className="w-4 h-4" />
+                            <span className="text-blue-600 font-medium">Pre-Test Configuration</span>
+                        </div>
+                    </div>
+                    <div className="text-right">
+                        <p className="text-sm text-gray-600">Course ID</p>
+                        <p className="text-lg font-bold text-gray-900">{courseId}</p>
+                    </div>
                 </div>
+
+                {/* ✅ Progress Bar */}
+                {totalQuestions > 0 && (
+                    <div className="mt-4">
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm font-semibold text-gray-700">
+                                Question Progress
+                            </span>
+                            <span className="text-sm font-bold text-blue-600">
+                                {savedQuestions.length} / {totalQuestions} Questions
+                            </span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                            <div 
+                                className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-500"
+                                style={{ width: `${progress}%` }}
+                            />
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Navigation Bar (Edit Mode) */}
@@ -230,67 +250,184 @@ export default function PreTestForm({
                 isEditMode={isEditMode}
             />
 
-            {/* Main Form */}
-            <div className="min-h-screen bg-white p-4 rounded-lg shadow">
-                <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-lg font-semibold">{formTitle}</h2>
-                    <p className="text-sm text-gray-600">Course ID: {courseId}</p>
+            {/* ✅ Main Form - Enhanced */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                {/* Section: Test Configuration */}
+                <div className={`p-6 border-b border-gray-200 ${savedQuestions.length > 0 ? 'bg-gray-50' : 'bg-white'}`}>
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                                isConfigComplete ? 'bg-green-100' : 'bg-blue-100'
+                            }`}>
+                                {isConfigComplete ? (
+                                    <CheckCircle className="w-6 h-6 text-green-600" />
+                                ) : (
+                                    <Info className="w-6 h-6 text-blue-600" />
+                                )}
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold text-gray-900">Test Configuration</h3>
+                                <p className="text-sm text-gray-600">
+                                    {savedQuestions.length > 0 
+                                        ? 'Configuration locked after first question'
+                                        : 'Configure your test settings before adding questions'}
+                                </p>
+                            </div>
+                        </div>
+                        {isConfigComplete && (
+                            <span className="px-3 py-1 bg-green-100 text-green-700 text-sm font-semibold rounded-full flex items-center gap-1">
+                                <CheckCircle className="w-4 h-4" />
+                                Complete
+                            </span>
+                        )}
+                    </div>
+
+                    <TestConfigSection
+                        testConfig={testConfig}
+                        onChange={handleTestConfigChange}
+                        disabled={savedQuestions.length > 0}
+                    />
+
+                    {/* ✅ Config Incomplete Warning */}
+                    {!isConfigComplete && savedQuestions.length === 0 && (
+                        <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start gap-3">
+                            <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                            <div className="flex-1">
+                                <p className="text-sm font-semibold text-yellow-900">
+                                    Complete Configuration Required
+                                </p>
+                                <p className="text-xs text-yellow-700 mt-1">
+                                    Please fill all configuration fields before adding questions
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ✅ Config Locked Info */}
+                    {savedQuestions.length > 0 && (
+                        <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-3">
+                            <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                            <div className="flex-1">
+                                <p className="text-sm font-semibold text-blue-900">
+                                    Configuration Locked
+                                </p>
+                                <p className="text-xs text-blue-700 mt-1">
+                                    Test configuration cannot be changed after adding questions
+                                </p>
+                            </div>
+                        </div>
+                    )}
                 </div>
-        
-                {/* Test Configuration */}
-                <TestConfigSection
-                    testConfig={testConfig}
-                    onChange={handleTestConfigChange}
-                    disabled={savedQuestions.length > 0}
-                />
 
-                {/* Question Editor */}
-                <QuestionEditor
-                    formData={formData}
-                    currentQuestionNumber={currentQuestionNumber}
-                    editorKey={editorKey}
-                    quillModules={quillModules}
-                    quillFormats={quillFormats}
-                    isEditMode={isEditMode}
-                    autoCalculatedPoints={autoCalculatedPoints}
-                    pointDistribution={testConfig.pointDistribution}
-                    onQuestionChange={handleQuestionChange}
-                    onOptionChange={handleOptionChange}
-                    onAnswerKeyChange={(val) => handleInputChange('answerKey', val)}
-                    onPointsChange={(val) => handleInputChange('correctAnswerPoints', val)}
-                />
+                {/* Section: Question Editor */}
+                <div className="p-6">
+                    <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                                <span className="text-lg font-bold text-purple-600">
+                                    {currentQuestionNumber}
+                                </span>
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold text-gray-900">Question Editor</h3>
+                                <p className="text-sm text-gray-600">
+                                    Create question #{currentQuestionNumber}
+                                    {totalQuestions > 0 && ` of ${totalQuestions}`}
+                                </p>
+                            </div>
+                        </div>
 
-                {/* Points Remaining */}
-                <div className="mt-6 text-gray-700 font-medium">
-                    Points Remaining: <span className="font-bold text-xl text-blue-600">{pointsRemaining}</span>
+                        {/* ✅ Points Display - More Prominent */}
+                        <div className="flex items-center gap-4">
+                            <div className="text-right">
+                                <p className="text-xs text-gray-600 font-medium">Points Used</p>
+                                <p className="text-xl font-bold text-gray-900">
+                                    {totalPointsUsed}
+                                </p>
+                            </div>
+                            <div className="w-px h-10 bg-gray-300"></div>
+                            <div className="text-right">
+                                <p className="text-xs text-gray-600 font-medium">Points Remaining</p>
+                                <p className={`text-xl font-bold ${
+                                    pointsRemaining > 0 ? 'text-blue-600' : 
+                                    pointsRemaining === 0 ? 'text-orange-600' : 
+                                    'text-red-600'
+                                }`}>
+                                    {pointsRemaining}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <QuestionEditor
+                        formData={formData}
+                        currentQuestionNumber={currentQuestionNumber}
+                        editorKey={editorKey}
+                        quillModules={quillModules}
+                        quillFormats={quillFormats}
+                        isEditMode={isEditMode}
+                        autoCalculatedPoints={autoCalculatedPoints}
+                        pointDistribution={testConfig.pointDistribution}
+                        onQuestionChange={handleQuestionChange}
+                        onOptionChange={handleOptionChange}
+                        onAnswerKeyChange={(val) => handleInputChange('answerKey', val)}
+                        onPointsChange={(val) => handleInputChange('correctAnswerPoints', val)}
+                    />
                 </div>
 
-                {/* Action Buttons */}
-                <div className="mt-12 flex gap-6">
-                    {!isEditMode && (
+                {/* ✅ Enhanced Action Buttons */}
+                <div className="p-6 bg-gray-50 border-t border-gray-200">
+                    <div className="flex items-center justify-between">
                         <button 
-                        onClick={handleSaveAndNextWithSubmit}
-                        disabled={!isFormValid()}
-                         className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-                            Save & Next
+                            onClick={handleCancel} 
+                            className="px-5 py-2.5 bg-white border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-all"
+                        >
+                            Cancel
                         </button>
-                    )}
-                    {isEditMode && (
-                        <button onClick={() => handleSubmitTest()} className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-                            Save All Changes
-                        </button>
-                    )}
-                    <button 
-                        onClick={handlePreview} 
-                        className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-                    >
-                        Preview ({savedQuestions.length})
-                    </button>
-                    <button onClick={handleCancel} className="px-6 py-2 bg-red-600 text-white rounded hover:bg-red-700">
-                        Cancel
-                    </button>
+
+                        <div className="flex items-center gap-3">
+                            <button 
+                                onClick={handlePreview} 
+                                className="px-5 py-2.5 bg-white border-2 border-green-500 text-green-700 rounded-xl font-semibold hover:bg-green-50 transition-all flex items-center gap-2"
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                                Preview ({savedQuestions.length})
+                            </button>
+
+                            {!isEditMode && (
+                                <button 
+                                    onClick={handleSaveAndNextWithSubmit}
+                                    disabled={!isFormValid()}
+                                    className={`px-6 py-2.5 rounded-xl font-bold transition-all shadow-md hover:shadow-lg flex items-center gap-2 ${
+                                        isFormValid()
+                                            ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800'
+                                            : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                    }`}
+                                >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                    </svg>
+                                    Save & Next Question
+                                </button>
+                            )}
+
+                            {isEditMode && (
+                                <button 
+                                    onClick={() => handleSubmitTest()} 
+                                    className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-bold hover:from-blue-700 hover:to-blue-800 transition-all shadow-md hover:shadow-lg flex items-center gap-2"
+                                >
+                                    <CheckCircle className="w-5 h-5" />
+                                    Save All Changes
+                                </button>
+                            )}
+                        </div>
+                    </div>
                 </div>
             </div>
+
             {/* Preview Modal */}
             <PreviewModal
                 isOpen={showPreviewModal}

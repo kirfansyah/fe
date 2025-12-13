@@ -7,7 +7,7 @@ import { ProfileContext } from "../../../contexts/profile/ProfileContext";
 
 export default function PreTestEdit() {
     const router = useRouter();
-    const { courseId,contentId } = router.query;
+    const { courseId,contentTypeId,contentId } = router.query;
 
     useEffect(() => {
         if (router.isReady && !courseId) {
@@ -52,6 +52,7 @@ export default function PreTestEdit() {
     return (
         <PreTestForm 
             courseId={courseId}
+            contentTypeId={contentTypeId}
             onBack={handleBack}
             onSave={handleSave}
             createdBy={dataKaryawans.nama}
