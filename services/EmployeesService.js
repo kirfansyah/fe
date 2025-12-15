@@ -1,5 +1,6 @@
 // import API from "contexts/api";
 import API from "./api";
+// console.log("API is:", API);
 
 class EmployeesService {
   /**
@@ -7,11 +8,30 @@ class EmployeesService {
    * @returns {Promise} API response
    */
 
-  static async getAllData(page = 1, limit = 8, search = "") {
+  static async getAllData(
+    page = 0,
+    limit = 8,
+    search = "",
+    status = "",
+    categories = ""
+  ) {
+    // console.log(
+    //   "URL Request getAllData:",
+    //   `/learner/course?page=${page}&limit=${limit}${
+    //     search ? `&search=${encodeURIComponent(search)}` : ""
+    //   }${status ? `&status=${encodeURIComponent(status)}` : ""}`
+    // );
+
+    // console.log("test");
+    const fixedCategories = categories === "All" ? "" : categories;
     try {
       const response = await API.get(
         `/learner/course?page=${page}&limit=${limit}${
           search ? `&search=${encodeURIComponent(search)}` : ""
+        }${status ? `&status=${encodeURIComponent(status)}` : ""}${
+          fixedCategories
+            ? `&categories=${encodeURIComponent(fixedCategories)}`
+            : ""
         }`,
         {
           //   headers: {
@@ -21,6 +41,7 @@ class EmployeesService {
         }
       );
 
+      //   console.log("✅ EmployeesService.getAllData response.data:", response);
       // jika 404 / tidak ada data
       if (response.status === 404 || !response.data.data?.length) {
         return {
@@ -30,7 +51,6 @@ class EmployeesService {
           pagination: { totalCount: 0 },
         };
       }
-      console.log("✅ EmployeesService.getAllData response.data:", response);
 
       return {
         success: response.data.success,
@@ -60,7 +80,7 @@ class EmployeesService {
         validateStatus: (status) => status >= 200 && status < 500,
       });
 
-      //   console.log("✅ response.data.data:", response.data?.data);
+      //   console.log("✅ response:", response);
 
       const content = response.data?.data;
       // jika 404 / tidak ada data
@@ -72,7 +92,7 @@ class EmployeesService {
         return {
           success: false,
           data: [],
-          message: "No data found",
+          message: response.data?.message,
         };
       }
 
@@ -96,13 +116,8 @@ class EmployeesService {
   static async getCourseDetail(id) {
     try {
       const response = await API.get(`/learner/course/content/detail/${id}`, {
-        // headers: {
-        //   Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_TOKEN}`,
-        // },
         validateStatus: (status) => status >= 200 && status < 500,
       });
-
-      //   console.log("✅ response.data.data:", response.data?.data);
 
       const content = response.data?.data;
       // jika 404 / tidak ada data
@@ -141,12 +156,10 @@ class EmployeesService {
         "/learner/course/content/complete",
         courseData,
         {
-          //   headers: {
-          //     Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_TOKEN}`,
-          //   },
-          validateStatus: (status) => status >= 200 && status < 500,
+          validateStatus: (status) => status >= 200 && status <= 500,
         }
       );
+      //   console.log("completeContent: ", response);
 
       return {
         success: response.data.success,
@@ -161,10 +174,7 @@ class EmployeesService {
   static async sendAnswers(answers) {
     try {
       const response = await API.post("/learner/course/assessment", answers, {
-        // headers: {
-        //   Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_TOKEN}`,
-        // },
-        validateStatus: (status) => status >= 200 && status < 500,
+        validateStatus: (status) => status >= 200 && status <= 500,
       });
 
       return {
@@ -180,10 +190,7 @@ class EmployeesService {
   static async sendEnrollment(data) {
     try {
       const response = await API.post("/learner/course/enrollment", data, {
-        // headers: {
-        //   Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_TOKEN}`,
-        // },
-        validateStatus: (status) => status >= 200 && status < 500,
+        validateStatus: (status) => status >= 200 && status <= 500,
       });
 
       return {
@@ -193,16 +200,15 @@ class EmployeesService {
       };
     } catch (error) {
       console.error("EmployeesService.sendEnrollment Error:", error);
+      return error?.message;
+      //   throw error;
     }
   }
 
   static async sendFeedback(data) {
     try {
       const response = await API.post("/learner/course/review", data, {
-        // headers: {
-        //   Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_TOKEN}`,
-        // },
-        validateStatus: (status) => status >= 200 && status < 500,
+        validateStatus: (status) => status >= 200 && status <= 500,
       });
 
       return {

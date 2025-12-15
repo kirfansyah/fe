@@ -86,14 +86,15 @@ export default function CourseDetail({ ...props }) {
       }
     }
   }, []);
-  //   console.log("startCourse : ", startCourse);
-  //   toast.success("Terima kasih atas feedback Anda! 🎉");
 
   useEffect(() => {
     const loadData = async () => {
       try {
         const res = await getCourseById(id);
-        // console.log("res : ", res.data.data);
+
+        if (res.data.data.length <= 0) {
+          toast.warning("Error API response : " + res.data.message);
+        }
 
         setCourses(res.data.data || []);
         if (res.data.data?.feedback) {
@@ -109,44 +110,35 @@ export default function CourseDetail({ ...props }) {
     loadData();
   }, [getCourseById, id, hasFeedback, userFeedback]);
 
-  useEffect(() => {
-    const getData = async () => {
-      try {
-        const res = await getCourseDetailById(id);
-        // console.log("res : ", res);
-
-        setCourses(res.data.data || []);
-      } catch (error) {
-        console.error("❌ Gagal memuat data:", error);
-      }
-    };
-
-    getData();
-  }, [getCourseDetailById, id]);
   const sections = courseData?.sections || {};
-
-  //   console.log("courseData : ", courseData);
 
   const handleStartCourse = async () => {
     try {
       const payload = {
         id_course_enrollment: courseData.id_course_enrollment,
+        // id_course_enrollment: 8,
         id_course: courseData.id_course,
         progress_percentage: 0,
         created_by: "system",
         created_device: "web",
       };
-      //   console.log("courses : ", courseData);
 
       if (!courseData?.id_user_enrollment) {
-        // console.log("📦 Sending enrollment payload:", payload);
         const result = await sendEnrollment(payload);
-        // console.log("✅ Enrollment berhasil:", result);
+        if (!result.success) {
+          toast.warning("Error API Response : " + result.message);
+          return;
+        }
       }
       setCourseId(courseData.id_course);
       router.push(`${startCourse}${courseData.id_course}`);
     } catch (error) {
       console.error("❌ Gagal melakukan enrollment:", error);
+      console.log(
+        "error : ",
+        error.apiMessage || error.message || "Terjadi kesalahan"
+      );
+      //   toast.warning(error);
     }
   };
 
@@ -171,10 +163,7 @@ export default function CourseDetail({ ...props }) {
         created_device: "web",
       };
 
-      //   console.log("📦 Sending feedback payload:", payload);
-
       const result = await sendFeedback(payload);
-      //   console.log("✅ Feedback terkirim:", result);
 
       if (result?.success) {
         toast.success("Terima kasih atas feedback Anda! 🎉");
@@ -188,7 +177,6 @@ export default function CourseDetail({ ...props }) {
       }
     } catch (error) {
       console.error("❌ Gagal mengirim feedback:", error);
-      //   alert("Terjadi kesalahan saat mengirim feedback.");
       toast.warning("Terjadi kesalahan saat mengirim feedback.");
     } finally {
       setIsSubmitting(false); // 🔹 Kembalikan ke false saat proses selesai
@@ -200,8 +188,8 @@ export default function CourseDetail({ ...props }) {
   return (
     <div className="p-6 space-y-6">
       {/* Breadcrumb */}
-      <Card className="mb-6 bg-gray-50 rounded-lg shadow-md">
-        <CardContent className="flex items-center text-base font-semibold text-gray-700 space-x-3 p-6">
+      <Card className="mb-6 rounded-lg shadow-md bg-gradient-to-r from-blue-900 to-blue-500 text-white">
+        <CardContent className="flex items-center text-base font-semibold text-white space-x-3 p-6">
           <Link href="/" className="">
             Home
           </Link>
@@ -210,7 +198,7 @@ export default function CourseDetail({ ...props }) {
             Courses
           </Link>
           <ChevronRight className="w-5 h-5 text-gray-500" />
-          <span className="text-gray-600 font-bold">
+          <span className="text-white font-bold">
             {courseData.course_title}
           </span>
         </CardContent>
@@ -223,9 +211,15 @@ export default function CourseDetail({ ...props }) {
           <Card>
             <CardContent className="flex flex-col items-center space-y-4 p-3">
               <img
-                src={`${courseData.thumbnail || "/img/course/k3.jpg"}`}
+                src={
+                  courseData?.thumbnail ||
+                  "/img/course/Teacher student-cuate.png"
+                }
+                onError={(e) =>
+                  (e.target.src = "/img/course/Teacher student-cuate.png")
+                }
                 alt="Course"
-                className="w-full h-48 object-cover rounded-md"
+                className="w-full h-45 object-cover rounded-md"
               />
 
               {/* Avatar + You're Enrolled */}
@@ -261,7 +255,7 @@ export default function CourseDetail({ ...props }) {
                   className="h-3 rounded-full [&>div]:bg-blue-600"
                 />
                 <span className="text-sm text-gray-500 mt-1">
-                  {courseData.progress_percentage}% Completed
+                  {Math.ceil(courseData?.progress_percentage || 0)}% Completed
                 </span>
               </div>
 
@@ -271,8 +265,16 @@ export default function CourseDetail({ ...props }) {
                   <Button
                     className="w-full bg-blue-900 hover:bg-blue-700 text-white"
                     onClick={() => setOpenConfirm(true)}
+                    // disabled={loading && !courseData && !courseData.id_course}
+                    disabled={!courseData.id_course}
+                    // disabled={true}
                   >
-                    Start Course
+                    {courseData.progress_percentage &&
+                    courseData.progress_percentage !== 100
+                      ? "Continue Course"
+                      : courseData.progress_percentage === 100
+                      ? "View Completed Course"
+                      : "Start Course"}{" "}
                   </Button>
                 </AlertDialogTrigger>
 
@@ -299,7 +301,6 @@ export default function CourseDetail({ ...props }) {
                     <AlertDialogCancel>Batal</AlertDialogCancel>
                     <AlertDialogAction
                       onClick={handleStartCourse}
-                      disabled={loading}
                       className="bg-blue-900 hover:bg-blue-700 text-white"
                     >
                       {loading ? "Memulai..." : "Mulai"}
@@ -327,7 +328,10 @@ export default function CourseDetail({ ...props }) {
                   <span>{courseData.completion_time}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Reviews</span> <span>{courseData.rating}/5</span>
+                  <span>Reviews</span>{" "}
+                  <span>
+                    {courseData?.rating ? `${courseData.rating}/5` : "-"}
+                  </span>
                 </div>
                 {/* <div className="flex justify-between">
                   <span>Result</span> <span>{course.result}</span>
@@ -359,7 +363,6 @@ export default function CourseDetail({ ...props }) {
                 const isCourseContent = sectionKey === "courseContent";
                 const isPreTest = sectionKey === "preTest";
                 const isPostTest = sectionKey === "postTest";
-                // console.log("sectionKey, items : ", sectionKey, items);
 
                 return (
                   <div key={sectionKey} className="space-y-4">

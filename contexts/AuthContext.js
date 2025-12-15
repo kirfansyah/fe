@@ -102,12 +102,12 @@ const AuthContextProvider = (props) => {
     }
   };
 
-  const Login = async ({ username, password }) => {
+  const Login = async ({ nik, password, site_id, is_karyawan }) => {
     dispatch({ type: "loading" }); // loading
 
  
     try {
-      const response = await API.post("/auth/get_token", { username, password });
+      const response = await API.post("/auth/login", { nik, password, site_id, is_karyawan });
       const { status, message, data } = response.data;
 
       if (status === 200 && data.length > 0) {
@@ -213,6 +213,10 @@ const AuthContextProvider = (props) => {
       cancelButtonText: "Belum",
       confirmButtonColor: "#941d05",
       cancelButtonColor: "#1e3a8a",
+      customClass: {
+        cancelButton: "swal-cancel-style",
+        confirmButton: "swal-confirm-style",
+      }
     }).then((result) => {
       /* Read more about isConfirmed, isDenied below */
       if (result.isConfirmed) {

@@ -8,7 +8,7 @@ import {
     Edit,
     Trash2
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import EnrollmentFormModal from "./EnrollmentForm";
 
 export default function CourseCard({ 
@@ -29,7 +29,7 @@ export default function CourseCard({
 }) {
     const [modalState, setModalState] = useState({
         isOpen: false,
-        enrollment: null,
+        
         enrollmentIndex: null
     });
 
@@ -37,7 +37,7 @@ export default function CourseCard({
     const existingEnrollments = enrollments.filter(e => e.id_course_enrollment);
     const newEnrollments = enrollments.filter(e => e.is_new);
     const totalCompaniesEnrolled = existingEnrollments.length;
-
+    const [pendingModalOpen, setPendingModalOpen] = useState(null);
     const openModal = (enrollment, index) => {
         setModalState({
             isOpen: true,
@@ -54,27 +54,23 @@ export default function CourseCard({
         });
     };
 
+     useEffect(() => {
+        if (pendingModalOpen !== null && enrollments.length > pendingModalOpen) {
+            const newEnrollment = enrollments[pendingModalOpen];
+            openModal(newEnrollment, pendingModalOpen);
+            setPendingModalOpen(null);
+        }
+    }, [enrollments.length]);
+
     const handleAddNew = () => {
-        const newEnrollmentIndex = enrollments.length; 
-        onAddEnrollment(course.id_course);
-        // Create temporary enrollment
-        const newEnrollment = {
-            temp_id: Date.now(),
-            is_new: true,
-            company_id: null,
-            enroll_type_name: '',
-            course_status_name: '',
-            publish_date: '',
-            end_date: '',
-            remedial_allowed: true,
-            remedial_limit: 1,
-            groupings: []
-        };
-        
-        
-        
-        // Open modal with the new enrollment (last item)
-        
+        const newEnrollmentIndex = enrollments.length;
+        setPendingModalOpen(newEnrollmentIndex);
+        onAddEnrollment(course.id_course); 
+    };
+
+    const handleSaveEnrollment = async (courseId, enrollmentIndex) => {
+        const result = await onSave(courseId, enrollmentIndex);
+        return result;
     };
 
     return (
@@ -88,7 +84,7 @@ export default function CourseCard({
                     <div className="flex items-center gap-4 flex-1 min-w-0">
                         {/* Order Number Badge */}
                         <div className="relative flex-shrink-0">
-                            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+                            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
                                 <span className="text-lg font-bold text-white">{index + 1}</span>
                             </div>
                             {newEnrollments.length > 0 && (
@@ -325,7 +321,7 @@ export default function CourseCard({
                     availableCompanies={availableCompanies(course.id_course, modalState.enrollmentIndex)}
                     onUpdateField={onUpdateField}
                     onToggleGroup={onToggleGroup}
-                    onSave={onSave}
+                    onSave={handleSaveEnrollment}
                 />
             )}
         </>

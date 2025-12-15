@@ -12,10 +12,12 @@ const WebLayout = ({ children, contentRef }) => {
     <>
       <Header />
       { sS.isModal ? <SeekingModal /> : <></> }
-      <main className='h-screen-75 w-full select-none z-30 min-h-[720px]' ref={contentRef}>
+      
+      <main className='flex-1 w-full select-none z-30 pb-6' ref={contentRef}> {/* ✅ Changed h-screen-75 to flex-1 */}
         {children}
       </main>
-      <Footer />
+      
+      <Footer absolute={false} />
     </>
   );
 };

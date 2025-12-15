@@ -34,15 +34,15 @@ const ProfileContextProvider = ({ children }) => {
         try {
             let cookie = `; ${document.cookie}`.match(`;\\s*token=([^;]+)`);
             let token = cookie ? cookie[1] : "";
-            const response = await API.post("/auth/get_karyawan", { token });
+            const response = await API.get("/auth/me",
+                {headers: { Authorization: `Bearer ${token}` }}
+            );
             const resData = response.data;
 
             dispatch({
                 type: "getKaryawan",
-                payload: resData.data,
+                payload: [resData.data.user],
             });
-
-            console.log(resData.data);
         } catch (err) {
             console.log(err);
         };

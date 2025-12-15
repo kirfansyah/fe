@@ -53,21 +53,21 @@ export default function Enroll({
     }
     
     // Handle course changes from child components
-    const handleCourseChange = (courseId, field, value) => {
+    const handleCourseChange = async (courseId, field, value) => {
         console.log('📝 handleCourseChange:', { courseId, field, valueType: typeof value });
         
         if (field === 'save_single') {
             const { enrollment, index } = value;
             
-            // Save to backend
-            saveSingleEnrollment({
+            // ✅ Await save and return result
+            const result = await saveSingleEnrollment({
                 courseId: courseId,
                 enrollment: enrollment,
                 index: index
             });
             
-            // Update local state
-            updateLocalEnrollmentState(courseId, index, enrollment);
+            // ✅ Return result for modal to handle
+            return result;
             
         } else if (field === 'enrollments') {
             // Handle normal enrollment updates
@@ -120,7 +120,28 @@ export default function Enroll({
             };
         });
     };
-
+    const extractGroupingIds = (groupings) => {
+            if (!Array.isArray(groupings) || groupings.length === 0) {
+                return [];
+            }
+            
+            return groupings.map(item => {
+                
+                if (typeof item === 'number') {
+                    return item;
+                }
+                
+                if (item && typeof item === 'object' && item.id_grouping !== undefined) {
+                    return parseInt(item.id_grouping);
+                }
+                
+                if (typeof item === 'string') {
+                    const num = parseInt(item);
+                    return isNaN(num) ? null : num;
+                }
+                return null;
+            }).filter(id => id !== null && !isNaN(id) && id > 0);
+        };
     // Save single enrollment to backend
     const saveSingleEnrollment = async (enrollmentData) => {
         try {
@@ -141,30 +162,89 @@ export default function Enroll({
                 remedial_allowed: enrollmentData.enrollment.remedial_allowed === 'Yes' || 
                                 enrollmentData.enrollment.remedial_allowed === true,
                 remedial_limit: enrollmentData.enrollment.remedial_limit || 
-                            enrollmentData.enrollment.remedial_limit || 1,
+                            enrollmentData.enrollment.times || 1,
+                passing_grade: enrollmentData.enrollment.passing_grade ?? 0,
+                refreshment_months: enrollmentData.enrollment.refreshment_months || null,
                 created_by: dataKaryawans.nama,
-                    created_device: "system",
-                target_groupings: enrollmentData.enrollment.groupings?.map(g => g.id_grouping) || []
+                created_device: "system",
+                target_groupings: extractGroupingIds(enrollmentData.enrollment.groupings)
             };
             
-            // ✅ PENTING: Tambahkan ID untuk update
             if (isUpdate) {
                 transformedData.id_course_enrollment = enrollmentData.enrollment.id_course_enrollment;
             }
-            console.log('datatattatata', transformedData);
+            
+            console.log('📤 Sending enrollment data:', transformedData);
+            
             const response = await handleSaveEnroll(transformedData);
             
             if (response.success) {
-                showSuccess(isUpdate ? 'Enrollment updated successfully!' : 'Enrollment saved successfully!');
+                await showSuccess(isUpdate ? 'Enrollment updated successfully!' : 'Enrollment saved successfully!');
                 
-                // ✅ Refresh data dari backend
-                await fetchEnrollData();
+                const updatedEnrollment = {
+                    // Keep all form data
+                    ...enrollmentData.enrollment,
+                    
+                    // Add/update from API response
+                    id_course_enrollment: response.data,
+                    
+                    // Mark as saved (not new anymore)
+                    is_new: false,
+                    
+                    // Update other fields from response if available
+                    company_name: enrollmentData.enrollment.company_name || 
+                                companyUnits.find(c => c.id === enrollmentData.enrollment.company_id)?.company_name,
+                    
+                    enroll_type_name: enrollmentData.enrollment.enroll_type_name,
+                    id_enrollment_type: transformedData.id_enrollment_type,
+                    
+                    course_status_name: enrollmentData.enrollment.course_status_name,
+                    id_course_status: transformedData.id_course_status,
+                    
+                    publish_date: enrollmentData.enrollment.publish_date,
+                    end_date: enrollmentData.enrollment.end_date,
+                    
+                    remedial_allowed: transformedData.remedial_allowed,
+                    remedial_limit: transformedData.remedial_limit,
+                    
+                    passing_grade: transformedData.passing_grade,
+                    refreshment_months: transformedData.refreshment_months,
+                    
+                    // Keep groupings as clean array
+                    groupings: extractGroupingIds(enrollmentData.enrollment.groupings),
+                    
+                    // Add timestamps if in response
+                    created_at: response.data.created_at || new Date().toISOString(),
+                    created_by: transformedData.created_by,
+                    updated_at: response.data.updated_at || null,
+                    updated_by: response.data.updated_by || null
+                };
+                
+                
+                console.log('💾 Updating state, is_new:', updatedEnrollment);
+                // ✅ Update local state immediately
+                updateLocalEnrollmentState(
+                    enrollmentData.courseId, 
+                    enrollmentData.index, 
+                    updatedEnrollment
+                );
+
+                 fetchEnrollData();
+                
+                
+                return { success: true };
             }
+            
+            return { success: false };
+            
         } catch (error) {
             console.error('❌ Save enrollment failed:', error);
-            showError('Failed to save enrollment: ' + error.message);
+            await showError('Failed to save enrollment: ' + error.message);
+            return { success: false };
         }
     };
+
+    
 
     // Transform enrollment data for bulk API call
     const transformEnrollmentData = (data) => {
@@ -200,7 +280,9 @@ export default function Enroll({
                         publish_date: publishDate.toISOString(),
                         end_date: endDate.toISOString(),
                         remedial_allowed: remedialAllowed,
-                        remedial_limit: remedialAllowed ? enrollment.remedial_limit : 0,
+                        remedial_limit: remedialAllowed ? (enrollment.remedial_limit || enrollment.times || 1) : 0,
+                        passing_grade: enrollment.passing_grade ?? 0, // ✅ New field
+                        refreshment_months: enrollment.refreshment_months || null, // ✅ New field
                         created_by: dataKaryawans.nama,
                         created_device: "System",
                         target_groupings: enrollment.groupings || []
@@ -240,6 +322,13 @@ export default function Enroll({
                     if (!enrollment.publish_date) {
                         errors.push(`${courseName} (Enrollment ${idx + 1}): Publish date is required`);
                     }
+
+                    // ✅ Validate passing_grade
+                    if (enrollment.passing_grade === undefined || enrollment.passing_grade === null) {
+                        errors.push(`${courseName} (Enrollment ${idx + 1}): Minimum score is required`);
+                    } else if (enrollment.passing_grade < 0 || enrollment.passing_grade > 100) {
+                        errors.push(`${courseName} (Enrollment ${idx + 1}): Minimum score must be between 0 and 100`);
+                    }
                     
                     if (enrollment.enroll_type_name === 'Specific' && 
                         (!enrollment.enrollment_group_ids || enrollment.enrollment_group_ids.length === 0)) {
@@ -253,7 +342,7 @@ export default function Enroll({
                     
                     if (enrollment.remedial_allowed === 'Yes' && 
                         (!enrollment.remedial_limit || isNaN(enrollment.remedial_limit) || enrollment.remedial_limit < 1)) {
-                        errors.push(`${courseName} (Enrollment ${idx + 1}): Remedial remedial_limit must be at least 1`);
+                        errors.push(`${courseName} (Enrollment ${idx + 1}): Remedial limit must be at least 1`);
                     }
                 }
             });
@@ -302,10 +391,10 @@ export default function Enroll({
             return;
         }
         
-        const result = await confirmAction(
-            'Confirm Enrollment',
-            `Are you sure you want to create ${newEnrollmentsCount} new enrollment(s)?`
-        );
+        const result = await confirmAction({
+            title: 'Confirm Enrollment',
+            text: `Are you sure you want to create ${newEnrollmentsCount} new enrollment(s)?`
+        });
         
         if (!result.isConfirmed) return;
         

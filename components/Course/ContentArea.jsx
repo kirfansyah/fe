@@ -21,13 +21,13 @@ import PptViewer from "@/components/Course/PptViewer";
 import dynamic from "next/dynamic";
 import { useEmployees } from "@/hooks/useEmployees";
 import { useRouter } from "next/navigation";
-// import VideoPlayer from "@/components/VideoPlayer";
+import { toast } from "sonner";
 
 const VideoPlayer = dynamic(() => import("@/components/Course/VideoPlayer"), {
   ssr: false,
 });
 
-export default function ContentArea() {
+export default function ContentArea({ exitCourse }) {
   const { state, goNext, setStep, completeStep, refreshCourseProgress } =
     useContext(CourseContext);
   const { flow, currentStep, answers, courseData } = state;
@@ -40,6 +40,7 @@ export default function ContentArea() {
     "courseContent",
     "postTest",
   ];
+  //   console.log("flow :", flow);
 
   const allSteps = Object.entries(flow)
     .sort(
@@ -66,25 +67,6 @@ export default function ContentArea() {
       })
     );
 
-  //   const allSteps = Object.values(flow)
-  //     .flat()
-  //     .map((s) => {
-  //       let type = "text"; // default
-
-  //       if (s.content_url) {
-  //         if (s.content_url.endsWith(".mp4")) type = "video";
-  //         else if (s.content_url.endsWith(".pdf")) type = "pdf";
-  //         else if (s.content_url.endsWith(".pptx")) type = "pptx";
-  //       } else if (s.questions) {
-  //         type = "quiz";
-  //       }
-
-  //       return {
-  //         ...s,
-  //         id: s.id_course_content,
-  //         type,
-  //       };
-  //     });
   let idx = allSteps.findIndex((s) => s.id === currentStep);
   if (idx === -1) idx = 0;
   const step = allSteps[idx];
@@ -102,8 +84,80 @@ export default function ContentArea() {
   const [courseId, setCourseId] = useState(null);
   const [timeLeft, setTimeLeft] = useState(null);
   const [autoSubmitting, setAutoSubmitting] = useState(false);
+  const [pdfFinished, setPdfFinished] = useState(false);
+  const [videoFinished, setVideoFinished] = useState(false);
+  const [pdfFile, setPdfFile] = useState(null);
+  const [videoFile, setVideoFile] = useState(null);
+  const [pptFile, setPptFile] = useState(null);
+
+  const defaultPDF = "/uploads/pdf/default.pdf";
+  //   const defaultPDF =
+  //     "/api/pdf-proxy?url=" +
+  //     encodeURIComponent(
+  //       "https://api-lms.sambu.co.id/uploads/ebooks/files/a569a951-3311-451c-9338-89dad8d7595a.pdf"
+  //     );
+  //   const defaultPDF =
+  //     "http://api-lms.sambu.co.id/uploads/ebooks/files/a569a951-3311-451c-9338-89dad8d7595a.pdf";
+  const defaultVideo = "/uploads/video/komunikasi-efektif-2.mp4";
+  const defaultPpt =
+    "https://docs.google.com/presentation/d/1jsjVVdCjlVd5uAM3e_nlyPVoNUKid07A/edit?usp=sharing";
+
+  //docs.google.com/presentation/d/16Q2rtFTCRZuzWLoq9c1qmIzvHX6gcUvM/edit?usp=sharing&ouid=107324705590480170219&rtpof=true&sd=true
+  https: useEffect(() => {
+    // ❗ Jangan lakukan apa pun kalau step belum siap
+    if (!step) return;
+
+    async function checkFiles() {
+      //   const baseURL = window.location.origin;
+      const baseURL = process.env.API_BASE || "https://api-lms.sambu.co.id";
+
+      // ===== PDF =====
+      if (step.content_url && step.content_url.endsWith(".pdf")) {
+        const pdfUrl = `${baseURL}/${step.content_url}`;
+
+        try {
+          const res = await fetch(pdfUrl, { method: "HEAD" });
+          setPdfFile(res.ok ? pdfUrl : defaultPDF);
+        } catch {
+          setPdfFile(defaultPDF);
+        }
+      } else {
+        setPdfFile(defaultPDF);
+      }
+
+      // ===== VIDEO =====
+      if (step.content_url && step.content_url.endsWith(".mp4")) {
+        const videoUrl = `${baseURL}/${step.content_url}`;
+
+        try {
+          const res = await fetch(videoUrl, { method: "HEAD" });
+          setVideoFile(res.ok ? videoUrl : defaultVideo);
+        } catch {
+          setVideoFile(defaultVideo);
+        }
+      } else {
+        setVideoFile(defaultVideo);
+      }
+
+      // ===== PPT =====
+      if (step.content_url && step.content_url.endsWith(".pptx")) {
+        const pptUrl = `${baseURL}/${step.content_url}`;
+
+        try {
+          const res = await fetch(pptUrl, { method: "HEAD" });
+          setPptFile(res.ok ? pptUrl : defaultPpt);
+        } catch {
+          setPptFile(defaultPpt);
+        }
+      } else {
+        setPptFile(defaultPpt);
+      }
+    }
+
+    checkFiles();
+  }, [step]);
+
   const router = useRouter();
-  //   console.log("currentStep: ", courseData);
   useEffect(() => {
     if (!step) return;
 
@@ -139,15 +193,7 @@ export default function ContentArea() {
       setStep(allSteps[0].id_course_content);
     }
     setCourseId(courseData?.id_course);
-    // console.log("courseId useEffect: ", courseId);
   }, [currentStep, allSteps, setStep]);
-
-  //   console.log(courseId);
-
-  //   console.log("allSteps: ", allSteps);
-  //   console.log("idx: ", idx);
-  //   console.log("step: ", step);
-  //   console.log("courseData: ", courseData);
 
   if (!step) {
     return (
@@ -160,9 +206,7 @@ export default function ContentArea() {
   }
 
   const handleFinishLogic = async () => {
-    // console.log("User finished course!");
-
-    const navigate = router.push(`/course/employee/detail/${courseId}`);
+    const navigate = router.push(`${exitCourse}${courseId}`);
 
     if (document.fullscreenElement) {
       Promise.race([
@@ -174,9 +218,8 @@ export default function ContentArea() {
     }
 
     setOpen(false);
-    // console.log("courseId di handleFinishLogic: ", courseId);
 
-    // await navigate;
+    await navigate;
   };
 
   const handleAutoSubmit = async () => {
@@ -190,20 +233,23 @@ export default function ContentArea() {
   const handleCompleteContent = async (stepId) => {
     try {
       setIsSubmitting(true);
-      //   console.log("stepid : ", stepId);
-
       const payload = {
         id_user_enrollment: courseData.id_user_enrollment,
+        // id_user_enrollment: 8,
         id_course_content: stepId,
         updated_at: new Date().toISOString(),
         updated_by: "system",
         updated_device: "web",
       };
-      await completeCourse(payload);
+
+      const res = await completeCourse(payload);
+      if (res.data.length <= 0) {
+        toast.warning("Error API response : " + res.data.message);
+        return;
+      }
       completeStep(stepId);
       setContentCompleted((prev) => !prev);
       await refreshCourseProgress();
-      //   console.log("✅ Konten disimpan sebagai complete:", stepId);
     } catch (err) {
       console.error("❌ Gagal menyimpan progress:", err);
     } finally {
@@ -272,9 +318,11 @@ export default function ContentArea() {
         };
       });
 
-      //   console.log("🧩 Payload jawaban:", payload);
-
       const response = await sendAswers(payload);
+
+      if (!response.success) {
+        toast.warning("Error API Response: " + response.message);
+      }
 
       //   console.log("✅ Hasil submit quiz:", response);
 
@@ -300,7 +348,6 @@ export default function ContentArea() {
   return (
     <Card className="flex-1 flex flex-col h-full">
       <CardContent className="p-4 over space-y-4">
-        {/* {console.log("type: ", step.type)} */}
         {step.type === "text" && (
           <div className="space-y-3 p-5">
             <h2 className="text-xl font-semibold text-gray-800">
@@ -328,6 +375,8 @@ export default function ContentArea() {
             questions={step.questions}
             score={step.earned_points}
             isCompleted={step.is_completed}
+            currentQuiz={currentQuiz}
+            setCurrentQuiz={setCurrentQuiz}
           />
         )}
         {step.type === "pdf" && (
@@ -336,8 +385,14 @@ export default function ContentArea() {
               {step.content_title}
             </h2>
             <div className="w-full flex justify-center ">
-              {/* <PdfViewer file={step.content_url} /> */}
-              <PdfViewer file={`/uploads/pdf/komunikasi-efektif.pdf`} />
+              <PdfViewer
+                // file={step.content_url_full}
+                file={`/api/pdf-proxy?url=${encodeURIComponent(
+                  step.content_url_full
+                )}`}
+                onPageChange={(isLastPage) => setPdfFinished(isLastPage)}
+                // onError={() => setPdfFile(defaultPDF)}
+              />
             </div>
           </div>
         )}
@@ -347,10 +402,14 @@ export default function ContentArea() {
             <h2 className="text-xl font-semibold text-gray-800">
               {step.content_title}
             </h2>
-            {/* <VideoPlayer url={step.content_url || "/videos/default.mp4"} /> */}
             <VideoPlayer
-              url={`/uploads/video/komunikasi-efektif.mp4`}
+              //   url={`/uploads/video/komunikasi-efektif.mp4`}
+              //   url={videoFile}
+              url={`/api/video-proxy?url=${encodeURIComponent(
+                step.content_url_full
+              )}`}
               videoId={`${step.id}`}
+              onVideoEnd={() => setVideoFinished(true)}
             />
             {/* <video
               src={`/uploads/video/komunikasi-efektif.mp4`}
@@ -372,8 +431,8 @@ export default function ContentArea() {
               {/* <PptViewer
                 fileUrl={`https://docs.google.com/presentation/d/1qar5wJ9SEmlBTl-TS3z2GwKldOb4Cjyz/edit?usp=sharing&ouid=107324705590480170219&rtpof=true&sd=true`}
               /> */}
-              <PptViewer fileUrl="https://docs.google.com/presentation/d/1jsjVVdCjlVd5uAM3e_nlyPVoNUKid07A/edit?usp=sharing" />
-              {/* <PptViewer fileUrl={step.content_url} /> */}
+              {/* <PptViewer fileUrl="https://docs.google.com/presentation/d/1jsjVVdCjlVd5uAM3e_nlyPVoNUKid07A/edit?usp=sharing" /> */}
+              <PptViewer fileUrl={pptFile} />
             </div>
           </div>
         )}
@@ -547,7 +606,7 @@ export default function ContentArea() {
         )} */}
 
         {/* ===== PREVIOUS BUTTON ===== */}
-        {((step.type === "quiz" && currentQuiz > 0) || prevStep) && (
+        {/* {((step.type === "quiz" && currentQuiz > 0) || prevStep) && (
           <Button
             onClick={handlePrevious}
             variant="outline"
@@ -555,32 +614,64 @@ export default function ContentArea() {
           >
             Previous
           </Button>
-        )}
+        )} */}
+
+        {step.type === "quiz" && currentQuiz > 0 ? (
+          <Button
+            onClick={() => setCurrentQuiz(currentQuiz - 1)}
+            variant="outline"
+            className="bg-gray-200 text-gray-800"
+          >
+            Previous
+          </Button>
+        ) : prevStep ? (
+          <Button
+            onClick={handlePrevious}
+            variant="outline"
+            className="bg-gray-200 text-gray-800"
+          >
+            Previous
+          </Button>
+        ) : null}
 
         {/* ===== NEXT / SUBMIT / FINISH LOGIC ===== */}
-        {step.type !== "quiz" ? (
-          // ===================== Non-Quiz Content =====================
-          nextStep ? (
-            <Button onClick={handleNext} className="bg-blue-900 text-white">
-              Next: {nextStep.content_title}
-            </Button>
-          ) : step.section === "postTest" && step.is_completed ? (
-            <Button
-              onClick={() => setOpen(true)}
-              className="bg-blue-900 text-white"
-            >
-              Selesai
-            </Button>
-          ) : null
-        ) : (
+        {step.type === "quiz" ? (
           // ===================== Quiz Content =====================
           <>
-            {score === null && !step.is_completed ? (
+            {step.is_completed && step.section !== "postTest" ? (
               <Button
-                onClick={() => setShowConfirm(true)}
+                onClick={() => {
+                  // Kalau masih ada soal berikutnya
+                  if (currentQuiz < step.questions.length - 1) {
+                    setCurrentQuiz(currentQuiz + 1);
+                  } else {
+                    goNext(currentStep, nextStep.id_course_content);
+                    setScore(null);
+                    setCurrentQuiz(0);
+                  }
+                }}
                 className="bg-blue-900 text-white"
               >
-                Submit Quiz
+                {currentQuiz < step.questions.length - 1
+                  ? "Next Soal"
+                  : `Next: ${nextStep?.content_title}`}
+              </Button>
+            ) : !step.is_completed ? (
+              <Button
+                onClick={() => {
+                  // Kalau masih ada soal berikutnya
+                  if (currentQuiz < step.questions.length - 1) {
+                    setCurrentQuiz(currentQuiz + 1);
+                  } else {
+                    // Quiz terakhir → show confirm submit
+                    setShowConfirm(true);
+                  }
+                }}
+                className="bg-blue-900 text-white"
+              >
+                {currentQuiz < step.questions.length - 1
+                  ? "Next Soal"
+                  : "Submit Quiz"}
               </Button>
             ) : nextStep ? (
               <Button
@@ -595,14 +686,43 @@ export default function ContentArea() {
               </Button>
             ) : step.section === "postTest" && step.is_completed ? (
               <Button
-                onClick={() => setOpen(true)}
+                // onClick={() => setOpen(true)}
+                onClick={() => {
+                  // Kalau masih ada soal berikutnya
+                  if (currentQuiz < step.questions.length - 1) {
+                    setCurrentQuiz(currentQuiz + 1);
+                  } else {
+                    setOpen(true);
+                  }
+                }}
                 className="bg-blue-900 text-white"
               >
-                Selesai
+                {currentQuiz < step.questions.length - 1
+                  ? "Next Soal"
+                  : "Selesai"}
               </Button>
             ) : null}
           </>
-        )}
+        ) : // ===================== Non-Quiz Content =====================
+        nextStep ? (
+          <Button
+            onClick={handleNext}
+            className="bg-blue-900 text-white"
+            disabled={
+              (step.type === "pdf" && !pdfFinished) ||
+              (step.type === "video" && !videoFinished)
+            }
+          >
+            Next: {nextStep.content_title}
+          </Button>
+        ) : step.section === "postTest" && step.is_completed ? (
+          <Button
+            onClick={() => setOpen(true)}
+            className="bg-blue-900 text-white"
+          >
+            Selesai
+          </Button>
+        ) : null}
       </CardFooter>
     </Card>
   );

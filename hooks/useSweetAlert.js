@@ -8,7 +8,6 @@ export const useSweetAlert = () => {
             title = 'Are you sure?',
             text = "You won't be able to revert this!",
             confirmButtonText = 'Yes, do it!',
-            ...otherOptions
         } = options;
 
         return await Swal.fire({
@@ -19,7 +18,10 @@ export const useSweetAlert = () => {
             confirmButtonColor: '#d33',
             cancelButtonColor: '#3085d6',
             confirmButtonText,
-            ...otherOptions
+            customClass: {
+                cancelButton: "swal-cancel-style",
+                confirmButton: "swal-confirm-style",
+            }
         });
     };
 

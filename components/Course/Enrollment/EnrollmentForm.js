@@ -4,7 +4,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
-export default function EnrollmentFormModal({ 
+export default function EnrollmentForm({ 
     isOpen,
     onClose,
     courseId,
@@ -21,12 +21,33 @@ export default function EnrollmentFormModal({
     const [currentStep, setCurrentStep] = useState(1);
     const [isSaving, setIsSaving] = useState(false);
     const [validationErrors, setValidationErrors] = useState({});
-    const [editMode, setEditMode] = useState(false); // ✅ New state for edit mode
+    const [editMode, setEditMode] = useState(false);
 
     const isExisting = !!enrollment.id_course_enrollment;
     const isSpecific = enrollment.enroll_type_name === 'Specific' || enrollment.id_enrollment_type === 2;
-    const selectedGroups = enrollment.groupings || 
-                          (enrollment.groupings?.map(g => g.id_grouping)) || [];
+    const extractGroupingIds = (groupings) => {
+        if (!Array.isArray(groupings) || groupings.length === 0) {
+            return [];
+        }
+        
+        return groupings.map(item => {
+           
+            if (typeof item === 'number') {
+                return item;
+            }
+           
+            if (item && typeof item === 'object' && item.id_grouping !== undefined) {
+                return parseInt(item.id_grouping);
+            }
+           
+            if (typeof item === 'string') {
+                const num = parseInt(item);
+                return isNaN(num) ? null : num;
+            }
+            return null;
+        }).filter(id => id !== null && !isNaN(id) && id > 0);
+    };
+    const selectedGroups = extractGroupingIds(enrollment.groupings);
     const selectedCompany = companyUnits.find(c => c.id === enrollment.company_id);
 
     // Format values
@@ -42,14 +63,14 @@ export default function EnrollmentFormModal({
                    new Date(enrollment.end_date).toISOString().split('T')[0] : '';
     const remedialAllowed = enrollment.remedial_allowed !== undefined ? 
                           (enrollment.remedial_allowed ? 'Yes' : 'No') : 'Yes';
-    const times = enrollment.remedial_limit || enrollment.times || 1;
+    const remedial_limit = enrollment.remedial_limit || 1;
     
     // Reset step when modal opens
     useEffect(() => {
         if (isOpen) {
             setCurrentStep(1);
             setValidationErrors({});
-            setEditMode(false); // ✅ Reset edit mode
+            setEditMode(false);
         }
     }, [isOpen]);
 
@@ -80,6 +101,15 @@ export default function EnrollmentFormModal({
                 errors.end_date = 'End date must be after start date';
             }
         }
+
+        if (currentStep === 3) {
+            if (!enrollment.passing_grade && enrollment.passing_grade !== 0) {
+                errors.passing_grade = 'Minimum score is required';
+            }
+            if (enrollment.passing_grade < 0 || enrollment.passing_grade > 100) {
+                errors.passing_grade = 'Score must be between 0 and 100';
+            }
+        }
         
         if (currentStep === 4 && isSpecific && selectedGroups.length === 0) {
             errors.groups = 'Please select at least one group';
@@ -104,8 +134,14 @@ export default function EnrollmentFormModal({
         
         setIsSaving(true);
         try {
-            await onSave(courseId, enrollmentIndex);
-            onClose();
+            // ✅ Await the save and get result
+            const result = await onSave(courseId, enrollmentIndex);
+            
+            // ✅ Close only if successful
+            if (result?.success) {
+                await new Promise(resolve => setTimeout(resolve, 800));
+                onClose();
+            }
         } catch (error) {
             console.error('Save error:', error);
         } finally {
@@ -113,16 +149,13 @@ export default function EnrollmentFormModal({
         }
     };
 
-    // ✅ Enable edit mode
     const handleEnableEdit = () => {
         setEditMode(true);
-        setCurrentStep(1); // Go back to step 1 for editing
+        setCurrentStep(1);
     };
 
-    // ✅ Cancel edit mode
     const handleCancelEdit = () => {
         setEditMode(false);
-        // You might want to reset changes here
     };
 
     const canProceed = () => {
@@ -132,13 +165,15 @@ export default function EnrollmentFormModal({
         if (currentStep === 2) {
             return publishDate;
         }
+        if (currentStep === 3) {
+            return enrollment.passing_grade >= 0 && enrollment.passing_grade <= 100;
+        }
         if (currentStep === 4 && isSpecific) {
             return selectedGroups.length > 0;
         }
         return true;
     };
 
-    // ✅ Check if form is in read-only mode
     const isReadOnly = isExisting && !editMode;
 
     if (!isOpen) return null;
@@ -146,7 +181,7 @@ export default function EnrollmentFormModal({
     return (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
             <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full my-8 max-h-[90vh] overflow-hidden flex flex-col">
-                {/* ✅ Enhanced Header */}
+                {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-blue-100">
                     <div className="flex-1 min-w-0 mr-4">
                         <div className="flex items-center gap-3 mb-1">
@@ -226,7 +261,7 @@ export default function EnrollmentFormModal({
                     </div>
                 </div>
 
-                {/* ✅ Read-Only Banner */}
+                {/* Read-Only Banner */}
                 {isReadOnly && (
                     <div className="mx-6 mt-6 p-4 bg-blue-50 border-2 border-blue-200 rounded-xl flex items-center justify-between">
                         <div className="flex items-center gap-3">
@@ -273,7 +308,7 @@ export default function EnrollmentFormModal({
                                         'company_id', 
                                         e.target.value ? parseInt(e.target.value) : null
                                     )}
-                                    disabled={isReadOnly} // ✅ Changed from isExisting
+                                    disabled={isReadOnly}
                                     className={`w-full px-4 py-3 border-2 rounded-xl transition-all ${
                                         validationErrors.company_id
                                             ? 'border-red-300 focus:ring-red-500'
@@ -466,7 +501,7 @@ export default function EnrollmentFormModal({
                                 </div>
                                 <div>
                                     <h4 className="text-lg font-bold text-gray-900">Course Settings</h4>
-                                    <p className="text-sm text-gray-600">Configure remedial and attempts</p>
+                                    <p className="text-sm text-gray-600">Configure remedial, score, and refresh period</p>
                                 </div>
                             </div>
 
@@ -479,7 +514,15 @@ export default function EnrollmentFormModal({
                                     <div className="grid grid-cols-2 gap-3">
                                         <button
                                             type="button"
-                                            onClick={() => !isReadOnly && onUpdateField(courseId, enrollmentIndex, 'remedial_allowed', 'Yes')}
+                                            onClick={() => {
+                                                if (!isReadOnly) {
+                                                    onUpdateField(courseId, enrollmentIndex, 'remedial_allowed', 'Yes');
+                                                    // ✅ Set default remedial_limit to 1 when enabling remedial
+                                                    if (remedial_limit === 0) {
+                                                        onUpdateField(courseId, enrollmentIndex, 'remedial_limit', 1);
+                                                    }
+                                                }
+                                            }}
                                             disabled={isReadOnly}
                                             className={`p-4 rounded-xl border-2 transition-all ${
                                                 remedialAllowed === 'Yes'
@@ -492,7 +535,13 @@ export default function EnrollmentFormModal({
                                         </button>
                                         <button
                                             type="button"
-                                            onClick={() => !isReadOnly && onUpdateField(courseId, enrollmentIndex, 'remedial_allowed', 'No')}
+                                            onClick={() => {
+                                                if (!isReadOnly) {
+                                                    onUpdateField(courseId, enrollmentIndex, 'remedial_allowed', 'No');
+                                                    // ✅ Set remedial_limit to 0 when disabling remedial
+                                                    onUpdateField(courseId, enrollmentIndex, 'remedial_limit', 0);
+                                                }
+                                            }}
                                             disabled={isReadOnly}
                                             className={`p-4 rounded-xl border-2 transition-all ${
                                                 remedialAllowed === 'No'
@@ -513,20 +562,124 @@ export default function EnrollmentFormModal({
                                     </label>
                                     <input
                                         type="number"
-                                        value={times}
-                                        onChange={(e) => onUpdateField(courseId, enrollmentIndex, 'times', parseInt(e.target.value) || 1)}
-                                        min="1"
+                                        value={remedialAllowed === 'No' ? 0 : remedial_limit}
+                                        onChange={(e) => {
+                                            let value = parseInt(e.target.value, 10);
+                                            if (isNaN(value) || value < 1) value = 0;
+                                            if (value > 10) value = 10;
+                                            onUpdateField(courseId, enrollmentIndex, 'remedial_limit', value);
+                                        }}
+                                        min="0"
                                         max="10"
-                                        disabled={isReadOnly}
+                                        disabled={isReadOnly || remedialAllowed === 'No'} // ✅ Disable when remedial not allowed
                                         className={`w-full px-4 py-3 border-2 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                                            isReadOnly ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'
+                                            isReadOnly || remedialAllowed === 'No' ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'
                                         }`}
                                     />
                                     <p className="text-xs text-gray-500 mt-2">
-                                        Number of times employee can attempt this course
+                                        {remedialAllowed === 'No' 
+                                            ? 'Remedial not allowed - Only one attempt available'
+                                            : 'Number of times employee can attempt this course'
+                                        }
+                                    </p>
+                                </div>
+
+                                {/* Minimum Score */}
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                                        Minimum Score <span className="text-red-500">*</span>
+                                    </label>
+                                    <div className="relative">
+                                        <input
+                                            type="number"
+                                            value={enrollment.passing_grade === 0 ? '' : enrollment.passing_grade}
+                                            onChange={(e) => {
+                                                const inputValue = e.target.value;
+                                                
+                                                // ✅ Allow empty input
+                                                if (inputValue === '') {
+                                                    onUpdateField(courseId, enrollmentIndex, 'passing_grade', 0);
+                                                    return;
+                                                }
+                                                
+                                                // ✅ Parse and validate
+                                                let value = parseInt(inputValue, 10);
+                                                if (isNaN(value) || value < 0) value = 0;
+                                                if (value > 100) value = 100;
+                                                
+                                                onUpdateField(courseId, enrollmentIndex, 'passing_grade', value);
+                                            }}
+                                            onFocus={(e) => {
+                                                // ✅ Auto select all text on focus
+                                                e.target.select();
+                                            }}
+                                            min="0"
+                                            max="100"
+                                            disabled={isReadOnly}
+                                            placeholder="0"
+                                            className={`w-full px-4 py-3 pr-12 border-2 rounded-xl transition-all focus:outline-none focus:ring-2 ${
+                                                validationErrors.passing_grade
+                                                    ? 'border-red-300 focus:ring-red-500'
+                                                    : 'border-gray-200 focus:ring-blue-500'
+                                            } ${isReadOnly ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'}`}
+                                        />
+                                    </div>
+                                    {validationErrors.passing_grade ? (
+                                        <p className="text-xs text-red-600 mt-2 flex items-center gap-1">
+                                            <AlertCircle className="w-3 h-3" />
+                                            {validationErrors.passing_grade}
+                                        </p>
+                                    ) : (
+                                        <p className="text-xs text-gray-500 mt-2">
+                                            Minimum passing score (0-100)
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Refreshment Date */}
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                                        Refreshment Period (Months)
+                                    </label>
+                                    <select
+                                        value={enrollment.refreshment_months || ''}
+                                        onChange={(e) => onUpdateField(courseId, enrollmentIndex, 'refreshment_months', e.target.value ? parseInt(e.target.value) : null)}
+                                        disabled={isReadOnly}
+                                        className={`w-full px-4 py-3 border-2 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                                            isReadOnly ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'
+                                        } border-gray-200`}
+                                    >
+                                        <option value="">No Refresh Required</option>
+                                        <option value="6">6 Months</option>
+                                        <option value="12">12 Months (1 Year)</option>
+                                        <option value="18">18 Months</option>
+                                        <option value="24">24 Months (2 Years)</option>
+                                        <option value="36">36 Months (3 Years)</option>
+                                    </select>
+                                    <p className="text-xs text-gray-500 mt-2">
+                                        Course must be retaken after this period
                                     </p>
                                 </div>
                             </div>
+
+                            {/* Settings Info Card */}
+                            {((enrollment.passing_grade ?? 0) > 0 || enrollment.refreshment_months) && (
+                                <div className="p-4 bg-green-50 border border-green-200 rounded-xl">
+                                    <p className="text-sm text-green-800">
+                                        {(enrollment.passing_grade ?? 0) > 0 && (
+                                            <>
+                                                <strong>Passing Score:</strong> Employees must score at least {enrollment.passing_grade} to pass
+                                                {enrollment.refreshment_months && <br />}
+                                            </>
+                                        )}
+                                        {enrollment.refreshment_months && (
+                                            <>
+                                                <strong>Refresh Period:</strong> Course must be retaken every {enrollment.refreshment_months} months
+                                            </>
+                                        )}
+                                    </p>
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -621,12 +774,22 @@ export default function EnrollmentFormModal({
                                     </p>
                                 </div>
                                 <div>
+                                    <p className="text-blue-700 font-medium mb-1">Minimum Score:</p>
+                                    <p className="text-blue-900 font-bold">{enrollment.passing_grade ?? 0}</p>
+                                </div>
+                                <div>
+                                    <p className="text-blue-700 font-medium mb-1">Refresh Period:</p>
+                                    <p className="text-blue-900 font-bold">
+                                        {enrollment.refreshment_months ? `${enrollment.refreshment_months} months` : 'None'}
+                                    </p>
+                                </div>
+                                <div>
                                     <p className="text-blue-700 font-medium mb-1">Remedial:</p>
                                     <p className="text-blue-900 font-bold">{remedialAllowed}</p>
                                 </div>
                                 <div>
                                     <p className="text-blue-700 font-medium mb-1">Max Attempts:</p>
-                                    <p className="text-blue-900 font-bold">{times}</p>
+                                    <p className="text-blue-900 font-bold">{remedial_limit}</p>
                                 </div>
                                 {isSpecific && (
                                     <div className="col-span-2">
@@ -639,14 +802,13 @@ export default function EnrollmentFormModal({
                     )}
                 </div>
 
-                {/* ✅ Enhanced Footer */}
+                {/* Footer */}
                 <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50">
                     <div className="text-sm text-gray-600">
                         {!isReadOnly && `Step ${currentStep} of ${totalSteps}`}
                     </div>
                     
                     <div className="flex items-center gap-3">
-                        {/* Read-Only Mode - Only Close Button */}
                         {isReadOnly ? (
                             <button
                                 onClick={onClose}
@@ -655,9 +817,7 @@ export default function EnrollmentFormModal({
                                 Close
                             </button>
                         ) : (
-                            /* Edit Mode - Navigation Buttons */
                             <>
-                                {/* Cancel Edit Button (if editing existing) */}
                                 {isExisting && editMode && (
                                     <button
                                         type="button"
@@ -668,7 +828,6 @@ export default function EnrollmentFormModal({
                                     </button>
                                 )}
 
-                                {/* Back Button */}
                                 {currentStep > 1 && (
                                     <button
                                         type="button"
@@ -680,7 +839,6 @@ export default function EnrollmentFormModal({
                                     </button>
                                 )}
                                 
-                                {/* Next/Save Button */}
                                 {currentStep < totalSteps ? (
                                     <button
                                         type="button"
