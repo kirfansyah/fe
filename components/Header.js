@@ -30,7 +30,7 @@ const Header = () => {
     getKaryawan();
   }, []);
   const [showChangePassword, setShowChangePassword] = useState(false);
-  console.log("dataKaryawans", dataKaryawans);
+  
  
   return ( 
     <>
@@ -44,23 +44,6 @@ const Header = () => {
         </div>
         <div className='flex items-center'>
           <ul className='flex justify-between items-center space-x-3 select-none'>
-            <li className='font-roboto text-sm text-blue-900 transition duration-700 ease-out cursor-pointer group'>
-              <svg
-                className='w-6 h-6 group-hover:scale-105 group-hover:text-blue-900/95 group-hover:font-bold group-hover:ease-in'
-                fill='none'
-                stroke='currentColor'
-                viewBox='0 0 24 24'
-                onClick={() => showModal(!stateSeeking.isModal)}
-                xmlns='http://www.w3.org/2000/svg'>
-                <path
-                  strokeLinecap='round'
-                  strokeLinejoin='round'
-                  strokeWidth={2}
-                  d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z'
-                />
-              </svg>
-            </li> 
-            
               <li className='flex items-center '>
                 <label className='w-9 h-9 pl-2 text-blue-900 font-normal mr-2 lg:block'>
                   <IoIosNotifications className="w-9 h-9 " />

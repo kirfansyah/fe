@@ -2,12 +2,14 @@
 import Swal from 'sweetalert2';
 
 export const useSweetAlert = () => {
-    // ✅ Reusable confirmation
+    // ❌ MODAL - Confirmation (butuh user action)
     const confirmAction = async (options = {}) => {
         const {
-            title = 'Are you sure?',
-            text = "You won't be able to revert this!",
-            confirmButtonText = 'Yes, do it!',
+            title = 'Apakah Anda yakin?',
+            text = "Data tidak dapat dikembalikan!",
+            confirmButtonText = 'Ya, lanjutkan!',
+            cancelButtonText = 'Batal',
+            ...otherOptions
         } = options;
 
         return await Swal.fire({
@@ -15,9 +17,11 @@ export const useSweetAlert = () => {
             text,
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#3085d6',
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#6b7280',
             confirmButtonText,
+            cancelButtonText,
+            ...otherOptions
             customClass: {
                 cancelButton: "swal-cancel-style",
                 confirmButton: "swal-confirm-style",
@@ -25,66 +29,122 @@ export const useSweetAlert = () => {
         });
     };
 
-    // ✅ Success alert
-    const showSuccess = async (message = 'Success!', title = 'Done!') => {
-        return await Swal.fire({
+    // ✅ TOAST - Success (quick feedback)
+    const showSuccess = (message = 'Berhasil!') => {
+        return Swal.fire({
+            toast: true,
+            position: 'top-end',
             icon: 'success',
-            title,
-            text: message,
+            title: message,
+            showConfirmButton: false,
             timer: 2000,
-            showConfirmButton: false
+            timerProgressBar: true,
+            didOpen: (toast) => {
+                toast.addEventListener('mouseenter', Swal.stopTimer);
+                toast.addEventListener('mouseleave', Swal.resumeTimer);
+            }
         });
     };
 
-    // ✅ Error alert
-    const showError = (message = 'Something went wrong!', title = 'Error!') => {
+    // ❌ MODAL - Error (important message)
+    const showError = (message = 'Terjadi kesalahan!', title = 'Error') => {
         return Swal.fire({
             icon: 'error',
             title,
-            text: message
+            text: message,
+            confirmButtonColor: '#1e3a8a',
+            confirmButtonText: 'OK'
         });
     };
 
-    // ✅ Warning alert
-    const showWarning = (message, title = 'Warning!') => {
-        return Swal.fire({  
+    // ❌ MODAL - Warning (need attention)
+    const showWarning = (message, title = 'Peringatan') => {
+        return Swal.fire({
             icon: 'warning',
             title,
-            text: message
+            text: message,
+            confirmButtonColor: '#f59e0b',
+            confirmButtonText: 'OK'
         });
-    }
+    };
 
-    // ✅ Loading alert
-    const showLoading = (message = 'Processing...') => {
+    // ✅ TOAST - Info (quick info)
+    const showInfo = (message) => {
+        return Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'info',
+            title: message,
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true,
+        });
+    };
+
+    // ❌ MODAL - Loading (blocking)
+    const showLoading = (message = 'Memproses...') => {
         Swal.fire({
             title: message,
             allowOutsideClick: false,
+            allowEscapeKey: false,
+            showConfirmButton: false,
             didOpen: () => {
                 Swal.showLoading();
             }
         });
     };
 
-    // ✅ Close loading
     const closeLoading = () => {
         Swal.close();
     };
 
-    // ✅ Input dialog
+    // ❌ MODAL - Input (need user input)
     const getInput = async (options = {}) => {
         const {
-            title = 'Enter value',
+            title = 'Masukkan nilai',
             inputType = 'text',
             inputPlaceholder = '',
+            inputLabel = '',
             ...otherOptions
         } = options;
 
         return await Swal.fire({
             title,
             input: inputType,
+            inputLabel,
             inputPlaceholder,
             showCancelButton: true,
+            confirmButtonColor: '#1e3a8a',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'OK',
+            cancelButtonText: 'Batal',
             ...otherOptions
+        });
+    };
+
+    // ✅ TOAST - Delete Success (quick feedback after confirm)
+    const showDeleteSuccess = (message = 'Data berhasil dihapus!') => {
+        return Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'success',
+            title: message,
+            showConfirmButton: false,
+            timer: 2000,
+            timerProgressBar: true,
+        });
+    };
+
+    // ✅ TOAST - Update Success
+    const showUpdateSuccess = (message = 'Data berhasil diperbarui!') => {
+        return Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'success',
+            title: message,
+            showConfirmButton: false,
+            timer: 2000,
+            timerProgressBar: true,
         });
     };
 
@@ -93,8 +153,11 @@ export const useSweetAlert = () => {
         showSuccess,
         showError,
         showWarning,
+        showInfo,
         showLoading,
         closeLoading,
-        getInput
+        getInput,
+        showDeleteSuccess,
+        showUpdateSuccess,
     };
 };

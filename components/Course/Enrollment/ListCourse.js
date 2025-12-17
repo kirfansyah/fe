@@ -21,6 +21,7 @@ export default function ListCourses({
     groupEnroll = [],
     companyUnits = [],
     onCourseChange,
+    deleteEnrolls,
     loading = false,
     error = null,
 }) {
@@ -29,7 +30,7 @@ export default function ListCourses({
     const [filterCompany, setFilterCompany] = useState("all");
     const [filterStatus, setFilterStatus] = useState("all");
     
-    const { showSuccess, showError, showWarning, confirmAction } = useSweetAlert();
+    const { showSuccess, showError, showWarning, confirmAction,showLoading,closeLoading } = useSweetAlert();
 
     // Extract courses from enrollmentData
     const courses = useMemo(() => {
@@ -114,28 +115,81 @@ export default function ListCourses({
         showSuccess('New enrollment added. Please fill in the details.');
     };
 
-    const removeEnrollment = async (courseId, index) => {
+    // const removeEnrollment = async (courseId, index) => {
+    //     const currentData = enrollmentData[courseId] || {};
+    //     const enrollments = currentData.enrollments || [];
+    //     const enrollment = enrollments[index];
+        
+    //     if (!enrollment) {
+    //         showError('Enrollment not found.');
+    //         return;
+    //     }
+        
+    //     const result = await confirmAction({
+    //         title: 'Delete Enrollment?',
+    //         text: `Remove enrollment for ${enrollment.company_name || 'this company'}?`,
+    //         confirmButtonText: 'Yes, delete it!',
+    //         cancelButtonText: 'Cancel'
+    //     });
+        
+    //     if (!result.isConfirmed) return;
+        
+    //     const updated = enrollments.filter((_, i) => i !== index);
+    //     onCourseChange(courseId, 'enrollments', updated);
+    //     showSuccess('Enrollment removed successfully.');
+    // };
+
+    const handleDeleteEnrollment = async (courseId, enrollmentId, enrollmentIndex) => {
         const currentData = enrollmentData[courseId] || {};
         const enrollments = currentData.enrollments || [];
-        const enrollment = enrollments[index];
+        const enrollment = enrollments[enrollmentIndex];
         
         if (!enrollment) {
-            showError('Enrollment not found.');
-            return;
+            return { success: false, message: 'Enrollment not found.' };
         }
-        
-        const result = await confirmAction({
-            title: 'Delete Enrollment?',
-            text: `Remove enrollment for ${enrollment.company_name || 'this company'}?`,
-            confirmButtonText: 'Yes, delete it!',
-            cancelButtonText: 'Cancel'
-        });
-        
-        if (!result.isConfirmed) return;
-        
-        const updated = enrollments.filter((_, i) => i !== index);
-        onCourseChange(courseId, 'enrollments', updated);
-        showSuccess('Enrollment removed successfully.');
+
+        const isExisting = !!enrollment.id_course_enrollment;
+
+        if (isExisting) {
+            // ✅ Delete existing via API
+            showLoading('Deleting enrollment...');
+            
+            try {
+                const deleteResult = await deleteEnrolls(enrollmentId);
+                closeLoading();
+
+                if (deleteResult.success) {
+                    const updated = enrollments.filter((_, i) => i !== enrollmentIndex);
+                    onCourseChange(courseId, 'enrollments', updated);
+                    
+                    return { 
+                        success: true, 
+                        message: deleteResult.message || 'Enrollment deleted successfully' 
+                    };
+                } else {
+                    return { 
+                        success: false, 
+                        message: deleteResult.message || 'Failed to delete enrollment' 
+                    };
+                }
+            } catch (error) {
+                closeLoading();
+                console.error('Delete enrollment error:', error);
+                return { 
+                    success: false, 
+                    message: 'An error occurred while deleting enrollment' 
+                };
+            }
+        } else {
+            // ✅ Remove pending (local state only)
+            const updated = enrollments.filter((_, i) => i !== enrollmentIndex);
+            onCourseChange(courseId, 'enrollments', updated);
+            
+            return { 
+                success: true, 
+                message: 'Pending enrollment removed successfully' 
+            };
+        }
     };
 
     const duplicateEnrollment = async (courseId, index) => {
@@ -420,8 +474,8 @@ export default function ListCourses({
                         onUpdateField={updateEnrollmentField}
                         onToggleGroup={toggleEnrollmentGroup}
                         onDuplicate={duplicateEnrollment}
-                        onRemove={removeEnrollment}
                         onSave={handleSaveEnrollment}
+                        onDeleteEnrollment={handleDeleteEnrollment}
                     />
                 ))}
             </div>

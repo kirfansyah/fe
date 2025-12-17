@@ -17,6 +17,7 @@ const ProfileContextProvider = ({ children }) => {
         message: "",
         messageHeader: "",
         dataKaryawan: [],
+        dataMenu: [],
         listDatas: [],
         state: false
     };
@@ -48,8 +49,26 @@ const ProfileContextProvider = ({ children }) => {
         };
     };
 
+    const getMenu = async () => {
+        dispatch({ type: "loading" });
+        try {
+            let cookie = `; ${document.cookie}`.match(`;\\s*token=([^;]+)`);
+            let token = cookie ? cookie[1] : "";
+            const response = await API.get("/auth/me",
+                {headers: { Authorization: `Bearer ${token}` }}
+            );
+            const resData = response.data;
+            dispatch({
+                type: "getMenu",
+                payload: resData.data.data, // data menu dari response
+            });
+        } catch (err) {
+            console.log(err);
+        };
+    };
+
     return (
-        <ProfileContext.Provider value={{ ...state, getKaryawan }}>
+        <ProfileContext.Provider value={{ ...state, getKaryawan, getMenu }}>
             {children}
         </ProfileContext.Provider>
     );
