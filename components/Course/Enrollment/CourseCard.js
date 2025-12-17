@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import EnrollmentFormModal from "./EnrollmentForm";
-
+import Swal from 'sweetalert2';
 export default function CourseCard({ 
     course, 
     index,
@@ -23,7 +23,6 @@ export default function CourseCard({
     onUpdateField,
     onToggleGroup,
     onDuplicate,
-    onRemove,
     onSave,
     onDeleteEnrollment
 }) {
@@ -71,6 +70,58 @@ export default function CourseCard({
     const handleSaveEnrollment = async (courseId, enrollmentIndex) => {
         const result = await onSave(courseId, enrollmentIndex);
         return result;
+    };
+
+    const handleDelete = async (enrollment, idx) => {
+        const isExisting = !!enrollment.id_course_enrollment;
+
+        const result = await Swal.fire({
+            title: 'Delete Enrollment?',
+            html: `
+                <p class="text-gray-700 mb-2">Are you sure you want to delete this enrollment?</p>
+                <div class="bg-red-50 border border-red-200 rounded-lg p-3 mt-3">
+                    <p class="font-semibold text-gray-900">${enrollment.company_name || 'Incomplete'}</p>
+                    <p class="text-sm text-gray-600 mt-1">
+                        ${isExisting ? '⚠️ This will permanently delete the enrollment' : 'This will remove the pending enrollment'}
+                    </p>
+                </div>
+            `,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Yes, Delete',
+            cancelButtonText: 'Cancel',
+            reverseButtons: true
+        });
+
+        if (!result.isConfirmed) return;
+
+        // ✅ Single handler for both cases
+        console.log('🗑️ Deleting enrollment ID:', course.id_course);
+        const deleteResult = await onDeleteEnrollment(
+            course.id_course,
+            enrollment.id_course_enrollment, // Will be null for pending
+            idx
+        );
+
+        if (deleteResult.success) {
+            await Swal.fire({
+                icon: 'success',
+                title: isExisting ? 'Deleted!' : 'Removed!',
+                text: deleteResult.message,
+                showConfirmButton: false,
+                timer: 2000,
+                timerProgressBar: true
+            });
+        } else {
+            await Swal.fire({
+                icon: 'error',
+                title: 'Failed!',
+                text: deleteResult.message,
+                confirmButtonColor: '#1e3a8a'
+            });
+        }
     };
 
     return (
@@ -262,7 +313,18 @@ export default function CourseCard({
                                             >
                                                 <Edit className="w-4 h-4" />
                                             </button>
-                                            {!isExisting && (
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleDelete(enrollment, idx);
+                                                }}
+                                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                title={isExisting ? 'Delete Enrollment' : 'Remove Pending'}
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                            {/* {!isExisting && (
                                                 <button
                                                     type="button"
                                                     onClick={(e) => {
@@ -274,7 +336,7 @@ export default function CourseCard({
                                                 >
                                                     <Trash2 className="w-4 h-4" />
                                                 </button>
-                                            )}
+                                            )} */}
                                         </div>
                                     </div>
                                 );

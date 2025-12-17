@@ -19,7 +19,7 @@ export default function Enroll({
 }) {
     const [loading, setLoading] = useState(false);
     const { showLoading, showSuccess, showError, confirmAction } = useSweetAlert();
-    const { handleSaveEnroll, fetchCourses, fetchEnrollData } = useCourses();
+    const { handleSaveEnroll, fetchCourses, fetchEnrollData,deleteEnrolls } = useCourses();
     const { dataKaryawan } = useContext(ProfileContext);
     const dataKaryawans = dataKaryawan?.length ? dataKaryawan[0] : [];
     
@@ -435,7 +435,7 @@ export default function Enroll({
             />
 
             {/* Content */}
-            <div className="bg-white mt-2 p-4 rounded-lg shadow">
+            <div className="">
                 {activeEnrollmentTab === 'courses-list-sub' && (
                     <div className="space-y-4">
                         {/* Header with Confirm Button */}
@@ -452,6 +452,7 @@ export default function Enroll({
                             companyUnits={companyUnits}
                             onCourseChange={handleCourseChange}
                             enrollmentData={enrollmentData}
+                            deleteEnrolls={deleteEnrolls}
                         />
                     </div>
                 )}

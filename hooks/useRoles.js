@@ -1,180 +1,191 @@
-import { useState, useEffect, useCallback, use} from "react";
-import API from '../services/RoleService';
+import { useState, useEffect, useCallback } from "react";
+import RoleService from '../services/RoleService';
 
-export function useRoles(){
+
+export function useRoles() {
     const [roles, setRoles] = useState([]);
     const [menus, setMenus] = useState([]);
-    const [menuData, setMenuData] = useState(null);
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null); 
-   
-    // get semua data course
+    const [error, setError] = useState(null);
+
+    // ✅ Get all roles
     const fetchRoles = useCallback(async () => {
         setLoading(true);
-        setError(null); 
-        
-        try {
-            const res = await API.getAllRoles();
-            setRoles(res.data);
-        } catch (err) {
-            setError(err.message || 'Failed to fetch courses');
-        } finally {
-            setLoading(false);
+        setError(null);
+
+        const result = await RoleService.getAllRoles();
+
+        if (result.success) {
+            setRoles(result.data);
+        } else {
+            setError(result.message);
         }
+
+        setLoading(false);
     }, []);
 
-    // save data roles
-    const handleCreateRoles = useCallback(async (rolesData) => {    
+    // ✅ Create or Update role
+    const handleCreateRoles = useCallback(async (rolesData) => {
         setLoading(true);
         setError(null);
-        
-        try {
-            let response;
-            if (rolesData.id_role) {
-                response = await API.updateRoles(rolesData);
-            } else {
-                response = await API.createRoles(rolesData);
-            }
-            await fetchRoles();
-            return response;
-        } catch (err) {
-            setError(err.message);
-            throw err;
-        } finally {
-            setLoading(false);
+
+        let result;
+        if (rolesData.id_role) {
+            result = await RoleService.updateRoles(rolesData);
+        } else {
+            result = await RoleService.createRoles(rolesData);
         }
+
+        if (result.success) {
+            await fetchRoles(); // Refresh list
+        } else {
+            setError(result.message);
+        }
+
+        setLoading(false);
+        return result;
     }, [fetchRoles]);
 
-    //get data role by id
+    // ✅ Get role by ID
     const fetchRoleByID = useCallback(async (roleId) => {
-         if (!roleId) return;
+        if (!roleId) {
+            console.warn('fetchRoleByID: roleId is required');
+            return { success: false, data: null, message: 'Role ID is required' };
+        }
+
         setLoading(true);
         setError(null);
-        try {
-            const res = await API.getRoleById(roleId);
-            return res
-        } catch (err) {
-            setError(err.message || 'Failed to fetch roles');
-            console.error('Error fetching roles:', err);
-            throw err;
-        } finally {
-            setLoading(false);
-        }  
+
+        const result = await RoleService.getRoleById(roleId);
+
+        if (!result.success) {
+            setError(result.message);
+        }
+
+        setLoading(false);
+        return result;
     }, []);
 
-    // get semua data course
+    // ✅ Get all menus
     const fetchMenus = useCallback(async () => {
         setLoading(true);
-        setError(null); 
-        
-        try {
-            const res = await API.getAllMenus();
-            setMenus(res.data);
-        } catch (err) {
-            setError(err.message || 'Failed to fetch courses');
-        } finally {
-            setLoading(false);
+        setError(null);
+
+        const result = await RoleService.getAllMenus();
+
+        if (result.success) {
+            setMenus(result.data);
+        } else {
+            setError(result.message);
         }
+
+        setLoading(false);
     }, []);
 
-    // save data roles
-    const handleCreateMenus = useCallback(async (menusData) => {    
+    // ✅ Create or Update menu
+    const handleCreateMenus = useCallback(async (menusData) => {
         setLoading(true);
         setError(null);
-        
-        try {
-            let response;
-            if (menusData.id_menu) {
-                response = await API.updateRoles(menusData);
-            } else {
-                response = await API.createMenus(menusData);
-            }
-            await fetchMenus();
-            return response;
-        } catch (err) {
-            setError(err.message);
-            throw err;
-        } finally {
-            setLoading(false);
+
+        let result;
+        if (menusData.id_menu) {
+            result = await RoleService.updateRoles(menusData); // ⚠️ Check if this should be updateMenus
+        } else {
+            result = await RoleService.createMenus(menusData);
         }
+
+        if (result.success) {
+            await fetchMenus(); // Refresh list
+        } else {
+            setError(result.message);
+        }
+
+        setLoading(false);
+        return result;
     }, [fetchMenus]);
 
+    // ✅ Update role permissions
     const handleUpdateRolePermissions = useCallback(async (permissionsData) => {
         setLoading(true);
         setError(null);
-        try {
-            const response = await API.updateRolesConfig(permissionsData);
-            await fetchRoles();
-            return response;
-        } catch (err) {
-            setError(err.message);
-            throw err;
-        } finally {
-            setLoading(false);
+
+        const result = await RoleService.updateRolesConfig(permissionsData);
+
+        if (result.success) {
+            await fetchRoles(); // Refresh list
+        } else {
+            setError(result.message);
         }
+
+        setLoading(false);
+        return result;
     }, [fetchRoles]);
 
+    // ✅ Get analytics
     const fetchAnalytics = useCallback(async (filters = {}) => {
         setLoading(true);
-        setError(null); 
-        
-        try {
-            const res = await API.getAnalytics(filters);
-            return res;
-        } catch (err) {
-            setError(err.message || 'Failed to fetch analytics');
-            throw err;
-        } finally {
-            setLoading(false);
+        setError(null);
+
+        const result = await RoleService.getAnalytics(filters);
+
+        if (!result.success) {
+            setError(result.message);
         }
+
+        setLoading(false);
+        return result;
     }, []);
 
+    // ✅ Create category
     const handleCreateCategory = useCallback(async (categoryData) => {
         setLoading(true);
         setError(null);
-        try {
-            const response = await API.createCategory(categoryData);
-            return response;
-        } catch (err) {
-            setError(err.message);
-            throw err;
-        } finally {
-            setLoading(false);
-        }
-    },[]);
 
+        const result = await RoleService.createCategory(categoryData);
+
+        if (result.success) {
+        } else {
+            setError(result.message);
+        }
+
+        setLoading(false);
+        return result;
+    }, []);
+
+    // ✅ Create subcategory
     const handleCreateSubCategory = useCallback(async (subCategoryData) => {
         setLoading(true);
         setError(null);
-        try {
-            const response = await API.createSubCategory(subCategoryData);
-            return response;
-        } catch (err) {
-            setError(err.message);
-            throw err;
-        } finally {
-            setLoading(false);
+
+        const result = await RoleService.createSubCategory(subCategoryData);
+
+        if (result.success) {
+        } else {
+            setError(result.message);
         }
-    },[]);
 
+        setLoading(false);
+        return result;
+    }, []);
 
+    // ✅ Initial load
     useEffect(() => {
         Promise.all([fetchRoles(), fetchMenus()]);
     }, [fetchRoles, fetchMenus]);
-    
-  return {
-    roles, 
-    menus,
-    loading, 
-    error,           
-    fetchRoles, 
-    handleCreateRoles,
-    fetchRoleByID,
-    fetchMenus,
-    handleCreateMenus,
-    handleUpdateRolePermissions,
-    fetchAnalytics,
-    handleCreateCategory,
-    handleCreateSubCategory,
-  };
+
+    return {
+        roles,
+        menus,
+        loading,
+        error,
+        fetchRoles,
+        handleCreateRoles,
+        fetchRoleByID,
+        fetchMenus,
+        handleCreateMenus,
+        handleUpdateRolePermissions,
+        fetchAnalytics,
+        handleCreateCategory,
+        handleCreateSubCategory,
+    };
 }

@@ -20,8 +20,8 @@ export default function EnrollmentHeader({
             
 
             {/* Header with Action Button */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-                <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+            {/* <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5"> */}
+                {/* <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                     <div className="flex-1">
                         <h3 className="text-xl font-bold text-gray-900 mb-1">
                             Multi-Company Course Enrollment
@@ -29,10 +29,10 @@ export default function EnrollmentHeader({
                         <p className="text-sm text-gray-600">
                             Configure and manage company-specific enrollments for each course
                         </p>
-                    </div>
+                    </div> */}
 
                     {/* Confirm Button */}
-                    <button 
+                    {/* <button 
                         onClick={onConfirm}
                         disabled={loading || coursesCount === 0 || !hasNewEnrollments}
                         className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all shadow-lg ${
@@ -52,11 +52,11 @@ export default function EnrollmentHeader({
                                 <span>Confirm {newEnrollmentsCount > 0 ? `(${newEnrollmentsCount} new)` : 'Enrollment'}</span>
                             </>
                         )}
-                    </button>
-                </div>
+                    </button> */}
+                {/* </div> */}
 
                 {/* Progress Bar */}
-                {totalEnrollments > 0 && (
+                {/* {totalEnrollments > 0 && (
                     <div className="mt-5 pt-5 border-t border-gray-200">
                         <div className="flex items-center justify-between mb-2">
                             <span className="text-sm font-semibold text-gray-700">
@@ -78,10 +78,10 @@ export default function EnrollmentHeader({
                             {completedEnrollments} out of {totalEnrollments} enrollments completed
                         </p>
                     </div>
-                )}
+                )} */}
 
                 {/* Alert for Pending */}
-                {hasNewEnrollments && (
+                {/* {hasNewEnrollments && (
                     <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start gap-3">
                         <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
                         <div className="flex-1">
@@ -93,8 +93,8 @@ export default function EnrollmentHeader({
                             </p>
                         </div>
                     </div>
-                )}
-            </div>
+                )} */}
+            {/* </div> */}
         </div>
     );
 }

@@ -108,39 +108,42 @@ const AuthContextProvider = (props) => {
  
     try {
       const response = await API.post("/auth/login", { nik, password, site_id, is_karyawan });
-      const { status, message, data } = response.data;
+      const { success,statusCode , message, data } = response.data;
 
-      if (status === 200 && data.length > 0) {
-      const user = data[0];
-      document.cookie = `token=${user.token}; path=/`;
-      document.cookie = `username=${user.nik}; path=/`;
-      document.cookie = `nama=${user.nama}; path=/`;
+      if (statusCode  === 200 && data) {
+        const user = data;
+        
+        document.cookie = `token=${user.token}; path=/`;
+        document.cookie = `username=${user.nik}; path=/`;
+        document.cookie = `nama=${user.nama}; path=/`;
 
-      dispatch({
-        type: "loginSuccess",
-        data: {
-          message: message,
-          status: true,
-          token: user.token,
-          profil: {
-            nik: user.nik,
-            nama: user.nama,
+        dispatch({
+          type: "loginSuccess",
+          data: {
+            message: message,
+            status: true,
+            token: user.token,
+            profil: {
+              nik: user.nik,
+              nama: user.nama,
+            },
           },
-        },
-      });
+        });
 
-      // Alert sukses
-      Swal.fire({
-        icon: "success",
-        title: "Berhasil Login",
-        text: `Selamat datang ${user.nama}`,
-        confirmButtonColor: "#1e3a8a",
-      });
-
-      router.push("/dashboard");
-    } else {
-      throw new Error("Login gagal");
-    }
+        // Alert sukses
+        Swal.fire({
+          icon: "success",
+          title: "Berhasil Login",
+          text: `Selamat datang ${user.nama}`,
+          confirmButtonColor: "#1e3a8a",
+          showConfirmButton: false,
+          timer: 1000,
+        }).then((result) => {
+          router.push("/dashboard");
+        });
+      } else {
+        throw new Error("Login gagal");
+      }
     } catch (err) {
       Swal.fire({
         icon: "error",
