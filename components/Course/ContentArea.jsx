@@ -21,6 +21,7 @@ import PptViewer from "@/components/Course/PptViewer";
 import dynamic from "next/dynamic";
 import { useEmployees } from "@/hooks/useEmployees";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 const VideoPlayer = dynamic(() => import("@/components/Course/VideoPlayer"), {
   ssr: false,
@@ -39,6 +40,7 @@ export default function ContentArea({ exitCourse }) {
     "courseContent",
     "postTest",
   ];
+  //   console.log("flow :", flow);
 
   const allSteps = Object.entries(flow)
     .sort(
@@ -65,25 +67,6 @@ export default function ContentArea({ exitCourse }) {
       })
     );
 
-  //   const allSteps = Object.values(flow)
-  //     .flat()
-  //     .map((s) => {
-  //       let type = "text"; // default
-
-  //       if (s.content_url) {
-  //         if (s.content_url.endsWith(".mp4")) type = "video";
-  //         else if (s.content_url.endsWith(".pdf")) type = "pdf";
-  //         else if (s.content_url.endsWith(".pptx")) type = "pptx";
-  //       } else if (s.questions) {
-  //         type = "quiz";
-  //       }
-
-  //       return {
-  //         ...s,
-  //         id: s.id_course_content,
-  //         type,
-  //       };
-  //     });
   let idx = allSteps.findIndex((s) => s.id === currentStep);
   if (idx === -1) idx = 0;
   const step = allSteps[idx];
@@ -108,6 +91,13 @@ export default function ContentArea({ exitCourse }) {
   const [pptFile, setPptFile] = useState(null);
 
   const defaultPDF = "/uploads/pdf/default.pdf";
+  //   const defaultPDF =
+  //     "/api/pdf-proxy?url=" +
+  //     encodeURIComponent(
+  //       "https://api-lms.sambu.co.id/uploads/ebooks/files/a569a951-3311-451c-9338-89dad8d7595a.pdf"
+  //     );
+  //   const defaultPDF =
+  //     "http://api-lms.sambu.co.id/uploads/ebooks/files/a569a951-3311-451c-9338-89dad8d7595a.pdf";
   const defaultVideo = "/uploads/video/komunikasi-efektif-2.mp4";
   const defaultPpt =
     "https://docs.google.com/presentation/d/1jsjVVdCjlVd5uAM3e_nlyPVoNUKid07A/edit?usp=sharing";
@@ -118,7 +108,8 @@ export default function ContentArea({ exitCourse }) {
     if (!step) return;
 
     async function checkFiles() {
-      const baseURL = window.location.origin;
+      //   const baseURL = window.location.origin;
+      const baseURL = process.env.API_BASE || "https://api-lms.sambu.co.id";
 
       // ===== PDF =====
       if (step.content_url && step.content_url.endsWith(".pdf")) {
@@ -161,14 +152,12 @@ export default function ContentArea({ exitCourse }) {
       } else {
         setPptFile(defaultPpt);
       }
-      //   console.log("ppt :", pptFile);
     }
 
     checkFiles();
   }, [step]);
 
   const router = useRouter();
-  //   console.log("currentStep: ", courseData);
   useEffect(() => {
     if (!step) return;
 
@@ -204,15 +193,7 @@ export default function ContentArea({ exitCourse }) {
       setStep(allSteps[0].id_course_content);
     }
     setCourseId(courseData?.id_course);
-    // console.log("courseId useEffect: ", courseId);
   }, [currentStep, allSteps, setStep]);
-
-  //   console.log(courseId);
-
-  //   console.log("allSteps: ", allSteps);
-  //   console.log("idx: ", idx);
-  //   console.log("step: ", step);
-  //   console.log("courseData: ", courseData);
 
   if (!step) {
     return (
@@ -225,8 +206,6 @@ export default function ContentArea({ exitCourse }) {
   }
 
   const handleFinishLogic = async () => {
-    // console.log("User finished course!");
-
     const navigate = router.push(`${exitCourse}${courseId}`);
 
     if (document.fullscreenElement) {
@@ -239,7 +218,6 @@ export default function ContentArea({ exitCourse }) {
     }
 
     setOpen(false);
-    // console.log("courseId di handleFinishLogic: ", courseId);
 
     await navigate;
   };
@@ -255,8 +233,6 @@ export default function ContentArea({ exitCourse }) {
   const handleCompleteContent = async (stepId) => {
     try {
       setIsSubmitting(true);
-      //   console.log("stepid : ", stepId);
-
       const payload = {
         id_user_enrollment: courseData.id_user_enrollment,
         // id_user_enrollment: 8,
@@ -265,13 +241,15 @@ export default function ContentArea({ exitCourse }) {
         updated_by: "system",
         updated_device: "web",
       };
-      //   console.log("payload complete course : ", payload);
 
-      await completeCourse(payload);
+      const res = await completeCourse(payload);
+      if (res.data.length <= 0) {
+        toast.warning("Error API response : " + res.data.message);
+        return;
+      }
       completeStep(stepId);
       setContentCompleted((prev) => !prev);
       await refreshCourseProgress();
-      //   console.log("✅ Konten disimpan sebagai complete:", stepId);
     } catch (err) {
       console.error("❌ Gagal menyimpan progress:", err);
     } finally {
@@ -340,9 +318,11 @@ export default function ContentArea({ exitCourse }) {
         };
       });
 
-      //   console.log("🧩 Payload jawaban:", payload);
-
       const response = await sendAswers(payload);
+
+      if (!response.success) {
+        toast.warning("Error API Response: " + response.message);
+      }
 
       //   console.log("✅ Hasil submit quiz:", response);
 
@@ -368,7 +348,6 @@ export default function ContentArea({ exitCourse }) {
   return (
     <Card className="flex-1 flex flex-col h-full">
       <CardContent className="p-4 over space-y-4">
-        {/* {console.log("type: ", step.type)} */}
         {step.type === "text" && (
           <div className="space-y-3 p-5">
             <h2 className="text-xl font-semibold text-gray-800">
@@ -407,7 +386,10 @@ export default function ContentArea({ exitCourse }) {
             </h2>
             <div className="w-full flex justify-center ">
               <PdfViewer
-                file={pdfFile}
+                // file={step.content_url_full}
+                file={`/api/pdf-proxy?url=${encodeURIComponent(
+                  step.content_url_full
+                )}`}
                 onPageChange={(isLastPage) => setPdfFinished(isLastPage)}
                 // onError={() => setPdfFile(defaultPDF)}
               />
@@ -422,7 +404,10 @@ export default function ContentArea({ exitCourse }) {
             </h2>
             <VideoPlayer
               //   url={`/uploads/video/komunikasi-efektif.mp4`}
-              url={videoFile}
+              //   url={videoFile}
+              url={`/api/video-proxy?url=${encodeURIComponent(
+                step.content_url_full
+              )}`}
               videoId={`${step.id}`}
               onVideoEnd={() => setVideoFinished(true)}
             />

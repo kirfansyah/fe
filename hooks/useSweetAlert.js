@@ -22,6 +22,10 @@ export const useSweetAlert = () => {
             confirmButtonText,
             cancelButtonText,
             ...otherOptions
+            customClass: {
+                cancelButton: "swal-cancel-style",
+                confirmButton: "swal-confirm-style",
+            }
         });
     };
 

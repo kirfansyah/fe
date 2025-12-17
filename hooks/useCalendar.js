@@ -6,8 +6,6 @@ export function useCalendar() {
     try {
       const result = await API.getSchedule(year, month, company_id);
 
-      console.log("useCalendar : ", result);
-
       return {
         data: result.data || [],
         pagination: result.pagination || 0,
@@ -22,7 +20,6 @@ export function useCalendar() {
   const fetchHoliday = useCallback(async (year) => {
     try {
       const result = await API.getHoliday(year);
-      console.log("fetchHoliday : ", fetchHoliday);
 
       return {
         data: result || [],

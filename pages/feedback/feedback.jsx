@@ -1,14 +1,76 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Admin from "layouts/Admin.js";
-import RatingView from "../../components/RatingFeedback/RatingView";
-import FeedbackView from "../../components/RatingFeedback/FeedbackView";
-import { useRatingFeedback } from "../../hooks/useRatingFeedback";
-import { ChevronRight, Star, MessageSquare, Home } from "lucide-react";
+import {
+  ChevronRight,
+  Star,
+  MessageSquare,
+  Home,
+  BookOpen,
+  Book,
+} from "lucide-react";
+
+// Course components
+import CourseRatingView from "../../components/RatingFeedback/Course/RatingView";
+import CourseFeedbackView from "../../components/RatingFeedback/Course/FeedbackView";
+import { useRatingFeedback as useCourseRatingFeedback } from "../../hooks/useCourseRatingFeedback";
+
+// Ebook components
+import EbookRatingView from "../../components/RatingFeedback/Ebook/RatingView";
+import EbookFeedbackView from "../../components/RatingFeedback/Ebook/FeedbackView";
+import { useRatingFeedback as useEbookRatingFeedback } from "../../hooks/useEbookRatingFeedback";
 
 export default function RatingFeedback() {
-  const [activeTab, setActiveTab] = useState("rating");
-  const { ratings, feedbacks, loading, error, fetchRatings, fetchFeedbacks } =
-    useRatingFeedback();
+  const [mainTab, setMainTab] = useState("course"); // 'course' or 'ebook'
+  const [activeTab, setActiveTab] = useState("rating"); // 'rating' or 'feedback'
+
+  // Course data
+  const {
+    ratings: courseRatings,
+    feedbacks: courseFeedbacks,
+    loading: courseLoading,
+    error: courseError,
+    fetchRatings: fetchCourseRatings,
+    fetchFeedbacks: fetchCourseFeedbacks,
+  } = useCourseRatingFeedback();
+
+  // Ebook data
+  const {
+    ratings: ebookRatings,
+    feedbacks: ebookFeedbacks,
+    loading: ebookLoading,
+    error: ebookError,
+    fetchRatings: fetchEbookRatings,
+    fetchFeedbacks: fetchEbookFeedbacks,
+  } = useEbookRatingFeedback();
+
+  // Fetch data when tabs change
+  useEffect(() => {
+    if (mainTab === "course") {
+      if (
+        activeTab === "rating" &&
+        (!courseRatings || courseRatings.length === 0)
+      ) {
+        fetchCourseRatings();
+      } else if (
+        activeTab === "feedback" &&
+        (!courseFeedbacks || courseFeedbacks.length === 0)
+      ) {
+        fetchCourseFeedbacks();
+      }
+    } else if (mainTab === "ebook") {
+      if (
+        activeTab === "rating" &&
+        (!ebookRatings || ebookRatings.length === 0)
+      ) {
+        fetchEbookRatings();
+      } else if (
+        activeTab === "feedback" &&
+        (!ebookFeedbacks || ebookFeedbacks.length === 0)
+      ) {
+        fetchEbookFeedbacks();
+      }
+    }
+  }, [mainTab, activeTab]);
 
   const MainPage = () => (
     <div className="p-8 bg-gray-50 min-h-screen">
@@ -20,7 +82,8 @@ export default function RatingFeedback() {
               Rating & Feedback Management
             </h1>
             <p className="text-blue-100">
-              View and manage course ratings and feedback
+              View and manage {mainTab === "course" ? "course" : "ebook"}{" "}
+              ratings and feedback
             </p>
           </div>
 
@@ -36,7 +99,48 @@ export default function RatingFeedback() {
         </div>
       </div>
 
-      {/* Modern Tabs Card */}
+      {/* Main Tabs Card - Course / Ebook */}
+      <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden mb-6">
+        <div className="flex border-b border-gray-200">
+          <button
+            onClick={() => {
+              setMainTab("course");
+              setActiveTab("rating");
+            }}
+            className={`flex items-center gap-3 px-8 py-4 font-medium text-sm transition-all duration-200 relative ${
+              mainTab === "course"
+                ? "text-blue-600 bg-blue-50"
+                : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+            }`}
+          >
+            <BookOpen className="w-5 h-5" />
+            <span>Course</span>
+            {mainTab === "course" && (
+              <div className="absolute bottom-0 left-0 right-0 h-1 bg-blue-600"></div>
+            )}
+          </button>
+
+          <button
+            onClick={() => {
+              setMainTab("ebook");
+              setActiveTab("rating");
+            }}
+            className={`flex items-center gap-3 px-8 py-4 font-medium text-sm transition-all duration-200 relative ${
+              mainTab === "ebook"
+                ? "text-blue-600 bg-blue-50"
+                : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+            }`}
+          >
+            <Book className="w-5 h-5" />
+            <span>eBook</span>
+            {mainTab === "ebook" && (
+              <div className="absolute bottom-0 left-0 right-0 h-1 bg-blue-600"></div>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Sub Tabs Card - Rating / Feedback */}
       <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden mb-8">
         <div className="flex border-b border-gray-200">
           <button
@@ -72,22 +176,50 @@ export default function RatingFeedback() {
 
         {/* Content Section with Padding */}
         <div className="p-6">
-          {activeTab === "rating" && (
-            <RatingView
-              ratings={ratings}
-              loading={loading}
-              error={error}
-              onRefresh={fetchRatings}
-            />
+          {/* Course Content */}
+          {mainTab === "course" && (
+            <>
+              {activeTab === "rating" && (
+                <CourseRatingView
+                  ratings={courseRatings}
+                  loading={courseLoading}
+                  error={courseError}
+                  onRefresh={fetchCourseRatings}
+                />
+              )}
+
+              {activeTab === "feedback" && (
+                <CourseFeedbackView
+                  feedbacks={courseFeedbacks}
+                  loading={courseLoading}
+                  error={courseError}
+                  onRefresh={fetchCourseFeedbacks}
+                />
+              )}
+            </>
           )}
 
-          {activeTab === "feedback" && (
-            <FeedbackView
-              feedbacks={feedbacks}
-              loading={loading}
-              error={error}
-              onRefresh={fetchFeedbacks}
-            />
+          {/* Ebook Content */}
+          {mainTab === "ebook" && (
+            <>
+              {activeTab === "rating" && (
+                <EbookRatingView
+                  ratings={ebookRatings}
+                  loading={ebookLoading}
+                  error={ebookError}
+                  onRefresh={fetchEbookRatings}
+                />
+              )}
+
+              {activeTab === "feedback" && (
+                <EbookFeedbackView
+                  feedbacks={ebookFeedbacks}
+                  loading={ebookLoading}
+                  error={ebookError}
+                  onRefresh={fetchEbookFeedbacks}
+                />
+              )}
+            </>
           )}
         </div>
       </div>

@@ -86,14 +86,15 @@ export default function CourseDetail({ ...props }) {
       }
     }
   }, []);
-  //   console.log("startCourse : ", startCourse);
-  //   toast.success("Terima kasih atas feedback Anda! 🎉");
 
   useEffect(() => {
     const loadData = async () => {
       try {
         const res = await getCourseById(id);
-        // console.log("res : ", res.data.data);
+
+        if (res.data.data.length <= 0) {
+          toast.warning("Error API response : " + res.data.message);
+        }
 
         setCourses(res.data.data || []);
         if (res.data.data?.feedback) {
@@ -109,23 +110,7 @@ export default function CourseDetail({ ...props }) {
     loadData();
   }, [getCourseById, id, hasFeedback, userFeedback]);
 
-  //   useEffect(() => {
-  //     const getData = async () => {
-  //       try {
-  //         const res = await getCourseDetailById(id);
-  //         // console.log("res : ", res);
-
-  //         setCourses(res.data.data || []);
-  //       } catch (error) {
-  //         console.error("❌ Gagal memuat data:", error);
-  //       }
-  //     };
-
-  //     getData();
-  //   }, [getCourseDetailById, id]);
   const sections = courseData?.sections || {};
-
-  console.log("courseDatavv : ", courseData.id_course_enrollment);
 
   const handleStartCourse = async () => {
     try {
@@ -137,17 +122,23 @@ export default function CourseDetail({ ...props }) {
         created_by: "system",
         created_device: "web",
       };
-      console.log("payload : ", payload);
 
       if (!courseData?.id_user_enrollment) {
-        console.log("📦 Sending enrollment payload:", payload);
         const result = await sendEnrollment(payload);
-        console.log("✅ Enrollment berhasil:", result);
+        if (!result.success) {
+          toast.warning("Error API Response : " + result.message);
+          return;
+        }
       }
       setCourseId(courseData.id_course);
       router.push(`${startCourse}${courseData.id_course}`);
     } catch (error) {
       console.error("❌ Gagal melakukan enrollment:", error);
+      console.log(
+        "error : ",
+        error.apiMessage || error.message || "Terjadi kesalahan"
+      );
+      //   toast.warning(error);
     }
   };
 
@@ -172,10 +163,7 @@ export default function CourseDetail({ ...props }) {
         created_device: "web",
       };
 
-      //   console.log("📦 Sending feedback payload:", payload);
-
       const result = await sendFeedback(payload);
-      //   console.log("✅ Feedback terkirim:", result);
 
       if (result?.success) {
         toast.success("Terima kasih atas feedback Anda! 🎉");
@@ -189,7 +177,6 @@ export default function CourseDetail({ ...props }) {
       }
     } catch (error) {
       console.error("❌ Gagal mengirim feedback:", error);
-      //   alert("Terjadi kesalahan saat mengirim feedback.");
       toast.warning("Terjadi kesalahan saat mengirim feedback.");
     } finally {
       setIsSubmitting(false); // 🔹 Kembalikan ke false saat proses selesai
@@ -278,9 +265,15 @@ export default function CourseDetail({ ...props }) {
                   <Button
                     className="w-full bg-blue-900 hover:bg-blue-700 text-white"
                     onClick={() => setOpenConfirm(true)}
+                    // disabled={loading && !courseData && !courseData.id_course}
+                    disabled={!courseData.id_course}
+                    // disabled={true}
                   >
-                    {courseData.progress_percentage
+                    {courseData.progress_percentage &&
+                    courseData.progress_percentage !== 100
                       ? "Continue Course"
+                      : courseData.progress_percentage === 100
+                      ? "View Completed Course"
                       : "Start Course"}{" "}
                   </Button>
                 </AlertDialogTrigger>
@@ -308,9 +301,6 @@ export default function CourseDetail({ ...props }) {
                     <AlertDialogCancel>Batal</AlertDialogCancel>
                     <AlertDialogAction
                       onClick={handleStartCourse}
-                      disabled={
-                        loading && (!courseData || !courseData.id_course)
-                      }
                       className="bg-blue-900 hover:bg-blue-700 text-white"
                     >
                       {loading ? "Memulai..." : "Mulai"}
@@ -373,7 +363,6 @@ export default function CourseDetail({ ...props }) {
                 const isCourseContent = sectionKey === "courseContent";
                 const isPreTest = sectionKey === "preTest";
                 const isPostTest = sectionKey === "postTest";
-                // console.log("sectionKey, items : ", sectionKey, items);
 
                 return (
                   <div key={sectionKey} className="space-y-4">
