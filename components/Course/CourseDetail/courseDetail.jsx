@@ -212,7 +212,7 @@ export default function CourseDetail({ ...props }) {
             <CardContent className="flex flex-col items-center space-y-4 p-3">
               <img
                 src={
-                  courseData?.thumbnail ||
+                  courseData?.thumbnail_url ||
                   "/img/course/Teacher student-cuate.png"
                 }
                 onError={(e) =>
@@ -435,13 +435,16 @@ export default function CourseDetail({ ...props }) {
                                         isSubPoint ? "opacity-60" : ""
                                       }`}
                                     />
+
                                     <span
-                                      className={`flex-1 text-gray-700 ${
+                                      className={`flex-1 text-gray-700 line-clamp-1 ${
                                         isSubPoint ? "text-sm" : "font-semibold"
                                       }`}
-                                    >
-                                      {content}
-                                    </span>
+                                      dangerouslySetInnerHTML={{
+                                        __html: content,
+                                      }}
+                                    />
+
                                     {isSubPoint ? null : (
                                       <Checkbox
                                         checked={v.is_completed}
@@ -462,65 +465,11 @@ export default function CourseDetail({ ...props }) {
                               <Checkbox
                                 checked={v.is_completed}
                                 className="w-5 h-5 border-gray-300 rounded bg-white 
-              data-[state=checked]:bg-blue-600 
-              data-[state=checked]:border-blue-600 focus:ring-0"
+                                        data-[state=checked]:bg-blue-600 
+                                        data-[state=checked]:border-blue-600 focus:ring-0"
                               />
                             </Card>
                           )}
-
-                          {/* {v.content_body ? (
-                            v.content_body
-                              .replace(/\\n+/g, "\n")
-                              .split("\n")
-                              .map((line) => line.trim())
-                              .filter((line) => line.length > 0)
-                              .map((content, i) => {
-                                const isSubPoint = /^[-•o]/.test(content);
-                                const isNumbered = /^\d+\./.test(content);
-
-                                return (
-                                  <Card
-                                    key={i}
-                                    className={`flex items-center justify-between p-4 ${
-                                      isSubPoint ? "ml-6 bg-gray-50" : "ml-0"
-                                    }`}
-                                  >
-                                    <FileText
-                                      className={`w-5 h-5 text-gray-400 mr-4 ${
-                                        isSubPoint ? "opacity-60" : ""
-                                      }`}
-                                    />
-                                    <span
-                                      className={`flex-1 text-gray-700 ${
-                                        isSubPoint ? "text-sm" : "font-semibold"
-                                      }`}
-                                    >
-                                      {content}
-                                    </span>
-
-                                    <Checkbox
-                                      checked={v.is_completed}
-                                      className="w-5 h-5 border-gray-300 rounded bg-white 
-                          data-[state=checked]:bg-blue-600 
-                          data-[state=checked]:border-blue-600 focus:ring-0"
-                                    />
-                                  </Card>
-                                );
-                              })
-                          ) : (
-                            <Card className="flex items-center justify-between p-4">
-                              <FileText className="w-5 h-5 text-gray-400 mr-4" />
-                              <span className="flex-1 text-gray-500 italic">
-                                No content available.
-                              </span>
-                              <Checkbox
-                                checked={v.is_completed}
-                                className="w-5 h-5 border-gray-300 rounded bg-white 
-                      data-[state=checked]:bg-blue-600 
-                      data-[state=checked]:border-blue-600 focus:ring-0"
-                              />
-                            </Card>
-                          )} */}
                         </div>
                       ))
                     ) : (

@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useState, useEffect } from "react";
 import { pdfjs } from "react-pdf";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { toast } from "sonner";
 
 const Document = dynamic(
   () => import("react-pdf").then((mod) => mod.Document),
@@ -19,6 +20,10 @@ export default function PdfViewer({ file, onPageChange, onError = null }) {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [width, setWidth] = useState(600);
+
+  useEffect(() => {
+    console.log("📄 PDF FILE URL:", file);
+  }, [file]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -47,12 +52,41 @@ export default function PdfViewer({ file, onPageChange, onError = null }) {
           file={file}
           onLoadSuccess={({ numPages }) => setTotalPages(numPages)}
           onLoadError={(err) => {
-            console.error("PDF failed:", err);
-            // if (onError) onError();
+            // console.error("PDF failed:", err);
+            // toast.error("Gagal memuat PDF: " + err);
+            console.group("📄 PDF LOAD ERROR");
+            console.error("Raw error:", err);
+            // console.error("Name:", err?.name);
+            // console.error("Message:", err?.message);
+            // console.error("Stack:", err?.stack);
+
+            // pdfjs kadang simpan detail di .cause
+            if (err?.cause) {
+              console.error("Cause:", err.cause);
+            }
+
+            // Beberapa error pdfjs ada di .details
+            if (err?.details) {
+              console.error("Details:", err.details);
+            }
+
+            console.groupEnd();
+
+            toast.error(
+              err?.message
+                ? `PDF Error: ${err.message}`
+                : "PDF gagal dimuat (unknown error)"
+            );
 
             if (onError) {
-              onError("Path File tidak ditemukan");
+              onError(err?.message || "PDF gagal dimuat");
             }
+
+            // if (onError) onError();
+
+            // if (onError) {
+            //   onError("Path File tidak ditemukan");
+            // }
           }}
           loading={<div className="text-center p-4">Loading PDF...</div>}
           error={
@@ -70,36 +104,6 @@ export default function PdfViewer({ file, onPageChange, onError = null }) {
           />
         </Document>
       </div>
-
-      {/* <div className="flex items-center gap-5 mt-6">
-        <button
-          disabled={page === 1}
-          onClick={() => setPage((p) => p - 1)}
-          className={`px-4 py-2 rounded-lg ${
-            page === 1
-              ? "bg-gray-300 cursor-not-allowed"
-              : "bg-gray-700 text-white"
-          }`}
-        >
-          Previous
-        </button>
-
-        <span className="text-lg font-semibold">
-          Page {page} / {totalPages || "?"}
-        </span>
-
-        <button
-          disabled={page === totalPages}
-          onClick={() => setPage((p) => p + 1)}
-          className={`px-4 py-2 rounded-lg ${
-            page === totalPages
-              ? "bg-gray-300 cursor-not-allowed"
-              : "bg-blue-600 text-white"
-          }`}
-        >
-          Next
-        </button>
-      </div> */}
 
       <div className="flex items-center gap-5 mt-6">
         {/* === PREVIOUS BUTTON === */}

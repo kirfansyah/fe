@@ -32,6 +32,7 @@ export default function ContentArea({ exitCourse }) {
     useContext(CourseContext);
   const { flow, currentStep, answers, courseData } = state;
   const { completeCourse, sendAswers } = useEmployees();
+  const preloadedVideosRef = useRef(new Set());
 
   const orderedKeys = [
     "courseGuide",
@@ -194,6 +195,32 @@ export default function ContentArea({ exitCourse }) {
     }
     setCourseId(courseData?.id_course);
   }, [currentStep, allSteps, setStep]);
+
+  useEffect(() => {
+    if (!step) return;
+    if (step.type !== "video") return;
+
+    const videoUrl = `/api/video-proxy?url=${encodeURIComponent(
+      step.content_url_full
+    )}`;
+
+    // ❗ Hindari preload ulang
+    if (preloadedVideosRef.current.has(videoUrl)) return;
+
+    const video = document.createElement("video");
+    video.src = videoUrl;
+    video.preload = "metadata"; // 🔥 KUNCI UTAMA
+    video.muted = true;
+    video.playsInline = true;
+
+    video.load();
+
+    preloadedVideosRef.current.add(videoUrl);
+
+    return () => {
+      video.src = "";
+    };
+  }, [step]);
 
   if (!step) {
     return (
@@ -386,7 +413,6 @@ export default function ContentArea({ exitCourse }) {
             </h2>
             <div className="w-full flex justify-center ">
               <PdfViewer
-                // file={step.content_url_full}
                 file={`/api/pdf-proxy?url=${encodeURIComponent(
                   step.content_url_full
                 )}`}
@@ -397,25 +423,17 @@ export default function ContentArea({ exitCourse }) {
           </div>
         )}
         {step.type === "video" && (
-          //   <VideoPlayer url={step.content_url || "/videos/default.mp4"} />
           <div className="space-y-3 p-5">
             <h2 className="text-xl font-semibold text-gray-800">
               {step.content_title}
             </h2>
             <VideoPlayer
-              //   url={`/uploads/video/komunikasi-efektif.mp4`}
-              //   url={videoFile}
               url={`/api/video-proxy?url=${encodeURIComponent(
                 step.content_url_full
               )}`}
               videoId={`${step.id}`}
               onVideoEnd={() => setVideoFinished(true)}
             />
-            {/* <video
-              src={`/uploads/video/komunikasi-efektif.mp4`}
-              controls
-              width="100%"
-            /> */}
           </div>
         )}
 
@@ -531,91 +549,9 @@ export default function ContentArea({ exitCourse }) {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-
-        {/* Hasil quiz */}
-        {/* {score !== null && (
-          <div className="mt-4 p-4 border rounded-lg bg-blue-50 text-center">
-          
-            {nextStep && (
-              <Button
-                onClick={() => {
-                  goNext(currentStep, nextStep.id_course_content);
-                  setScore(null);
-                  setCurrentQuiz(0);
-                }}
-                className="mt-2 bg-blue-900 text-white"
-              >
-                Next: {nextStep.content_title}
-              </Button>
-            )}
-          </div>
-        )} */}
       </CardContent>
 
       <CardFooter className="flex justify-between mt-auto space-x-2">
-        {/* {(step.type === "quiz" && currentQuiz > 0) || prevStep ? (
-          <Button
-            onClick={handlePrevious}
-            variant="outline"
-            className="bg-gray-200 text-gray-800"
-          >
-            Previous
-          </Button>
-        ) : (
-          <></>
-        )}
-
-        {step.type !== "quiz" && nextStep ? (
-          <Button onClick={handleNext} className="bg-blue-900 text-white">
-            Next: {nextStep.content_title}
-          </Button>
-        ) : step.section === "postTest" ? (
-          <Button
-            onClick={() => setOpen(true)}
-            className="bg-blue-900 text-white"
-          >
-            Selesai
-          </Button>
-        ) : null}
-
-        {step.type === "quiz" && !showConfirm && (
-          <>
-            {score === null && !step.is_completed ? (
-              <Button
-                onClick={() => setShowConfirm(true)}
-                className="bg-blue-900 text-white"
-              >
-                Submit Quiz
-              </Button>
-            ) : (
-              // ✅ Jika sudah disubmit, tampilkan tombol Next
-              nextStep && (
-                <Button
-                  onClick={() => {
-                    goNext(currentStep, nextStep.id_course_content);
-                    setScore(null);
-                    setCurrentQuiz(0);
-                  }}
-                  className="mt-2 bg-blue-900 text-white"
-                >
-                  Next: {nextStep.content_title}
-                </Button>
-              )
-            )}
-          </>
-        )} */}
-
-        {/* ===== PREVIOUS BUTTON ===== */}
-        {/* {((step.type === "quiz" && currentQuiz > 0) || prevStep) && (
-          <Button
-            onClick={handlePrevious}
-            variant="outline"
-            className="bg-gray-200 text-gray-800"
-          >
-            Previous
-          </Button>
-        )} */}
-
         {step.type === "quiz" && currentQuiz > 0 ? (
           <Button
             onClick={() => setCurrentQuiz(currentQuiz - 1)}
@@ -708,10 +644,10 @@ export default function ContentArea({ exitCourse }) {
           <Button
             onClick={handleNext}
             className="bg-blue-900 text-white"
-            disabled={
-              (step.type === "pdf" && !pdfFinished) ||
-              (step.type === "video" && !videoFinished)
-            }
+            // disabled={
+            //   (step.type === "pdf" && !pdfFinished) ||
+            //   (step.type === "video" && !videoFinished)
+            // }
           >
             Next: {nextStep.content_title}
           </Button>
