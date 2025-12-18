@@ -21,7 +21,7 @@ export const useSweetAlert = () => {
             cancelButtonColor: '#6b7280',
             confirmButtonText,
             cancelButtonText,
-            ...otherOptions
+            ...otherOptions,
             customClass: {
                 cancelButton: "swal-cancel-style",
                 confirmButton: "swal-confirm-style",
