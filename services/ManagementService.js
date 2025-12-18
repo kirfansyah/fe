@@ -268,7 +268,7 @@ class ManagementService {
             formData.append('FolderType', ManagementService.getFolderTypeByContentType(fileData.contentTypeId));
             formData.append('idCourse', fileData.courseId);
             formData.append('Section', fileData.section);
-
+            console.log('ManagementService.uploadContentFile formData:', formData);
             const response = await API.post("/course/content/upload-file", formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data'
@@ -300,11 +300,11 @@ class ManagementService {
      */
     static getFolderTypeByContentType(contentTypeId) {
         const mapping = {
-            '4': 'pdfs', 
-            '5': 'videos', 
-            '6': 'docs'     
+            '4': 'pdf', 
+            '5': 'video', 
+            '6': 'doc'     
         };
-        return mapping[contentTypeId] || 'others';
+        return mapping[contentTypeId] || 'other';
     }
 
     /**

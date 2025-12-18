@@ -21,7 +21,7 @@ const AuthContextProvider = (props) => {
   };
   const [stateAuth, dispatch] = useReducer(authReducer, initialState);
   const router = useRouter();
-
+  
   const Register = async ({ email, password, passwordConfirm, tc }) => {
     dispatch({ type: "loading" }); // loading
     if (tc) {
@@ -132,6 +132,8 @@ const AuthContextProvider = (props) => {
 
         // Alert sukses
         Swal.fire({
+          toast: true,
+          position: 'top-end',
           icon: "success",
           title: "Berhasil Login",
           text: `Selamat datang ${user.nama}`,
@@ -145,21 +147,25 @@ const AuthContextProvider = (props) => {
         throw new Error("Login gagal");
       }
     } catch (err) {
-      Swal.fire({
-        icon: "error",
-        title: "Username atau password anda tidak sesuai",
-        showCloseButton: true,
-        showCancelButton: false,
-        cancelButtonText: "OK",
-        confirmButtonColor: "#1e3a8a",
-      }).then((result) => {
-      });
+      // ✅ Ambil message dari API response
+        const errorMessage = err.response?.data?.message || err.message || 'Username atau password anda tidak sesuai';
+        
+        Swal.fire({
+          toast: true,
+          position: 'top-end',
+            icon: "error",
+            title: "Login Gagal",
+            text: errorMessage,  // ✅ Message dari API
+            showCloseButton: true,
+            confirmButtonColor: "#1e3a8a",
+        });
 
-      dispatch({
-        type: "loginSuccess",
-        data: { message: 'Username atau password anda tidak sesuai', status: false },
-      });
-      console.log(err.response);
+        dispatch({
+            type: "loginFailed",  // ✅ Ganti type yang lebih sesuai
+            data: { message: errorMessage, status: false },
+        });
+        
+        console.log('Login error:', err.response?.data || err.message);
     }
   };
 

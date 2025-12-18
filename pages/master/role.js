@@ -31,7 +31,7 @@ export default function RoleManagement() {
     const groups = roles || [];
     const { getKaryawan, dataKaryawan } = useContext(ProfileContext);
     const dataKaryawans = dataKaryawan?.length ? dataKaryawan[0] : [];
-    const { showLoading, showSuccess, showError, showWarning, confirmAction } = useSweetAlert();
+    const { showLoading, showSuccess, showError, closeLoading, confirmAction } = useSweetAlert();
 
     useEffect(() => {
         setLoading(false);
@@ -85,7 +85,7 @@ export default function RoleManagement() {
         try {
             showLoading('Loading permissions...');
             const response = await fetchRoleByID(group.id_role);
-            hideLoading();
+            closeLoading();
             if (response?.data) {
                 setPermissionsData(response.data);
                 showSuccess('Permissions loaded successfully');
