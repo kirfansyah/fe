@@ -46,7 +46,7 @@ export default function ListEmployee(
 
     const filteredEmployees = employees.filter(employee =>
         employee.nama.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        employee.no_ktp.includes(searchQuery) ||
+        employee.employee_id.includes(searchQuery) ||
         employee.position_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         employee.dept_abbr.toLowerCase().includes(searchQuery.toLowerCase())
     );
@@ -92,10 +92,10 @@ export default function ListEmployee(
 
         const payload = [];
         
-        selectedEmployees.forEach(no_ktp => {
+        selectedEmployees.forEach(employee_id => {
             selectedGroupings.forEach(id_grouping => {
                 payload.push({
-                    no_ktp: no_ktp,
+                    employee_id: employee_id,
                     id_grouping: id_grouping,
                     assigned_by:created_by
                 });
@@ -239,7 +239,7 @@ export default function ListEmployee(
                                     />
                                 </th>
                                 <th className="text-left px-6 py-3 text-sm font-semibold text-gray-700">Name</th>
-                                <th className="text-left px-6 py-3 text-sm font-semibold text-gray-700">Employee ID</th>
+                                <th className="text-left px-6 py-3 text-sm font-semibold text-gray-700">ID Karyawan</th>
                                 <th className="text-left px-6 py-3 text-sm font-semibold text-gray-700">Position</th>
                                 <th className="text-left px-6 py-3 text-sm font-semibold text-gray-700">Department</th>
                                 <th className="text-left px-6 py-3 text-sm font-semibold text-gray-700">Company Unit</th>
@@ -249,7 +249,7 @@ export default function ListEmployee(
                         <tbody className="divide-y divide-gray-200">
                             {filteredEmployees.slice(0, pageSize).map((employee) => (
                                 <tr 
-                                    key={employee.no_ktp} 
+                                    key={employee.employee_id} 
                                     className={`hover:bg-gray-50 transition-colors ${
                                         selectedEmployees.includes(employee.id) ? 'bg-blue-50' : ''
                                     }`}
@@ -257,8 +257,8 @@ export default function ListEmployee(
                                     <td className="px-6 py-4">
                                         <input
                                             type="checkbox"
-                                            checked={selectedEmployees.includes(employee.no_ktp)}
-                                            onChange={(e) => handleSelectEmployee(employee.no_ktp, e.target.checked)}
+                                            checked={selectedEmployees.includes(employee.employee_id)}
+                                            onChange={(e) => handleSelectEmployee(employee.employee_id, e.target.checked)}
                                             className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
                                         />
                                     </td>
@@ -266,7 +266,7 @@ export default function ListEmployee(
                                         <div className="text-sm font-medium text-gray-900">{employee.nama}</div>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <div className="text-sm text-gray-600">{employee.no_ktp}</div>
+                                        <div className="text-sm text-gray-600">{employee.employee_id}</div>
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="text-sm text-gray-900">{employee.position_name}</div>
