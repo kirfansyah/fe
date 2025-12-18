@@ -413,9 +413,10 @@ export default function ContentArea({ exitCourse }) {
             </h2>
             <div className="w-full flex justify-center ">
               <PdfViewer
-                file={`/api/pdf-proxy?url=${encodeURIComponent(
-                  step.content_url_full
-                )}`}
+                // file={`/api/pdf-proxy?url=${encodeURIComponent(
+                //   step.content_url_full
+                // )}`}
+                file={`/uploads/pdf/test.pdf`}
                 onPageChange={(isLastPage) => setPdfFinished(isLastPage)}
                 // onError={() => setPdfFile(defaultPDF)}
               />
