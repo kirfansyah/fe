@@ -72,11 +72,11 @@ export default function PdfViewer({ file, onPageChange, onError = null }) {
 
             console.groupEnd();
 
-            toast.error(
-              err?.message
-                ? `PDF Error: ${err.message}`
-                : "PDF gagal dimuat (unknown error)"
-            );
+            // toast.error(
+            //   err?.message
+            //     ? `PDF Error: ${err.message}`
+            //     : "PDF gagal dimuat (unknown error)"
+            // );
 
             if (onError) {
               onError(err?.message || "PDF gagal dimuat");
