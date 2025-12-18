@@ -32,9 +32,15 @@ export default function PdfViewer({ file, onPageChange, onError = null }) {
   //   }
   // }, []);
 
+  //   useEffect(() => {
+  //     if (typeof window !== "undefined") {
+  //       pdfjs.GlobalWorkerOptions.workerSrc = `${window.location.origin}/pdf.worker.js`; // test  di production
+  //     }
+  //   }, []);
+
   useEffect(() => {
     if (typeof window !== "undefined") {
-      pdfjs.GlobalWorkerOptions.workerSrc = `${window.location.origin}/pdf.worker.js`; // test  di production
+      pdfjs.GlobalWorkerOptions.workerSrc = `${window.location.origin}/pdf.worker.js`;
     }
   }, []);
 

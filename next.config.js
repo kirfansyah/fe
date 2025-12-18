@@ -37,6 +37,7 @@ const withPWA = require("next-pwa")({
   register: true,
   skipWaiting: true,
   runtimeCaching,
+  buildExcludes: [/pdf\.worker\.js$/], // jangan cache pdf.worker.js
 });
 
 /** @type {import('next').NextConfig} */
