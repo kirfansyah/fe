@@ -76,7 +76,7 @@ export default function ContentArea({ exitCourse }) {
         };
       })
     );
-  console.log("flow allSteps :", flow);
+  //   console.log("flow allSteps :", flow);
 
   let idx = allSteps.findIndex((s) => s.id === currentStep);
   if (idx === -1) idx = 0;
