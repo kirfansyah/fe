@@ -51,11 +51,20 @@ export default function ContentArea({ exitCourse }) {
       items.map((s) => {
         let type = "text";
 
-        if (s.content_url) {
-          if (s.content_url.endsWith(".mp4")) type = "video";
-          else if (s.content_url.endsWith(".pdf")) type = "pdf";
-          else if (s.content_url.endsWith(".pptx")) type = "pptx";
-        } else if (s.questions) {
+        // if (s.content_url) {
+        //   if (s.content_url.endsWith(".mp4")) type = "video";
+        //   else if (s.content_url.endsWith(".pdf")) type = "pdf";
+        //   else if (s.content_url.endsWith(".pptx")) type = "pptx";
+        // } else if (s.questions) {
+        //   type = "quiz";
+        // }
+        if (s.content_type_name) {
+          if (s.content_type_name == "PDF Content") type = "pdf";
+          else if (s.content_type_name == "Video Content") type = "video";
+          else if (s.content_type_name == "PPT Content") type = "pptx";
+          else if (s.content_type_name == "Post Test") type = "quiz";
+          else if (s.content_type_name == "Pre Test") type = "quiz";
+        } else {
           type = "quiz";
         }
 
@@ -67,6 +76,7 @@ export default function ContentArea({ exitCourse }) {
         };
       })
     );
+  console.log("flow allSteps :", flow);
 
   let idx = allSteps.findIndex((s) => s.id === currentStep);
   if (idx === -1) idx = 0;
@@ -91,7 +101,7 @@ export default function ContentArea({ exitCourse }) {
   const [videoFile, setVideoFile] = useState(null);
   const [pptFile, setPptFile] = useState(null);
 
-  const defaultPDF = "/uploads/pdf/default.pdf";
+  //   const defaultPDF = "/uploads/pdf/default.pdf";
   //   const defaultPDF =
   //     "/api/pdf-proxy?url=" +
   //     encodeURIComponent(
@@ -99,64 +109,64 @@ export default function ContentArea({ exitCourse }) {
   //     );
   //   const defaultPDF =
   //     "http://api-lms.sambu.co.id/uploads/ebooks/files/a569a951-3311-451c-9338-89dad8d7595a.pdf";
-  const defaultVideo = "/uploads/video/komunikasi-efektif-2.mp4";
-  const defaultPpt =
-    "https://docs.google.com/presentation/d/1jsjVVdCjlVd5uAM3e_nlyPVoNUKid07A/edit?usp=sharing";
+  //   const defaultVideo = "/uploads/video/komunikasi-efektif-2.mp4";
+  //   const defaultPpt =
+  //     "https://docs.google.com/presentation/d/1jsjVVdCjlVd5uAM3e_nlyPVoNUKid07A/edit?usp=sharing";
 
   //docs.google.com/presentation/d/16Q2rtFTCRZuzWLoq9c1qmIzvHX6gcUvM/edit?usp=sharing&ouid=107324705590480170219&rtpof=true&sd=true
-  https: useEffect(() => {
-    // ❗ Jangan lakukan apa pun kalau step belum siap
-    if (!step) return;
+  //   useEffect(() => {
+  //     // ❗ Jangan lakukan apa pun kalau step belum siap
+  //     if (!step) return;
 
-    async function checkFiles() {
-      //   const baseURL = window.location.origin;
-      const baseURL = process.env.API_BASE || "https://api-lms.sambu.co.id";
+  //     async function checkFiles() {
+  //       //   const baseURL = window.location.origin;
+  //       const baseURL = process.env.API_BASE || "https://api-lms.sambu.co.id";
 
-      // ===== PDF =====
-      if (step.content_url && step.content_url.endsWith(".pdf")) {
-        const pdfUrl = `${baseURL}/${step.content_url}`;
+  //       // ===== PDF =====
+  //       if (step.content_url && step.content_url.endsWith(".pdf")) {
+  //         const pdfUrl = `${baseURL}/${step.content_url}`;
 
-        try {
-          const res = await fetch(pdfUrl, { method: "HEAD" });
-          setPdfFile(res.ok ? pdfUrl : defaultPDF);
-        } catch {
-          setPdfFile(defaultPDF);
-        }
-      } else {
-        setPdfFile(defaultPDF);
-      }
+  //         try {
+  //           const res = await fetch(pdfUrl, { method: "HEAD" });
+  //           setPdfFile(res.ok ? pdfUrl : defaultPDF);
+  //         } catch {
+  //           setPdfFile(defaultPDF);
+  //         }
+  //       } else {
+  //         setPdfFile(defaultPDF);
+  //       }
 
-      // ===== VIDEO =====
-      if (step.content_url && step.content_url.endsWith(".mp4")) {
-        const videoUrl = `${baseURL}/${step.content_url}`;
+  //       // ===== VIDEO =====
+  //       if (step.content_url && step.content_url.endsWith(".mp4")) {
+  //         const videoUrl = `${baseURL}/${step.content_url}`;
 
-        try {
-          const res = await fetch(videoUrl, { method: "HEAD" });
-          setVideoFile(res.ok ? videoUrl : defaultVideo);
-        } catch {
-          setVideoFile(defaultVideo);
-        }
-      } else {
-        setVideoFile(defaultVideo);
-      }
+  //         try {
+  //           const res = await fetch(videoUrl, { method: "HEAD" });
+  //           setVideoFile(res.ok ? videoUrl : defaultVideo);
+  //         } catch {
+  //           setVideoFile(defaultVideo);
+  //         }
+  //       } else {
+  //         setVideoFile(defaultVideo);
+  //       }
 
-      // ===== PPT =====
-      if (step.content_url && step.content_url.endsWith(".pptx")) {
-        const pptUrl = `${baseURL}/${step.content_url}`;
+  //       // ===== PPT =====
+  //       if (step.content_url && step.content_url.endsWith(".pptx")) {
+  //         const pptUrl = `${baseURL}/${step.content_url}`;
 
-        try {
-          const res = await fetch(pptUrl, { method: "HEAD" });
-          setPptFile(res.ok ? pptUrl : defaultPpt);
-        } catch {
-          setPptFile(defaultPpt);
-        }
-      } else {
-        setPptFile(defaultPpt);
-      }
-    }
+  //         try {
+  //           const res = await fetch(pptUrl, { method: "HEAD" });
+  //           setPptFile(res.ok ? pptUrl : defaultPpt);
+  //         } catch {
+  //           setPptFile(defaultPpt);
+  //         }
+  //       } else {
+  //         setPptFile(defaultPpt);
+  //       }
+  //     }
 
-    checkFiles();
-  }, [step]);
+  //     checkFiles();
+  //   }, [step]);
 
   const router = useRouter();
   useEffect(() => {
