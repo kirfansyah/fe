@@ -25,10 +25,22 @@ export default function PdfViewer({ file, onPageChange, onError = null }) {
     console.log("📄 PDF FILE URL:", file);
   }, [file]);
 
+  //   useEffect(() => {
+  //     if (typeof window !== "undefined") {
+  //       //   pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+  //       pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.js";
+  //     }
+  //   }, []);
+
   useEffect(() => {
     if (typeof window !== "undefined") {
-      //   pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
-      pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.js";
+      const isLocal =
+        window.location.hostname === "localhost" ||
+        window.location.hostname === "127.0.0.1";
+
+      pdfjs.GlobalWorkerOptions.workerSrc = isLocal
+        ? "/pdf.worker.js"
+        : "/course-start/pdf.worker.js";
     }
   }, []);
 
