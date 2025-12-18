@@ -40,7 +40,8 @@ export default function PdfViewer({ file, onPageChange, onError = null }) {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      pdfjs.GlobalWorkerOptions.workerSrc = `${window.location.origin}/pdf.worker.js`;
+      pdfjs.GlobalWorkerOptions.workerSrc =
+        "https://lms.sambu.co.id/pdf.worker.js";
     }
   }, []);
 
