@@ -15,13 +15,6 @@ class EmployeesService {
     status = "",
     categories = ""
   ) {
-    // console.log(
-    //   "URL Request getAllData:",
-    //   `/learner/course?page=${page}&limit=${limit}${
-    //     search ? `&search=${encodeURIComponent(search)}` : ""
-    //   }${status ? `&status=${encodeURIComponent(status)}` : ""}`
-    // );
-
     // console.log("test");
     const fixedCategories = categories === "All" ? "" : categories;
     try {
@@ -34,9 +27,6 @@ class EmployeesService {
             : ""
         }`,
         {
-          //   headers: {
-          //     Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_TOKEN}`,
-          //   },
           validateStatus: (status) => status >= 200 && status < 500,
         }
       );
@@ -74,10 +64,7 @@ class EmployeesService {
   static async getCourseContent(id) {
     try {
       const response = await API.get(`/learner/course/content/${id}`, {
-        // headers: {
-        //   Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_TOKEN}`,
-        // },
-        validateStatus: (status) => status >= 200 && status < 500,
+        validateStatus: (status) => status >= 200 && status <= 500,
       });
 
       //   console.log("✅ response:", response);
@@ -118,6 +105,7 @@ class EmployeesService {
       const response = await API.get(`/learner/course/content/detail/${id}`, {
         validateStatus: (status) => status >= 200 && status < 500,
       });
+      console.log("✅ response:", response);
 
       const content = response.data?.data;
       // jika 404 / tidak ada data

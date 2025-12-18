@@ -108,8 +108,9 @@ export default function Quiz({
           SOAL YANG SEDANG DITAMPILKAN
       ========================== */}
       <div className="space-y-3 border-b pb-4">
-        <h3 className="text-lg font-semibold">
-          {currentQuiz + 1}. {q.question_text}
+        <h3 className="text-lg font-semibold flex items-start gap-2">
+          <span>{currentQuiz + 1}.</span>
+          <span dangerouslySetInnerHTML={{ __html: q.question_text }} />
         </h3>
 
         <div className="space-y-2">
@@ -120,10 +121,15 @@ export default function Quiz({
 
             const isCorrect = opt.is_correct === true;
 
+            // const labelClass = isCompleted
+            //   ? isCorrect
+            //     ? "border-green-500 bg-green-50"
+            //     : isUserAnswer
+            //     ? "border-blue-500 bg-blue-50"
+            //     : "border-gray-200"
+            //   : "border-gray-300 hover:bg-gray-50 cursor-pointer";
             const labelClass = isCompleted
-              ? isCorrect
-                ? "border-green-500 bg-green-50"
-                : isUserAnswer
+              ? isUserAnswer
                 ? "border-blue-500 bg-blue-50"
                 : "border-gray-200"
               : "border-gray-300 hover:bg-gray-50 cursor-pointer";
@@ -144,8 +150,15 @@ export default function Quiz({
                     setAnswer(q.id_course_question, opt.id_option)
                   }
                 />
-                <span>
-                  <strong>{opt.option_label}.</strong> {opt.option_text}
+                <span className="flex gap-1">
+                  <strong>
+                    {" "}
+                    <span
+                      dangerouslySetInnerHTML={{ __html: opt.option_label }}
+                    />
+                    .
+                  </strong>
+                  <span dangerouslySetInnerHTML={{ __html: opt.option_text }} />
                 </span>
               </label>
             );

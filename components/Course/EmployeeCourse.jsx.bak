@@ -131,22 +131,31 @@ export default function CoursePage({ link }) {
     <div className="mt-6 p-2 grid grid-cols-1 gap-6">
       {/* Search + Toolbar */}
       <div className="w-full mt-5">
-        <div className="flex flex-row items-center justify-between gap-4 flex-wrap">
-          <div className="relative flex-shrink-0 w-72">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <Input
-              type="text"
-              placeholder="Search..."
-              value={searchQuery}
-              onChange={handleSearch}
-              className="pl-10 pr-4 w-full"
-            />
+        <div className="grid w-full grid-cols-[auto_1fr] items-center gap-4">
+          {/* ================= SEARCH (LEFT) ================= */}
+          <div className="w-full max-w-sm">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input
+                type="text"
+                placeholder="Search..."
+                value={searchQuery}
+                onChange={handleSearch}
+                className="pl-9"
+              />
+            </div>
           </div>
 
-          <div className="flex items-center gap-3 flex-wrap justify-end">
+          {/* ================= TOOLBAR (RIGHT) ================= */}
+          <div className="flex items-center gap-3 justify-end flex-nowrap">
+            {/* Filter Category */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2"
+                >
                   <Filter className="w-4 h-4" />
                   {filterCategory === "All"
                     ? "Filter Category"
@@ -168,54 +177,50 @@ export default function CoursePage({ link }) {
               </DropdownMenuContent>
             </DropdownMenu>
 
+            {/* Filter Status */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2"
+                >
                   <Filter className="w-4 h-4" />
                   {filterStatus === "" ? "Filter Status" : filterStatus}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 {["All", "Not Started", "In Progress", "Passed", "Failed"].map(
-                  (cat) => (
+                  (status) => (
                     <DropdownMenuItem
-                      key={cat}
-                      onClick={() => handleFilterStatus(cat)}
+                      key={status}
+                      onClick={() => handleFilterStatus(status)}
                     >
-                      {cat}
+                      {status}
                     </DropdownMenuItem>
                   )
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
 
+            {/* Pagination */}
             <div className="flex items-center border rounded-md overflow-hidden">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="px-3"
-                onClick={goPrev}
-              >
+              <Button variant="ghost" size="icon" onClick={goPrev}>
                 ‹
               </Button>
-              <span className="px-4 text-sm font-medium">
+              <span className="px-4 text-sm font-medium whitespace-nowrap">
                 {currentPage} / {totalPages}
               </span>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="px-3"
-                onClick={goNext}
-              >
+              <Button variant="ghost" size="icon" onClick={goNext}>
                 ›
               </Button>
             </div>
 
+            {/* View Mode */}
             <div className="flex border rounded-md overflow-hidden">
               <Button
                 variant="ghost"
                 size="icon"
-                className="px-3"
                 onClick={() => setViewMode("tiles")}
               >
                 <LayoutGrid className="w-4 h-4" />
@@ -223,7 +228,6 @@ export default function CoursePage({ link }) {
               <Button
                 variant="ghost"
                 size="icon"
-                className="px-3"
                 onClick={() => setViewMode("list")}
               >
                 <List className="w-4 h-4" />
