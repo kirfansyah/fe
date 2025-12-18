@@ -1,26 +1,11 @@
 import { useContext, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import {
-  Home,
-  BarChart3,
-  BookOpen,
-  FileText,
-  MessageSquare,
-  Library,
-  Users,
-  GraduationCap,
-  Settings,
-  UserLock,
-  BrickWall,
-  Menu,
-  X,
-  ChevronDown,
-  ChevronRight,
-  FolderTree,
-  BookMarked
-} from "lucide-react";
+import * as LucideIcons from "lucide-react";
 import { LanguageContext } from "@/contexts/LanguageContext";
+import { ProfileContext } from "@/contexts/profile/ProfileContext";
+
+const { Menu, X, ChevronDown, ChevronRight } = LucideIcons;
 
 export default function Sidebar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -29,6 +14,73 @@ export default function Sidebar() {
   const router = useRouter();
   const { stateLanguage } = useContext(LanguageContext);
   const { listLanguage } = stateLanguage;
+  const { dataMenu, getMenu, isLoading } = useContext(ProfileContext);
+
+  useEffect(() => {
+    getMenu();
+  }, []);
+
+  console.log("Sidebar - dataMenu:", dataMenu);
+
+  // Language mapping berdasarkan menu_code dari API
+  const getMenuLabel = (menuCode, defaultLabel) => {
+    const languageMap = {
+      // Main Menus
+      "MENU_HOME": listLanguage.home || "Home",
+      "MENU_DASHBOARD": listLanguage.dashboard || "Dashboard",
+      "MENU_COURSE_MGMT": listLanguage.course_management || "Course Management",
+      "MENU_REPORT": listLanguage.report || "Report",
+      "MENU_FEEDBACK": listLanguage.feedback || "Feedback",
+      "MENU_LIBRARY_TP": listLanguage.library || "Library",
+      "MENU_EMPLOYEE_COURSE": listLanguage.employee_course || "Employee Course",
+      "MENU_USER_MGMT": listLanguage.user_management || "User Management",
+      "MENU_MASTERING": listLanguage.mastering || "Mastering",
+      
+      // Submenu items (jika ada)
+      "MENU_GROUPING": listLanguage.grouping || "Grouping",
+      "MENU_CATEGORY_EBOOK": listLanguage.category_ebook || "Category Ebook",
+      "MENU_ROLE_MGMT": listLanguage.role_management || "Role Management",
+      "MENU_MENU_MGMT": listLanguage.menu_management || "Menu Management",
+    };
+    
+    return languageMap[menuCode] || defaultLabel;
+  };
+
+  // Ambil hanya children dari menu "Trainer Portal"
+  const getTrainerPortalMenu = () => {
+    if (!dataMenu || dataMenu.length === 0) return [];
+    
+    const trainerPortal = dataMenu.find(
+      menu => menu.menu_code === "HDR_TRAINER_PORTAL"
+    );
+    
+    return trainerPortal?.children || [];
+  };
+
+  // Convert API data to sidebar structure
+  const sidebarItems = getTrainerPortalMenu().map((item) => {
+    const menuItem = {
+      id: item.id_menu,
+      icon: LucideIcons[item.menu_icon] || LucideIcons.BookOpen, // Langsung akses dari LucideIcons
+      label: getMenuLabel(item.menu_code, item.menu_name),
+      link: item.menu_url,
+      permissions: item.permissions,
+      menuCode: item.menu_code,
+    };
+
+    if (item.children && item.children.length > 0) {
+      menuItem.submenu = item.children.map((child) => ({
+        id: child.id_menu,
+        icon: LucideIcons[child.menu_icon] || LucideIcons.BookOpen, // Langsung akses dari LucideIcons
+        label: getMenuLabel(child.menu_code, child.menu_name),
+        link: child.menu_url,
+        permissions: child.permissions,
+        menuCode: child.menu_code,
+      }));
+    }
+
+    return menuItem;
+  });
 
   // Detect mobile screen
   useEffect(() => {
@@ -59,7 +111,7 @@ export default function Sidebar() {
     });
     
     setExpandedMenus(prev => ({ ...prev, ...newExpandedMenus }));
-  }, [router.pathname]);
+  }, [router.pathname, dataMenu]);
 
   // Close mobile menu on route change
   useEffect(() => {
@@ -78,48 +130,6 @@ export default function Sidebar() {
     };
   }, [isMobileMenuOpen]);
 
-  const sidebarItems = [
-    { icon: Home, label: listLanguage.home || "Beranda", link: "/admin/home" },
-    {
-      icon: BarChart3,
-      label: listLanguage.dashboard || "Dasbor",
-      link: "/admin/dashboard",
-    },
-    {
-      icon: BookOpen,
-      label: listLanguage.course_management || "Manajemen Kursus",
-      link: "/course/management",
-    },
-    { icon: FileText, label: listLanguage.report || "Laporan", link: "/admin/report" },
-    { icon: MessageSquare, label: listLanguage.feedback || "Umpan Balik", link: "/feedback/feedback" },
-    { icon: Library, label: listLanguage.library || "Perpustakaan", link: "/library/ebook" },
-    {
-      icon: Users,
-      label: listLanguage.employee_course || "Kursus Karyawan",
-      link: "/course/employee/course",
-    },
-    { icon: Users, label: listLanguage.user_management || "Manajemen Pengguna", link: "/master/user" },
-    { icon: UserLock, label: listLanguage.role_management || "Manajemen Akses", link: "/master/role" },
-    { icon: BrickWall, label: listLanguage.menu_management || "Manajemen Menu", link: "/master/role-menu" },
-    { 
-      icon: GraduationCap, 
-      label: listLanguage.mastering || "Penguasaan",
-      submenu: [
-        {
-          icon: FolderTree,
-          label: listLanguage.grouping || "Grouping",
-          link: "/master/grouping"
-        },
-        {
-          icon: BookMarked,
-          label: listLanguage.category_ebook || "Kategori Ebook",
-          link: "/master/category-ebook"
-        }
-      ]
-    },
-    { icon: Settings, label: listLanguage.setting || "Pengaturan", link: "/admin/settings" },
-  ];
-
   const toggleSubmenu = (index) => {
     setExpandedMenus(prev => ({
       ...prev,
@@ -127,108 +137,136 @@ export default function Sidebar() {
     }));
   };
 
-  const SidebarContent = () => (
-    <nav className="p-2 space-y-1">
-      {sidebarItems.map((item, index) => {
-        const isActive = router.pathname === item.link;
-        const hasSubmenu = item.submenu && item.submenu.length > 0;
-        const isExpanded = expandedMenus[index];
-        const hasActiveSubmenu = hasSubmenu && item.submenu.some(sub => router.pathname === sub.link);
-
-        return (
-          <div key={index}>
-            {/* Main Menu Item */}
-            {hasSubmenu ? (
-              <button
-                onClick={() => toggleSubmenu(index)}
-                className={`w-full flex items-center px-3 py-3 rounded-lg text-left transition-all duration-200 group ${
-                  hasActiveSubmenu
-                    ? "bg-blue-600 text-white shadow-sm"
-                    : "text-gray-700 hover:bg-blue-50 hover:text-gray-900"
-                }`}
-              >
-                <item.icon
-                  className={`w-5 h-5 mr-3 flex-shrink-0 transition-transform duration-200 ${
-                    hasActiveSubmenu 
-                      ? "text-white" 
-                      : "text-gray-500 group-hover:text-blue-600"
-                  }`}
-                />
-                <span className={`font-normal text-sm flex-1 ${
-                  hasActiveSubmenu ? "text-white font-medium" : ""
-                }`}>
-                  {item.label}
-                </span>
-                {/* Chevron Icon */}
-                {isExpanded ? (
-                  <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${
-                    hasActiveSubmenu ? "text-white" : "text-gray-500"
-                  }`} />
-                ) : (
-                  <ChevronRight className={`w-4 h-4 transition-transform duration-200 ${
-                    hasActiveSubmenu ? "text-white" : "text-gray-500"
-                  }`} />
-                )}
-              </button>
-            ) : (
-              <Link
-                href={item.link || "#"}
-                className={`w-full flex items-center px-3 py-3 rounded-lg text-left transition-all duration-200 group ${
-                  isActive
-                    ? "bg-blue-600 text-white shadow-sm"
-                    : "text-gray-700 hover:bg-blue-50 hover:text-gray-900"
-                }`}
-              >
-                <item.icon
-                  className={`w-5 h-5 mr-3 flex-shrink-0 transition-transform duration-200 ${
-                    isActive 
-                      ? "text-white" 
-                      : "text-gray-500 group-hover:text-blue-600"
-                  }`}
-                />
-                <span className={`font-normal text-sm ${
-                  isActive ? "text-white font-medium" : ""
-                }`}>
-                  {item.label}
-                </span>
-              </Link>
-            )}
-
-            {/* Submenu Items */}
-            {hasSubmenu && isExpanded && (
-              <div className="mt-1 ml-4 space-y-1 pl-2">
-                {item.submenu.map((subItem, subIndex) => {
-                  const isSubActive = router.pathname === subItem.link;
-                  return (
-                    <Link
-                      href={subItem.link || "#"}
-                      key={subIndex}
-                      className={`w-full flex items-center px-3 py-2 rounded-lg text-left transition-all duration-200 group ${
-                        isSubActive
-                          ? "bg-blue-100 text-blue-700 font-medium"
-                          : "text-gray-600 hover:bg-blue-50 hover:text-gray-900"
-                      }`}
-                    >
-                      <subItem.icon
-                        className={`w-4 h-4 mr-2.5 flex-shrink-0 transition-transform duration-200 ${
-                          isSubActive 
-                            ? "text-blue-600" 
-                            : "text-gray-400 group-hover:text-gray-600"
-                        }`}
-                      />
-                      <span className="font-normal text-sm">
-                        {subItem.label}
-                      </span>
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
+  const SidebarContent = () => {
+    if (isLoading) {
+      return (
+        <div className="p-4 text-center text-gray-500">
+          <div className="animate-pulse">
+            {listLanguage.loading_menu || "Loading menu..."}
           </div>
-        );
-      })}
-    </nav>
-  );
+        </div>
+      );
+    }
+
+    if (!sidebarItems || sidebarItems.length === 0) {
+      return (
+        <div className="p-4 text-center text-gray-500">
+          {listLanguage.no_menu_available || "No menu available"}
+        </div>
+      );
+    }
+
+    return (
+      <nav className="p-2 space-y-1">
+        {sidebarItems.map((item, index) => {
+          const isActive = router.pathname === item.link;
+          const hasSubmenu = item.submenu && item.submenu.length > 0;
+          const isExpanded = expandedMenus[index];
+          const hasActiveSubmenu = hasSubmenu && item.submenu.some(sub => router.pathname === sub.link);
+
+          if (!item.permissions?.can_view) {
+            return null;
+          }
+
+          return (
+            <div key={item.id}>
+              {/* Main Menu Item */}
+              {hasSubmenu ? (
+                <button
+                  onClick={() => toggleSubmenu(index)}
+                  className={`w-full flex items-center px-3 py-3 rounded-lg text-left transition-all duration-200 group ${
+                    hasActiveSubmenu
+                      ? "bg-blue-600 text-white shadow-sm"
+                      : "text-gray-700 hover:bg-blue-50 hover:text-gray-900"
+                  }`}
+                >
+                  <item.icon
+                    className={`w-5 h-5 mr-3 flex-shrink-0 transition-transform duration-200 ${
+                      hasActiveSubmenu 
+                        ? "text-white" 
+                        : "text-gray-500 group-hover:text-blue-600"
+                    }`}
+                  />
+                  <span className={`font-normal text-sm flex-1 ${
+                    hasActiveSubmenu ? "text-white font-medium" : ""
+                  }`}>
+                    {item.label}
+                  </span>
+                  {isExpanded ? (
+                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${
+                      hasActiveSubmenu ? "text-white" : "text-gray-500"
+                    }`} />
+                  ) : (
+                    <ChevronRight className={`w-4 h-4 transition-transform duration-200 ${
+                      hasActiveSubmenu ? "text-white" : "text-gray-500"
+                    }`} />
+                  )}
+                </button>
+              ) : (
+                <Link
+                  href={item.link || "#"}
+                  className={`w-full flex items-center px-3 py-3 rounded-lg text-left transition-all duration-200 group ${
+                    isActive
+                      ? "bg-blue-600 text-white shadow-sm"
+                      : "text-gray-700 hover:bg-blue-50 hover:text-gray-900"
+                  }`}
+                >
+                  <item.icon
+                    className={`w-5 h-5 mr-3 flex-shrink-0 transition-transform duration-200 ${
+                      isActive 
+                        ? "text-white" 
+                        : "text-gray-500 group-hover:text-blue-600"
+                    }`}
+                  />
+                  <span className={`font-normal text-sm ${
+                    isActive ? "text-white font-medium" : ""
+                  }`}>
+                    {item.label}
+                  </span>
+                </Link>
+              )}
+
+              {/* Submenu Items */}
+              {hasSubmenu && isExpanded && (
+                <div className="mt-1 ml-4 space-y-1 pl-2">
+                  {item.submenu.map((subItem) => {
+                    const isSubActive = router.pathname === subItem.link;
+                    
+                    if (!subItem.permissions?.can_view) {
+                      return null;
+                    }
+
+                    return (
+                      <Link
+                        href={subItem.link || "#"}
+                        key={subItem.id}
+                        className={`w-full flex items-center px-3 py-2 rounded-lg text-left transition-all duration-200 group ${
+                          isSubActive
+                            ? "bg-blue-100 text-blue-700 font-medium"
+                            : "text-gray-600 hover:bg-blue-50 hover:text-gray-900"
+                        }`}
+                      >
+                        <subItem.icon
+                          className={`w-4 h-4 mr-2.5 flex-shrink-0 transition-transform duration-200 ${
+                            isSubActive 
+                              ? "text-blue-600" 
+                              : "text-gray-400 group-hover:text-gray-600"
+                          }`}
+                        />
+                        <span className="font-normal text-sm">
+                          {subItem.label}
+                        </span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </nav>
+    );
+  };
 
   return (
     <>
@@ -255,7 +293,7 @@ export default function Sidebar() {
         />
       )}
 
-      {/* Sidebar - Fixed on mobile, relative in flex on desktop */}
+      {/* Sidebar */}
       <aside
         className={`
           ${isMobile ? 'fixed' : 'relative'}
@@ -279,7 +317,9 @@ export default function Sidebar() {
         {/* Sidebar Header - Mobile only */}
         {isMobile && isMobileMenuOpen && (
           <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between z-10">
-            <h2 className="text-base font-semibold text-gray-900">Menu</h2>
+            <h2 className="text-base font-semibold text-gray-900">
+              {listLanguage.menu || "Menu"}
+            </h2>
             <button
               onClick={() => setIsMobileMenuOpen(false)}
               className="p-1 hover:bg-blue-100 rounded-lg transition-colors"
@@ -297,7 +337,7 @@ export default function Sidebar() {
         {/* Sidebar Footer */}
         <div className="sticky bottom-0 bg-white border-t border-gray-200 p-3 mt-4">
           <div className="text-xs text-gray-500 text-center">
-            © 2025 LMS System
+            © 2025 {listLanguage.lms_system || "LMS System"}
           </div>
         </div>
       </aside>
