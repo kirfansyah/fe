@@ -148,11 +148,11 @@ export default function Enroll({
             showLoading('Saving enrollment...');
             
             const isUpdate = !!enrollmentData.enrollment.id_course_enrollment;
-            
+            const isGeneral = enrollmentData.enrollment.enroll_type_name === 'General';
             const transformedData = {
                 id_course: parseInt(enrollmentData.courseId),
                 company_id: enrollmentData.enrollment.company_id,
-                id_enrollment_type: enrollmentData.enrollment.enroll_type_name === 'General' ? 1 : 
+                id_enrollment_type: isGeneral ? 1 : 
                                 enrollmentData.enrollment.id_enrollment_type || 2,
                 id_course_status: enrollmentData.enrollment.course_status_name === 'Mandatory' ? 1 : 
                                 enrollmentData.enrollment.id_course_status || 2,
@@ -167,7 +167,7 @@ export default function Enroll({
                 refreshment_months: enrollmentData.enrollment.refreshment_months || null,
                 created_by: dataKaryawans.nama,
                 created_device: "system",
-                target_groupings: extractGroupingIds(enrollmentData.enrollment.groupings)
+                target_groupings: isGeneral ? [1] :extractGroupingIds(enrollmentData.enrollment.groupings)
             };
             
             if (isUpdate) {
@@ -259,7 +259,8 @@ export default function Enroll({
                     enrollment.course_status_name &&
                     enrollment.is_new) {
                     
-                    const enrollmentTypeId = enrollment.enroll_type_name === 'General' ? 1 : 2;
+                    const isGeneral = enrollment.enroll_type_name === 'General';
+                    const enrollmentTypeId = isGeneral ? 1 : 2;
                     const courseStatusId = enrollment.course_status_name === 'Mandatory' ? 1 : 2;
                     const remedialAllowed = enrollment.remedial_allowed === 'Yes';
                     
@@ -285,7 +286,7 @@ export default function Enroll({
                         refreshment_months: enrollment.refreshment_months || null, // ✅ New field
                         created_by: dataKaryawans.nama,
                         created_device: "System",
-                        target_groupings: enrollment.groupings || []
+                        target_groupings: isGeneral ? [1] : (enrollment.groupings || [])
                     });
                 }
             });
@@ -330,9 +331,15 @@ export default function Enroll({
                         errors.push(`${courseName} (Enrollment ${idx + 1}): Minimum score must be between 0 and 100`);
                     }
                     
+                    // if (enrollment.enroll_type_name === 'Specific' && 
+                    //     (!enrollment.enrollment_group_ids || enrollment.enrollment_group_ids.length === 0)) {
+                    //     errors.push(`${courseName} (Enrollment ${idx + 1}): Please select at least one enrollment group`);
+                    // }
+
+                    // ✅ FIX: Hanya validasi groupings jika Specific
                     if (enrollment.enroll_type_name === 'Specific' && 
-                        (!enrollment.enrollment_group_ids || enrollment.enrollment_group_ids.length === 0)) {
-                        errors.push(`${courseName} (Enrollment ${idx + 1}): Please select at least one enrollment group`);
+                        (!enrollment.groupings || enrollment.groupings.length === 0)) {
+                        errors.push(`${courseName} (Enrollment ${idx + 1}): Please select at least one grouping for Specific enrollment`);
                     }
                     
                     if (enrollment.end_date && enrollment.publish_date && 

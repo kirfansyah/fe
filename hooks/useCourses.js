@@ -257,11 +257,11 @@ export function useCourses(contentId = null) {
         const deletedBy = dataKaryawans?.nama || "System";
         const result = await ManagementService.deleteEnrolls(enrollmentId, deletedBy);
         
-        // if (result.success) {
-        //     setEnrollData((prev) => prev.filter((c) => c.id_course_enrollment !== enrollmentId));
-        // } else {
-        //     setError(result.message);
-        // }
+        if (result.success) {
+            setEnrollData((prev) => prev.filter((c) => c.id_course_enrollment !== enrollmentId));
+        } else {
+            setError(result.message);
+        }
         
         setIsDeleting(null);
         return result;
