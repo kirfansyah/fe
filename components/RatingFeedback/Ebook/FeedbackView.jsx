@@ -1,27 +1,22 @@
 import { useState, useEffect } from "react";
-import { MessageSquare, Filter, Search, X, Calendar } from "lucide-react";
+import { MessageSquare, Filter, Search, X, Building2 } from "lucide-react";
 import FeedbackList from "./FeedbackList";
 
 export default function FeedbackView({ feedbacks, loading, error, onRefresh }) {
   const [filteredFeedbacks, setFilteredFeedbacks] = useState(feedbacks);
   const [filters, setFilters] = useState({
+    companyUnit: "",
     ebook: "",
-    companyId: "",
-    date: "",
     searchText: "",
   });
   const [showFilters, setShowFilters] = useState(false);
 
-  // Extract unique ebooks and company IDs for filter options
-  const uniqueEbooks = [...new Set(feedbacks?.map((f) => f.ebook_title) || [])];
+  // Extract unique company units and ebooks for filter options
+  const uniqueCompanyUnits = [
+    ...new Set(feedbacks?.map((f) => f.company_name).filter(Boolean) || []),
+  ];
 
-  const uniqueCompanyIds = [
-    ...new Set(
-      feedbacks
-        ?.map((f) => f.company_id)
-        .filter((id) => id !== null && id !== undefined) || []
-    ),
-  ].sort((a, b) => a - b);
+  const uniqueEbooks = [...new Set(feedbacks?.map((f) => f.ebook_title) || [])];
 
   useEffect(() => {
     setFilteredFeedbacks(feedbacks);
@@ -34,14 +29,12 @@ export default function FeedbackView({ feedbacks, loading, error, onRefresh }) {
   const applyFilters = () => {
     let filtered = feedbacks || [];
 
-    if (filters.ebook) {
-      filtered = filtered.filter((f) => f.ebook_title === filters.ebook);
+    if (filters.companyUnit) {
+      filtered = filtered.filter((f) => f.company_name === filters.companyUnit);
     }
 
-    if (filters.companyId) {
-      filtered = filtered.filter(
-        (f) => f.company_id === parseInt(filters.companyId)
-      );
+    if (filters.ebook) {
+      filtered = filtered.filter((f) => f.ebook_title === filters.ebook);
     }
 
     if (filters.searchText) {
@@ -49,7 +42,8 @@ export default function FeedbackView({ feedbacks, loading, error, onRefresh }) {
       filtered = filtered.filter(
         (f) =>
           f.feedback?.toLowerCase().includes(searchLower) ||
-          f.ebook_title?.toLowerCase().includes(searchLower)
+          f.ebook_title?.toLowerCase().includes(searchLower) ||
+          f.company_name?.toLowerCase().includes(searchLower)
       );
     }
 
@@ -58,24 +52,17 @@ export default function FeedbackView({ feedbacks, loading, error, onRefresh }) {
 
   const resetFilters = () => {
     setFilters({
+      companyUnit: "",
       ebook: "",
-      companyId: "",
-      date: "",
       searchText: "",
     });
     setFilteredFeedbacks(feedbacks);
   };
 
-  const handleDateFilter = () => {
-    if (filters.date) {
-      onRefresh(filters.date); // Refresh with date filter
-    }
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
       </div>
     );
   }
@@ -88,7 +75,7 @@ export default function FeedbackView({ feedbacks, loading, error, onRefresh }) {
           <p className="text-sm mt-2">{error}</p>
           <button
             onClick={() => onRefresh()}
-            className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="mt-4 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
           >
             Try Again
           </button>
@@ -105,11 +92,13 @@ export default function FeedbackView({ feedbacks, loading, error, onRefresh }) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Filter className="w-5 h-5 text-gray-600" />
-              <span className="font-semibold text-gray-700">Filters</span>
+              <span className="font-semibold text-gray-700">
+                Filters & Search
+              </span>
             </div>
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-green-600 hover:bg-green-50 rounded-lg transition-colors"
             >
               {showFilters ? (
                 <>
@@ -130,20 +119,44 @@ export default function FeedbackView({ feedbacks, loading, error, onRefresh }) {
           <div className="p-4 space-y-4">
             {/* Search Bar */}
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Search className="absolute left-3 top-1/4 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search feedback..."
+                placeholder="Search feedback, ebook, or company..."
                 value={filters.searchText}
                 onChange={(e) =>
                   handleFilterChange("searchText", e.target.value)
                 }
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Ebook Filter */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Company Unit Filter - FIRST */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="w-4 h-4" />
+                    <span>Company Unit</span>
+                  </div>
+                </label>
+                <select
+                  value={filters.companyUnit}
+                  onChange={(e) =>
+                    handleFilterChange("companyUnit", e.target.value)
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                >
+                  <option value="">All Companies</option>
+                  {uniqueCompanyUnits.map((unit, index) => (
+                    <option key={index} value={unit}>
+                      {unit}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* eBook Filter - SECOND */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   eBook
@@ -151,7 +164,7 @@ export default function FeedbackView({ feedbacks, loading, error, onRefresh }) {
                 <select
                   value={filters.ebook}
                   onChange={(e) => handleFilterChange("ebook", e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 >
                   <option value="">All eBooks</option>
                   {uniqueEbooks.map((ebook, index) => (
@@ -160,49 +173,6 @@ export default function FeedbackView({ feedbacks, loading, error, onRefresh }) {
                     </option>
                   ))}
                 </select>
-              </div>
-
-              {/* Company ID Filter */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Company ID
-                </label>
-                <select
-                  value={filters.companyId}
-                  onChange={(e) =>
-                    handleFilterChange("companyId", e.target.value)
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="">All Companies</option>
-                  {uniqueCompanyIds.map((companyId) => (
-                    <option key={companyId} value={companyId}>
-                      Company {companyId}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Date Filter */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Date Filter
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="date"
-                    value={filters.date}
-                    onChange={(e) => handleFilterChange("date", e.target.value)}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                  <button
-                    onClick={handleDateFilter}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-                    title="Apply date filter"
-                  >
-                    <Calendar className="w-4 h-4" />
-                  </button>
-                </div>
               </div>
             </div>
 
@@ -216,7 +186,7 @@ export default function FeedbackView({ feedbacks, loading, error, onRefresh }) {
               </button>
               <button
                 onClick={applyFilters}
-                className="px-6 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                className="px-6 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
               >
                 Apply Filters
               </button>
@@ -237,7 +207,7 @@ export default function FeedbackView({ feedbacks, loading, error, onRefresh }) {
           {!loading && (
             <button
               onClick={() => onRefresh()}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
             >
               Load Feedback Data
             </button>
