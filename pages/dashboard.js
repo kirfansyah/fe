@@ -14,9 +14,23 @@ const Dashboard = () => {
     getKaryawan();
     getMenu();
   }, []);
-
+  console.log("dataMenu:", dataMenu);
   const profileData = dataKaryawans || {};
-
+  const getMenuLabel = (menuCode, defaultLabel) => {
+    const languageMap = {
+      // Main Menus
+      "MENU_HOME": listLanguage.home || "Home",
+      
+      
+      "HDR_TRAINER_PORTAL": '/img/website.png',
+      "HDR_PROFILE": '/img/profile.png',
+      "HDR_COURSE": '/img/learning.png',
+      "HDR_CALENDAR": '/img/calendar.png',
+      "HDR_LIBRARY": '/img/bookshelf.png',
+    };
+    
+    return languageMap[menuCode] || defaultLabel;
+  };
   // Icon mapping untuk menu header
   const getIconPath = (menuCode) => {
     const iconMap = {

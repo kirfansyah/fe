@@ -7,6 +7,7 @@ import {
   Minimize,
   Star,
 } from "lucide-react";
+import PdfViewer from "@/components/Library/PdfViewer";
 
 export default function EbookReader({
   ebook,
@@ -35,7 +36,6 @@ export default function EbookReader({
 
   const hasAutoSaved = useRef(false);
   const readerContainerRef = useRef(null);
-  const iframeRef = useRef(null);
   const countdownTimerRef = useRef(null);
 
   // Hide resume notification after 3 seconds
@@ -75,31 +75,6 @@ export default function EbookReader({
         clearInterval(countdownTimerRef.current);
       }
     };
-  }, [currentPage]);
-
-  // Disable scroll in iframe
-  useEffect(() => {
-    const disableIframeScroll = () => {
-      if (iframeRef.current) {
-        try {
-          const iframeDoc =
-            iframeRef.current.contentDocument ||
-            iframeRef.current.contentWindow?.document;
-          if (iframeDoc) {
-            iframeDoc.body.style.overflow = "hidden";
-            iframeDoc.documentElement.style.overflow = "hidden";
-          }
-        } catch (e) {
-          // Cross-origin, can't access iframe content
-          console.log("Cannot access iframe content (cross-origin)");
-        }
-      }
-    };
-
-    // Try to disable scroll after iframe loads
-    const timer = setTimeout(disableIframeScroll, 100);
-
-    return () => clearTimeout(timer);
   }, [currentPage]);
 
   // Auto-save progress every 5 seconds
@@ -491,38 +466,37 @@ export default function EbookReader({
             />
           </button>
 
-          {/* eBook Display Area - Fit to Screen with Scroll Disabled */}
+          {/* eBook Display Area - Fit to Screen */}
           <div
             className="w-full h-full bg-white flex items-center justify-center"
             style={{
               overflow: "hidden",
               position: "relative",
-              touchAction: "none",
             }}
           >
             <div
               className="w-full h-full"
               style={{
-                overflow: "hidden",
-                pointerEvents: "none", // Block all mouse events including scroll
+                overflow: "auto",
               }}
             >
               {ebook.file_path_url ? (
-                <iframe
-                  ref={iframeRef}
-                  key={currentPage}
-                  src={`/api/proxy/proxy-pdf?url=${encodeURIComponent(
+                <PdfViewer
+                  file={`/api/pdf-proxy?url=${encodeURIComponent(
                     ebook.file_path_url
-                  )}#page=${currentPage}&toolbar=0&navpanes=0&scrollbar=0&statusbar=0&messages=0&view=Fit`}
-                  className="w-full h-full border-0"
-                  title="eBook Content"
-                  style={{
-                    overflow: "hidden",
-                    display: "block",
-                    border: "none",
-                    pointerEvents: "none", // Disable all pointer events
+                  )}`}
+                  currentPage={currentPage}
+                  initialPage={ebook.resumePage || 1}
+                  showControls={false}
+                  onPageChange={(isLastPage) => {
+                    // Handle jika sudah di halaman terakhir PDF
+                    if (isLastPage && currentPage >= totalPages) {
+                      console.log("✅ Reached last page of PDF");
+                    }
                   }}
-                  scrolling="no"
+                  onError={(errorMsg) => {
+                    console.error("PDF Error:", errorMsg);
+                  }}
                 />
               ) : ebook.cover_image_url ? (
                 <div

@@ -11,7 +11,7 @@ export default function ListEmployee(
     const [currentPage, setCurrentPage] = useState(1);
     const [showGroupingModal, setShowGroupingModal] = useState(false);
     const [selectedGroupings, setSelectedGroupings] = useState([]);
-    const { employeeData, groupEnroll, fetchEmployeeData, loading,error, handleSaveAssignEmployeeGrouping } = useCourses();
+    const { employeeData, groupEnroll, fetchEmployeeData,error, handleSaveAssignEmployeeGrouping } = useCourses();
     const { showLoading, showSuccess, showError, confirmAction, showWarning } = useSweetAlert();
     
     const employees = employeeData?.data || [];

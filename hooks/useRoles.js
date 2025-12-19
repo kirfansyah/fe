@@ -89,7 +89,7 @@ export function useRoles() {
 
         let result;
         if (menusData.id_menu) {
-            result = await RoleService.updateRoles(menusData); // ⚠️ Check if this should be updateMenus
+            result = await RoleService.updateMenus(menusData); // ⚠️ Check if this should be updateMenus
         } else {
             result = await RoleService.createMenus(menusData);
         }
