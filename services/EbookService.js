@@ -61,6 +61,36 @@ class EbookService {
     }
   }
 
+  // Get all Company
+  //   static async getAllCompany() {
+  //     const response = await API.get("/master/company");
+  //     return response;
+  //   }
+
+  static async getAllCompany() {
+    try {
+      const response = await API.get("/master/company");
+      return {
+        success: response.data.success,
+        data: response.data.data || [],
+        message: response.data.message,
+        pagination: response.data.pagination,
+      };
+    } catch (error) {
+      console.error("EbookService.getAllCompany Error:", error);
+
+      //   Cek apakah token ada
+      const token = localStorage.getItem("token");
+      if (!token) {
+        console.error("⚠️ No token found in localStorage");
+      }
+
+      throw new Error(
+        error.response?.data?.message || "Failed to fetch company"
+      );
+    }
+  }
+
   static async getAllCategory() {
     try {
       const response = await API.get("/master/ebook/category");
@@ -181,6 +211,7 @@ class EbookService {
     try {
       const formData = new FormData();
 
+      formData.append("company_id", ebookData.company_id);
       formData.append("title", ebookData.title);
       formData.append("id_category", ebookData.id_category);
       formData.append("id_subcategory", ebookData.id_subcategory);

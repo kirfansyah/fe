@@ -1,4 +1,3 @@
-// pages/api/proxy-pdf.js
 export default async function handler(req, res) {
   const { url } = req.query;
 
@@ -19,10 +18,21 @@ export default async function handler(req, res) {
 
     const buffer = await response.arrayBuffer();
 
-    // Set headers untuk allow iframe
+    // DEBUG: Log current headers
+    console.log("Before setting headers:", res.getHeaders());
+
+    // Remove conflicting headers
+    res.removeHeader("X-Frame-Options");
+
+    // Set new headers
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", "inline");
-    res.setHeader("X-Frame-Options", "ALLOWALL"); // Allow iframe
+    res.setHeader("Content-Security-Policy", "frame-ancestors 'self'");
+    res.setHeader("Access-Control-Allow-Origin", "https://lms.sambu.co.id");
+
+    // DEBUG: Log after setting headers
+    console.log("After setting headers:", res.getHeaders());
+
     res.send(Buffer.from(buffer));
   } catch (error) {
     console.error("Proxy PDF error:", error);
