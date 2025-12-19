@@ -23,6 +23,7 @@ export default function Management() {
         companies, 
         addCourse, 
         deleteCourse, 
+        deleteContent,
         enrollData,
         isLoading,    // ✅ Loading states
         isSaving, 
@@ -144,9 +145,9 @@ export default function Management() {
                             onEditContent={handleEditContent}
                             onSave={addCourse}
                             onDelete={deleteCourse}
-                            isLoading={isLoading}    // ✅ Passed
-                            isSaving={isSaving}      // ✅ Passed
-                            isDeleting={isDeleting}  // ✅ Passed
+                            onDeleteContent={deleteContent} 
+                            isLoading={isLoading}    
+                            isSaving={isSaving}   
                         />
                     )}
                     

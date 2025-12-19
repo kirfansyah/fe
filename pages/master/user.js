@@ -1,26 +1,26 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { 
-    Trash2, 
     Edit,
     Search,
     Home,
     ChevronRight,
-    Lock,
-    UserPlus,
     Eye,
-    EyeOff,
     Building,
     Users,
-    RefreshCw
+    RefreshCw,
 } from 'lucide-react';
 import Admin from "layouts/Admin.js";
 import { useCourses } from "@/hooks/useCourses";
 import { useSweetAlert } from '@/hooks/useSweetAlert';
-
+import { useRoles } from "../../hooks/useRoles";
+import { ProfileContext } from '@/contexts/profile/ProfileContext';
+import { getDeviceInfo } from '@/lib/deviceHelper';
 export default function UserManagement() {
     const { employeeData, fetchEmployeeData, loading: apiLoading } = useCourses();
+    const { roles: masterRoles, handleUpdateUser } = useRoles();
     const { showLoading, showSuccess, showError, confirmAction } = useSweetAlert();
-    
+    const { getKaryawan, dataKaryawan } = useContext(ProfileContext);
+    const dataKaryawans = dataKaryawan?.length ? dataKaryawan[0] : [];
     const [loading, setLoading] = useState(true);
     const [entriesPerPage, setEntriesPerPage] = useState(10);
     const [currentPage, setCurrentPage] = useState(1);
@@ -29,21 +29,17 @@ export default function UserManagement() {
     const [filterStatus, setFilterStatus] = useState('all');
     const [filterCompany, setFilterCompany] = useState('all');
     const [showModal, setShowModal] = useState(false);
-    const [modalMode, setModalMode] = useState('add');
+    const [modalMode, setModalMode] = useState('view'); // Only 'view' or 'edit'
     const [selectedUser, setSelectedUser] = useState(null);
-    const [showPassword, setShowPassword] = useState(false);
     const [formData, setFormData] = useState({ 
         employee_id: '',
         nama: '',
         no_ktp: '',
-        dept_abbr: '',
-        company_id: '',
-        roles: [],
-        groupings: [],
+        id_role: null,
         user_is_active: true,
-        password: '',
-        confirm_password: ''
     });
+
+    const availableRoles = masterRoles || [];
 
     // Get unique values for filters
     const getUniqueRoles = () => {
@@ -64,15 +60,6 @@ export default function UserManagement() {
             }
         });
         return Array.from(companies, ([id, name]) => ({ id, name }));
-    };
-
-    const getUniqueDepartments = () => {
-        if (!employeeData?.data) return [];
-        const depts = new Set();
-        employeeData.data.forEach(emp => {
-            if (emp.dept_abbr) depts.add(emp.dept_abbr);
-        });
-        return Array.from(depts);
     };
 
     useEffect(() => {
@@ -141,27 +128,10 @@ export default function UserManagement() {
             employee_id: user.employee_id,
             nama: user.nama,
             no_ktp: user.no_ktp,
-            dept_abbr: user.dept_abbr || '',
-            company_id: user.company_id,
-            roles: user.roles?.map(r => r.id_role) || [],
-            groupings: user.groupings?.map(g => g.id_grouping) || [],
-            user_is_active: user.user_is_active,
-            password: '',
-            confirm_password: ''
+            id_role: user.roles?.[0]?.id_role || null,
+            user_is_active: user.user_is_active ?? true,
         });
         setModalMode('edit');
-        setShowModal(true);
-    };
-
-    const handleDelete = (user) => {
-        setSelectedUser(user);
-        setModalMode('delete');
-        setShowModal(true);
-    };
-
-    const handleResetPassword = (user) => {
-        setSelectedUser(user);
-        setModalMode('reset-password');
         setShowModal(true);
     };
 
@@ -179,116 +149,72 @@ export default function UserManagement() {
         e.preventDefault();
         
         try {
-            if (modalMode === 'add') {
-                const result = await confirmAction({
-                    title: 'Add New User',
-                    text: 'Are you sure you want to add this new user?',
-                    icon: 'question'
-                });
-                
-                if (!result.isConfirmed) return;
-                
-                showLoading('Adding new user...');
-                // await handleCreateUser(formData);
-                showSuccess('User added successfully');
-                
-            } else if (modalMode === 'edit') {
-                const result = await confirmAction({
-                    title: 'Update User',
-                    text: 'Are you sure you want to update this user?',
-                    icon: 'question'
-                });
-                
-                if (!result.isConfirmed) return;
-                
-                showLoading('Updating user...');
-                // await handleUpdateUser(formData, selectedUser.employee_id);
-                showSuccess('User updated successfully');
-                
-            } else if (modalMode === 'delete') {
-                const result = await confirmAction({
-                    title: 'Delete User',
-                    text: 'Are you sure you want to delete this user?',
-                    icon: 'warning',
-                    confirmButtonText: 'Yes, delete it!'
-                });
-                
-                if (!result.isConfirmed) return;
-                
-                showLoading('Deleting user...');
-                // await handleDeleteUser(selectedUser.employee_id);
-                showSuccess('User deleted successfully');
-                
-            } else if (modalMode === 'reset-password') {
-                if (formData.password !== formData.confirm_password) {
-                    showError('Passwords do not match');
-                    return;
-                }
-                
-                const result = await confirmAction({
-                    title: 'Reset Password',
-                    text: 'Are you sure you want to reset password for this user?',
-                    icon: 'warning'
-                });
-                
-                if (!result.isConfirmed) return;
-                
-                showLoading('Resetting password...');
-                // await handleResetUserPassword(selectedUser.employee_id, formData.password);
-                showSuccess('Password reset successfully');
+            // Validate role selected
+            if (!formData.id_role) {
+                showError('Please select a role');
+                return;
             }
+            const deviceInfo = getDeviceInfo();
+            const result = await confirmAction({
+                title: 'Update User',
+                text: 'Are you sure you want to update this user?',
+                icon: 'question'
+            });
+            
+            if (!result.isConfirmed) return;
+            
+            showLoading('Updating user...');
+            
+            const updateData = {
+                id_role: [formData.id_role],
+                no_ktp: formData.no_ktp,
+                is_active: formData.user_is_active,
+                updated_by: dataKaryawans.nama || 'System',
+                updated_device: deviceInfo.device,
+            };
+           
+            await handleUpdateUser(updateData);
+            showSuccess('User updated successfully');
             
             setShowModal(false);
             setSelectedUser(null);
-            resetFormData();
+            await fetchEmployeeData();
             
         } catch (error) {
             console.error('Error:', error);
-            showError(error.message || `Failed to ${modalMode} user`);
+            showError(error.message || 'Failed to update user');
         }
     };
 
-    const resetFormData = () => {
-        setFormData({ 
-            employee_id: '',
-            nama: '',
-            no_ktp: '',
-            dept_abbr: '',
-            company_id: '',
-            roles: [],
-            groupings: [],
-            user_is_active: true,
-            password: '',
-            confirm_password: ''
-        });
+    // Get role badge color
+    const getRoleBadgeColor = (roleName) => {
+        switch (roleName) {
+            case 'Administrator':
+            case 'Super Admin':
+            case 'Super Admin update':
+                return 'bg-red-100 text-red-800';
+            case 'Trainer':
+                return 'bg-purple-100 text-purple-800';
+            case 'Learner A':
+                return 'bg-blue-100 text-blue-800';
+            case 'Learner B':
+                return 'bg-teal-100 text-teal-800';
+            default:
+                return 'bg-gray-100 text-gray-800';
+        }
     };
 
     // Render role badges
     const renderRoles = (roles) => {
         if (!roles || roles.length === 0) return <span className="text-gray-400">-</span>;
         
+        const role = roles[0];
         return (
-            <div className="flex flex-wrap gap-1">
-                {roles.slice(0, 2).map(role => (
-                    <span 
-                        key={role.id_role} 
-                        className={`inline-flex px-1.5 py-0.5 text-xs rounded-full ${
-                            role.role_name === 'Administrator' 
-                                ? 'bg-red-100 text-red-800'
-                                : role.role_name === 'Trainer'
-                                ? 'bg-purple-100 text-purple-800'
-                                : 'bg-blue-100 text-blue-800'
-                        }`}
-                    >
-                        {role.role_name}
-                    </span>
-                ))}
-                {roles.length > 2 && (
-                    <span className="inline-flex px-1.5 py-0.5 text-xs rounded bg-gray-100 text-gray-600">
-                        +{roles.length - 2}
-                    </span>
-                )}
-            </div>
+            <span 
+                className={`inline-flex px-2 py-1 text-xs rounded-full ${getRoleBadgeColor(role.role_name)}`}
+            >
+                {role.role_name}
+            </span>
         );
     };
 
@@ -321,17 +247,17 @@ export default function UserManagement() {
             <div className="mb-6 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 <div className="flex justify-between items-center">
                     <div>
-                        <h1 className="text-3xl  font-bold text-gray-900 mb-1">User Management</h1>
+                        <h1 className="text-2xl font-bold text-gray-900 mb-1">User Management</h1>
                         <p className="text-gray-600 text-sm">Manage system users and their access</p>
                     </div>
                     
-                    <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-lg">
+                    <div className="flex items-center gap-2 text-sm">
                         <Home className="w-4 h-4 text-gray-400" />
-                        <span className="text-gray text-sm">Home</span>
-                        <ChevronRight className="w-4 h-4 text-gray-500" />
-                        <span className="text-gray-500 text-sm">Master</span>
+                        <span className="text-gray-500">Home</span>
                         <ChevronRight className="w-4 h-4 text-gray-400" />
-                        <span className="text-gray-900 text-sm font-medium">User Management</span>
+                        <span className="text-gray-500">Master</span>
+                        <ChevronRight className="w-4 h-4 text-gray-400" />
+                        <span className="text-gray-900 font-medium">User Management</span>
                     </div>
                 </div>
             </div>
@@ -364,7 +290,7 @@ export default function UserManagement() {
 
                             {/* Filters */}
                             <select
-                                className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                className="py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                                 value={filterRole}
                                 onChange={(e) => {
                                     setFilterRole(e.target.value);
@@ -415,18 +341,6 @@ export default function UserManagement() {
                                 <RefreshCw className="w-4 h-4" />
                             </button>
 
-                            <button
-                                onClick={() => {
-                                    setModalMode('add');
-                                    resetFormData();
-                                    setShowModal(true);
-                                }}
-                                className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2"
-                            >
-                                <UserPlus className="w-4 h-4" />
-                                Add New User
-                            </button>
-
                             {/* Search */}
                             <div className="relative">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -465,7 +379,7 @@ export default function UserManagement() {
                                                 Department
                                             </th>
                                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Roles
+                                                Role
                                             </th>
                                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                 Groupings
@@ -549,20 +463,6 @@ export default function UserManagement() {
                                                         >
                                                             <Edit className="w-4 h-4" />
                                                         </button>
-                                                        <button
-                                                            onClick={() => handleResetPassword(user)}
-                                                            className="p-1.5 text-gray-600 hover:text-orange-600 transition-colors"
-                                                            title="Reset Password"
-                                                        >
-                                                            <Lock className="w-4 h-4" />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleDelete(user)}
-                                                            className="p-1.5 text-gray-600 hover:text-red-600 transition-colors"
-                                                            title="Delete"
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </button>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -634,49 +534,19 @@ export default function UserManagement() {
                 </div>
             </div>
 
-            {/* Modal */}
+            {/* Modal - View & Edit Only */}
             {showModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
                     <div className={`bg-white rounded-lg shadow-xl w-full ${modalMode === 'view' ? 'max-w-3xl' : 'max-w-lg'}`}>
                         <div className="px-6 py-4 border-b border-gray-200">
                             <h3 className="text-lg font-semibold text-gray-900">
-                                {modalMode === 'add' && 'Add New User'}
-                                {modalMode === 'edit' && 'Edit User'}
-                                {modalMode === 'delete' && 'Delete User'}
-                                {modalMode === 'view' && 'User Details'}
-                                {modalMode === 'reset-password' && 'Reset Password'}
+                                {modalMode === 'edit' ? 'Edit User' : 'User Details'}
                             </h3>
                         </div>
                         
                         <form onSubmit={handleSubmit}>
                             <div className="p-6 max-h-[60vh] overflow-y-auto">
-                                {modalMode === 'delete' ? (
-                                    <div>
-                                        <p className="text-gray-600">
-                                            Are you sure you want to delete this user?
-                                        </p>
-                                        <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                                                    <span className="text-sm font-medium text-white">
-                                                        {getInitials(selectedUser?.nama)}
-                                                    </span>
-                                                </div>
-                                                <div>
-                                                    <p className="font-semibold text-gray-900">
-                                                        {selectedUser?.nama}
-                                                    </p>
-                                                    <p className="text-sm text-gray-600">
-                                                        ID: {selectedUser?.employee_id}
-                                                    </p>
-                                                    <p className="text-sm text-gray-600">
-                                                        {selectedUser?.company_name}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ) : modalMode === 'view' ? (
+                                {modalMode === 'view' ? (
                                     <div className="space-y-6">
                                         {/* User Header */}
                                         <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
@@ -687,7 +557,7 @@ export default function UserManagement() {
                                             </div>
                                             <div>
                                                 <h4 className="text-xl font-semibold text-gray-900">{selectedUser?.nama}</h4>
-                                                <p className="text-sm text-gray-600">ID Karyawan: {selectedUser?.employee_id}</p>
+                                                <p className="text-sm text-gray-600">ID: {selectedUser?.employee_id}</p>
                                                 <p className="text-sm text-gray-600">KTP: {selectedUser?.no_ktp}</p>
                                             </div>
                                         </div>
@@ -733,28 +603,13 @@ export default function UserManagement() {
                                             </div>
                                         </div>
 
-                                        {/* Roles */}
+                                        {/* Role */}
                                         <div className="p-3 bg-gray-50 rounded-lg">
                                             <label className="block text-xs font-medium text-gray-500 mb-2">
                                                 <Users className="w-3 h-3 inline mr-1" />
-                                                Roles
+                                                Role
                                             </label>
-                                            <div className="flex flex-wrap gap-2">
-                                                {selectedUser?.roles?.map(role => (
-                                                    <span 
-                                                        key={role.id_role}
-                                                        className={`inline-flex px-2 py-1 text-xs rounded-full ${
-                                                            role.role_name === 'Administrator' 
-                                                                ? 'bg-red-100 text-red-800'
-                                                                : role.role_name === 'Trainer'
-                                                                ? 'bg-purple-100 text-purple-800'
-                                                                : 'bg-blue-100 text-blue-800'
-                                                        }`}
-                                                    >
-                                                        {role.role_name}
-                                                    </span>
-                                                )) || <span className="text-gray-400">-</span>}
-                                            </div>
+                                            {renderRoles(selectedUser?.roles)}
                                         </div>
 
                                         {/* Groupings */}
@@ -774,85 +629,18 @@ export default function UserManagement() {
                                             </div>
                                         </div>
                                     </div>
-                                ) : modalMode === 'reset-password' ? (
-                                    <div>
-                                        <p className="text-gray-600 mb-4">
-                                            Reset password for user:
-                                        </p>
-                                        <div className="p-4 bg-gray-50 rounded-lg mb-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                                                    <span className="text-xs font-medium text-white">
-                                                        {getInitials(selectedUser?.nama)}
-                                                    </span>
-                                                </div>
-                                                <div>
-                                                    <p className="font-semibold text-gray-900">
-                                                        {selectedUser?.nama}
-                                                    </p>
-                                                    <p className="text-sm text-gray-600">
-                                                        ID: {selectedUser?.employee_id}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="space-y-4">
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                    New Password
-                                                </label>
-                                                <div className="relative">
-                                                    <input
-                                                        type={showPassword ? "text" : "password"}
-                                                        required
-                                                        className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                        placeholder="Enter new password"
-                                                        value={formData.password}
-                                                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                                    />
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setShowPassword(!showPassword)}
-                                                        className="absolute right-2 top-2.5"
-                                                    >
-                                                        {showPassword ? (
-                                                            <EyeOff className="w-4 h-4 text-gray-400" />
-                                                        ) : (
-                                                            <Eye className="w-4 h-4 text-gray-400" />
-                                                        )}
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                    Confirm Password
-                                                </label>
-                                                <input
-                                                    type={showPassword ? "text" : "password"}
-                                                    required
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                    placeholder="Confirm new password"
-                                                    value={formData.confirm_password}
-                                                    onChange={(e) => setFormData({ ...formData, confirm_password: e.target.value })}
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
                                 ) : (
                                     <div className="space-y-4">
-                                        {/* Add/Edit form fields */}
+                                        {/* Edit form */}
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                                 ID Karyawan
                                             </label>
                                             <input
                                                 type="text"
-                                                required
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                disabled
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100"
                                                 value={formData.employee_id}
-                                                onChange={(e) => setFormData({ ...formData, employee_id: e.target.value })}
-                                                placeholder="Enter employee ID"
-                                                disabled={modalMode === 'edit'}
                                             />
                                         </div>
 
@@ -862,17 +650,15 @@ export default function UserManagement() {
                                             </label>
                                             <input
                                                 type="text"
-                                                required
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                disabled
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100"
                                                 value={formData.nama}
-                                                onChange={(e) => setFormData({ ...formData, nama: e.target.value })}
-                                                placeholder="Enter full name"
                                             />
                                         </div>
 
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                No KTP
+                                                No KTP <span className="text-red-500">*</span>
                                             </label>
                                             <input
                                                 type="text"
@@ -880,8 +666,49 @@ export default function UserManagement() {
                                                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                                                 value={formData.no_ktp}
                                                 onChange={(e) => setFormData({ ...formData, no_ktp: e.target.value })}
-                                                placeholder="Enter KTP number"
                                             />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                <Users className="w-4 h-4 inline mr-1" />
+                                                Role <span className="text-red-500">*</span>
+                                            </label>
+                                            <div className="border border-gray-200 rounded-md p-3 max-h-48 overflow-y-auto space-y-2">
+                                                {availableRoles.length === 0 ? (
+                                                    <p className="text-sm text-gray-500">Loading roles...</p>
+                                                ) : (
+                                                    availableRoles.filter(role => role.is_active).map(role => (
+                                                        <label 
+                                                            key={role.id_role} 
+                                                            className={`flex items-center p-2 rounded-lg cursor-pointer transition-colors ${
+                                                                formData.id_role === role.id_role
+                                                                    ? 'bg-blue-50 border border-blue-200'
+                                                                    : 'hover:bg-gray-50 border border-transparent'
+                                                            }`}
+                                                        >
+                                                            <input
+                                                                type="radio"
+                                                                name="role"
+                                                                className="w-4 h-4 text-blue-600 mr-3"
+                                                                checked={formData.id_role === role.id_role}
+                                                                onChange={() => setFormData({ ...formData, id_role: role.id_role })}
+                                                            />
+                                                            <div className="flex-1">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className={`inline-flex px-2 py-0.5 text-xs rounded-full ${getRoleBadgeColor(role.role_name)}`}>
+                                                                        {role.role_name}
+                                                                    </span>
+                                                                    <span className="text-xs text-gray-500">({role.role_code})</span>
+                                                                </div>
+                                                                {role.role_description && (
+                                                                    <p className="text-xs text-gray-500 mt-1">{role.role_description}</p>
+                                                                )}
+                                                            </div>
+                                                        </label>
+                                                    ))
+                                                )}
+                                            </div>
                                         </div>
 
                                         <div>
@@ -897,37 +724,6 @@ export default function UserManagement() {
                                                 <option value="false">Inactive</option>
                                             </select>
                                         </div>
-
-                                        {modalMode === 'add' && (
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                        Password
-                                                    </label>
-                                                    <input
-                                                        type="password"
-                                                        required
-                                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                        value={formData.password}
-                                                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                                        placeholder="Enter password"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                        Confirm Password
-                                                    </label>
-                                                    <input
-                                                        type="password"
-                                                        required
-                                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                        value={formData.confirm_password}
-                                                        onChange={(e) => setFormData({ ...formData, confirm_password: e.target.value })}
-                                                        placeholder="Confirm password"
-                                                    />
-                                                </div>
-                                            </div>
-                                        )}
                                     </div>
                                 )}
                             </div>
@@ -940,21 +736,12 @@ export default function UserManagement() {
                                 >
                                     {modalMode === 'view' ? 'Close' : 'Cancel'}
                                 </button>
-                                {modalMode !== 'view' && (
+                                {modalMode === 'edit' && (
                                     <button
                                         type="submit"
-                                        className={`px-4 py-2 text-sm text-white rounded-md transition-colors ${
-                                            modalMode === 'delete'
-                                                ? 'bg-red-600 hover:bg-red-700'
-                                                : modalMode === 'reset-password'
-                                                ? 'bg-orange-600 hover:bg-orange-700'
-                                                : 'bg-blue-600 hover:bg-blue-700'
-                                        }`}
+                                        className="px-4 py-2 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
                                     >
-                                        {modalMode === 'add' && 'Add User'}
-                                        {modalMode === 'edit' && 'Save Changes'}
-                                        {modalMode === 'delete' && 'Delete'}
-                                        {modalMode === 'reset-password' && 'Reset Password'}
+                                        Save Changes
                                     </button>
                                 )}
                             </div>
