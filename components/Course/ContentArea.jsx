@@ -434,7 +434,7 @@ export default function ContentArea({ exitCourse }) {
         <div className={step.type === "video" ? "block" : "hidden"}>
           <div className="space-y-3 p-5">
             <h2 className="text-xl font-semibold text-gray-800">
-              {step.content_title} test
+              {step.content_title}
             </h2>
             <VideoPlayer
               url={`/api/video-proxy?url=${encodeURIComponent(
