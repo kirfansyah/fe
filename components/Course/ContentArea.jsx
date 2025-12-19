@@ -361,8 +361,6 @@ export default function ContentArea({ exitCourse }) {
         toast.warning("Error API Response: " + response.message);
       }
 
-      //   console.log("✅ Hasil submit quiz:", response);
-
       const totalPoints = payload.reduce(
         (acc, q) => acc + q.max_points_possible,
         0
@@ -426,27 +424,28 @@ export default function ContentArea({ exitCourse }) {
                 file={`/api/pdf-proxy?url=${encodeURIComponent(
                   step.content_url_full
                 )}`}
-                // file={`/uploads/pdf/test.pdf`}
                 onPageChange={(isLastPage) => setPdfFinished(isLastPage)}
-                // onError={() => setPdfFile(defaultPDF)}
+                contentId={step.id}
               />
             </div>
           </div>
         )}
-        {step.type === "video" && (
+
+        <div className={step.type === "video" ? "block" : "hidden"}>
           <div className="space-y-3 p-5">
             <h2 className="text-xl font-semibold text-gray-800">
-              {step.content_title}
+              {step.content_title} test
             </h2>
             <VideoPlayer
               url={`/api/video-proxy?url=${encodeURIComponent(
                 step.content_url_full
               )}`}
               videoId={`${step.id}`}
+              active={step.type === "video"}
               onVideoEnd={() => setVideoFinished(true)}
             />
           </div>
-        )}
+        </div>
 
         {step.type === "pptx" && (
           <div className="space-y-3 p-5">
@@ -454,13 +453,6 @@ export default function ContentArea({ exitCourse }) {
               {step.content_title}
             </h2>
             <div className="w-full flex justify-center">
-              {/* <PptViewer file={`/test.pptx`} /> */}
-              {/* <PdfViewer file={step.content_url.replace(".pptx", ".pdf")} /> */}
-              {/* <PdfViewer file={`/test.pptx`.replace(".pptx", ".pdf")} /> */}
-              {/* <PptViewer
-                fileUrl={`https://docs.google.com/presentation/d/1qar5wJ9SEmlBTl-TS3z2GwKldOb4Cjyz/edit?usp=sharing&ouid=107324705590480170219&rtpof=true&sd=true`}
-              /> */}
-              {/* <PptViewer fileUrl="https://docs.google.com/presentation/d/1jsjVVdCjlVd5uAM3e_nlyPVoNUKid07A/edit?usp=sharing" /> */}
               <PptViewer fileUrl={pptFile} />
             </div>
           </div>

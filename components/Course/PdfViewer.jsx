@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { pdfjs } from "react-pdf";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
@@ -16,10 +16,19 @@ const Page = dynamic(() => import("react-pdf").then((mod) => mod.Page), {
 
 // pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
-export default function PdfViewer({ file, onPageChange, onError = null }) {
+export default function PdfViewer({
+  file,
+  onPageChange,
+  onError = null,
+  contentId,
+}) {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [width, setWidth] = useState(600);
+  const containerRef = useRef(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showControls, setShowControls] = useState(true);
+  const hideTimeoutRef = useRef(null);
 
   useEffect(() => {
     console.log("📄 PDF FILE URL:", file);
@@ -59,25 +68,137 @@ export default function PdfViewer({ file, onPageChange, onError = null }) {
     }
   }, [page, totalPages]);
 
+  useEffect(() => {
+    const handleKey = (e) => {
+      if (e.key === "ArrowLeft" && page > 1) setPage((p) => p - 1);
+      if (e.key === "ArrowRight" && page < totalPages) setPage((p) => p + 1);
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [page, totalPages]);
+
+  useEffect(() => {
+    const resetTimer = () => {
+      setShowControls(true);
+      clearTimeout(hideTimeoutRef.current);
+
+      hideTimeoutRef.current = setTimeout(() => {
+        setShowControls(false);
+      }, 2500);
+    };
+
+    const el = containerRef.current;
+    if (!el) return;
+
+    el.addEventListener("mousemove", resetTimer);
+    el.addEventListener("touchstart", resetTimer);
+
+    resetTimer(); // initial
+
+    return () => {
+      el.removeEventListener("mousemove", resetTimer);
+      el.removeEventListener("touchstart", resetTimer);
+      clearTimeout(hideTimeoutRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!contentId) return;
+
+    const savedPage = localStorage.getItem(`pdf-progress-${contentId}`);
+
+    const parsedPage = parseInt(savedPage, 10);
+
+    if (parsedPage && !isNaN(parsedPage) && parsedPage > 0) {
+      setPage(parsedPage);
+    } else {
+      setPage(1); // reset jika NaN atau 0
+    }
+  }, [contentId]);
+
+  useEffect(() => {
+    if (!contentId) return;
+    if (!page || isNaN(page)) {
+      setPage(1);
+      return;
+    }
+
+    localStorage.setItem(`pdf-progress-${contentId}`, page.toString());
+  }, [page, contentId]);
+
+  useEffect(() => {
+    if (page === totalPages && totalPages > 0) {
+      localStorage.setItem(`pdf-progress-${contentId}`, "COMPLETED");
+    }
+  }, [page, totalPages, contentId]);
+
+  const toggleFullscreen = async () => {
+    if (!containerRef.current) return;
+
+    try {
+      if (!document.fullscreenElement) {
+        await containerRef.current.requestFullscreen();
+        setIsFullscreen(true);
+      } else {
+        await document.exitFullscreen();
+        setIsFullscreen(false);
+      }
+    } catch (err) {
+      console.warn("Fullscreen gagal:", err);
+    }
+  };
+
   return (
     <div className="flex flex-col items-center w-full py-4">
-      <div className="flex justify-center w-full">
+      {/* PDF CONTAINER */}
+      {/* <div className="relative w-full flex justify-center"> */}
+      <div
+        ref={containerRef}
+        className={`
+            relative flex justify-center items-center group
+            w-full
+            ${isFullscreen ? "h-screen bg-black" : ""}
+        `}
+      >
+        {/* ===== PREVIOUS BUTTON (LEFT) ===== */}
+        <button
+          disabled={page === 1}
+          onClick={() => setPage((p) => p - 1)}
+          className={`
+                absolute left-4 top-1/2 -translate-y-1/2 z-20
+                p-3 rounded-full transition-all
+                ${showControls ? "opacity-100" : "opacity-0"}
+                md:opacity-0 md:group-hover:opacity-100
+                ${
+                  page === 1
+                    ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                    : "bg-white shadow-lg hover:bg-gray-100 text-gray-700"
+                }
+            `}
+        >
+          <ChevronLeft size={22} />
+        </button>
+        {/* ===== FULLSCREEN BUTTON (TOP RIGHT) ===== */}
+        <button
+          onClick={toggleFullscreen}
+          className={`
+                absolute top-4 right-4 z-30
+                px-3 py-2 rounded-lg text-sm font-medium
+                bg-black/70 text-white hover:bg-black/90 transition
+                ${showControls ? "opacity-100" : "opacity-0"}
+                md:opacity-0 md:group-hover:opacity-100
+            `}
+        >
+          {isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+        </button>
+
+        {/* ===== PDF DOCUMENT ===== */}
         <Document
           file={file}
           onLoadSuccess={({ numPages }) => setTotalPages(numPages)}
           onLoadError={(err) => {
-            // console.group("📄 PDF LOAD ERROR");
-            // console.error("Raw error:", err);
-
-            // pdfjs kadang simpan detail di .cause
-            if (err?.cause) {
-              console.error("Cause:", err.cause);
-            }
-
-            // Beberapa error pdfjs ada di .details
-            if (err?.details) {
-              console.error("Details:", err.details);
-            }
+            if (err?.cause) console.error("Cause:", err.cause);
+            if (err?.details) console.error("Details:", err.details);
 
             toast.error(
               err?.message
@@ -96,53 +217,47 @@ export default function PdfViewer({ file, onPageChange, onError = null }) {
             </div>
           }
         >
-          <Page
-            pageNumber={page}
-            width={width}
-            renderTextLayer={false}
-            renderAnnotationLayer={false}
-            className="shadow-lg rounded-lg bg-white"
-          />
+          <div className="flex items-center justify-center h-full w-full">
+            <Page
+              // pageNumber={page}
+              // width={width}
+              // renderTextLayer={false}
+              // renderAnnotationLayer={false}
+              // className="shadow-lg rounded-lg bg-white"
+              pageNumber={page}
+              width={isFullscreen ? undefined : width}
+              height={isFullscreen ? window.innerHeight - 80 : undefined}
+              //   scale={scale}
+              renderTextLayer={false}
+              renderAnnotationLayer={false}
+              className="shadow-lg rounded-lg bg-white"
+            />
+          </div>
         </Document>
-      </div>
 
-      <div className="flex items-center gap-5 mt-6">
-        {/* === PREVIOUS BUTTON === */}
-        <button
-          disabled={page === 1}
-          onClick={() => setPage((p) => p - 1)}
-          className={`
-      flex items-center gap-2 px-4 py-2 rounded-xl transition-all
-      ${
-        page === 1
-          ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-          : "bg-white shadow-md hover:bg-gray-100 text-gray-700"
-      }
-    `}
-        >
-          <ChevronLeft size={18} />
-        </button>
-
-        {/* PAGE INDICATOR */}
-        <span className="text-lg font-semibold text-gray-700">
-          {page} / {totalPages || "?"}
-        </span>
-
-        {/* === NEXT BUTTON === */}
+        {/* ===== NEXT BUTTON (RIGHT) ===== */}
         <button
           disabled={page === totalPages}
           onClick={() => setPage((p) => p + 1)}
           className={`
-      flex items-center gap-2 px-4 py-2 rounded-xl transition-all
-      ${
-        page === totalPages
-          ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-          : "bg-white shadow-md hover:bg-gray-100 text-gray-700"
-      }
-    `}
+                absolute right-4 top-1/2 -translate-y-1/2 z-20
+                p-3 rounded-full transition-all
+                ${showControls ? "opacity-100" : "opacity-0"}
+                md:opacity-0 md:group-hover:opacity-100
+                ${
+                  page === totalPages
+                    ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                    : "bg-white shadow-lg hover:bg-gray-100 text-gray-700"
+                }
+            `}
         >
-          <ChevronRight size={18} />
+          <ChevronRight size={22} />
         </button>
+      </div>
+
+      {/* ===== PAGE INDICATOR ===== */}
+      <div className="mt-4 text-lg font-semibold text-gray-700">
+        {page} / {totalPages || "?"}
       </div>
     </div>
   );
