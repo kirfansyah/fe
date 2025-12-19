@@ -2,19 +2,30 @@
 
 import { useRef, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
+import {
+  Maximize,
+  Minimize,
+  Volume2,
+  VolumeX,
+  Play,
+  Pause,
+} from "lucide-react";
 
 const ReactPlayer = dynamic(() => import("react-player"), { ssr: false });
 
-export default function VideoPlayer({ url, videoId, onVideoEnd }) {
+export default function VideoPlayer({ url, videoId, onVideoEnd, active }) {
   const isLocal = typeof url === "string" && url.endsWith(".mp4");
   const videoRef = useRef(null);
+  const containerRef = useRef(null);
 
   const [lastTime, setLastTime] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [volume, setVolume] = useState(1);
+  const [muted, setMuted] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
 
-  /* ================================
-   LOAD SAVED PROGRESS
-  ================================= */
+  /* ================================ LOAD SAVED PROGRESS ================================ */
   useEffect(() => {
     const saved = localStorage.getItem(`video-progress-${videoId}`);
     if (saved && saved !== "COMPLETED") {
@@ -22,9 +33,7 @@ export default function VideoPlayer({ url, videoId, onVideoEnd }) {
     }
   }, [videoId]);
 
-  /* ================================
-   LOCAL VIDEO – ANTI SKIP
-  ================================= */
+  /* ================================ LOCAL VIDEO – ANTI SKIP ================================ */
   useEffect(() => {
     if (!isLocal || !videoRef.current) return;
 
@@ -35,7 +44,10 @@ export default function VideoPlayer({ url, videoId, onVideoEnd }) {
       const finalTime = Math.min(safeTime, video.duration || 0);
       video.currentTime = finalTime;
       video.playbackRate = 1;
+      video.volume = volume;
+      video.muted = muted;
       setLoading(false);
+      setIsPlaying(!video.paused);
     };
 
     const preventSeek = () => {
@@ -51,29 +63,67 @@ export default function VideoPlayer({ url, videoId, onVideoEnd }) {
       }
 
       video.playbackRate = 1;
+      video.volume = volume;
+      video.muted = muted;
+      setIsPlaying(!video.paused);
     };
 
     video.addEventListener("timeupdate", preventSeek);
-
     return () => video.removeEventListener("timeupdate", preventSeek);
-  }, [isLocal, lastTime, videoId]);
+  }, [isLocal, lastTime, videoId, volume, muted]);
 
-  /* ================================
-   PLAY / PAUSE
-  ================================= */
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.code === "Space") {
+        e.preventDefault(); // cegah scroll halaman
+        togglePlayPause();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isPlaying, volume, muted]);
+
+  /* ================================ PLAY / PAUSE ================================ */
   const togglePlayPause = () => {
-    if (isLocal) {
-      const video = videoRef.current;
-      if (!video) return;
-      video.paused ? video.play() : video.pause();
+    if (!videoRef.current) return;
+    if (videoRef.current.paused) {
+      videoRef.current.play();
+      setIsPlaying(true);
+    } else {
+      videoRef.current.pause();
+      setIsPlaying(false);
     }
   };
 
-  /* ================================
-   UI
-  ================================= */
+  /* ================================ FULLSCREEN ================================ */
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      containerRef.current.requestFullscreen?.();
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen?.();
+      setIsFullscreen(false);
+    }
+  };
+
+  /* ================================ MUTE & VOLUME ================================ */
+  const toggleMute = () => {
+    setMuted(!muted);
+    if (isLocal && videoRef.current) videoRef.current.muted = !muted;
+  };
+
+  const handleVolumeChange = (e) => {
+    const vol = parseFloat(e.target.value);
+    setVolume(vol);
+    if (isLocal && videoRef.current) videoRef.current.volume = vol;
+  };
+
   return (
-    <div className="relative w-full aspect-video rounded-xl bg-black overflow-hidden">
+    <div
+      ref={containerRef}
+      className="relative w-full aspect-video rounded-xl bg-black overflow-hidden group"
+    >
       {/* ================= LOCAL VIDEO ================= */}
       {isLocal && (
         <video
@@ -88,6 +138,7 @@ export default function VideoPlayer({ url, videoId, onVideoEnd }) {
           onEnded={() => {
             localStorage.setItem(`video-progress-${videoId}`, "COMPLETED");
             if (onVideoEnd) onVideoEnd();
+            setIsPlaying(false);
           }}
         />
       )}
@@ -98,13 +149,17 @@ export default function VideoPlayer({ url, videoId, onVideoEnd }) {
           url={url}
           width="100%"
           height="100%"
-          playing
+          playing={active}
           controls={false}
+          stopOnUnmount={false}
+          volume={volume}
+          muted={muted}
           onReady={() => setLoading(false)}
           onStart={() => setLoading(false)}
           onBuffer={() => setLoading(true)}
           onBufferEnd={() => setLoading(false)}
-          onPlay={() => setLoading(false)}
+          onPlay={() => setIsPlaying(true)}
+          onPause={() => setIsPlaying(false)}
         />
       )}
 
@@ -116,15 +171,49 @@ export default function VideoPlayer({ url, videoId, onVideoEnd }) {
         </div>
       )}
 
-      {/* ================= CONTROL ================= */}
-      {isLocal && !loading && (
-        <div className="absolute bottom-3 left-0 right-0 flex justify-center z-30">
+      {/* ================= FULLSCREEN BUTTON ================= */}
+      <button
+        onClick={toggleFullscreen}
+        className="absolute top-3 right-3 z-30 bg-black/50 p-2 rounded-full hover:bg-black/70 transition"
+      >
+        {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
+      </button>
+
+      {/* ================= YOUTUBE-STYLE CONTROLS ================= */}
+      {!loading && (
+        <div
+          className="absolute bottom-0 left-0 right-0 z-30 flex justify-center gap-2 
+                     bg-black/50 p-3 rounded-t-lg opacity-0 translate-y-4
+                     transition-all duration-300
+                     group-hover:opacity-100 group-hover:translate-y-0"
+        >
+          {/* Play / Pause */}
           <button
             onClick={togglePlayPause}
-            className="bg-black/70 text-white px-4 py-2 rounded-lg hover:bg-black/90 transition"
+            className="p-2 rounded-full bg-black/70 hover:bg-black/90 text-white"
           >
-            Play / Pause
+            {isPlaying ? <Pause size={20} /> : <Play size={20} />}
           </button>
+
+          {/* Volume */}
+          <div className="flex items-center gap-2 bg-black/70 px-2 py-1 rounded-lg">
+            <button onClick={toggleMute} className="text-white">
+              {muted || volume === 0 ? (
+                <VolumeX size={20} />
+              ) : (
+                <Volume2 size={20} />
+              )}
+            </button>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value={volume}
+              onChange={handleVolumeChange}
+              className="w-24"
+            />
+          </div>
         </div>
       )}
     </div>
