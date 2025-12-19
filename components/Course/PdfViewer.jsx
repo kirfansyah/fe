@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { useState, useEffect, useRef } from "react";
 import { pdfjs } from "react-pdf";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Minimize, Maximize } from "lucide-react";
 import { toast } from "sonner";
 
 const Document = dynamic(
@@ -169,6 +169,7 @@ export default function PdfViewer({
                 p-3 rounded-full transition-all
                 ${showControls ? "opacity-100" : "opacity-0"}
                 md:opacity-0 md:group-hover:opacity-100
+                focus:outline-none focus:ring-0 outline-none ring-0
                 ${
                   page === 1
                     ? "bg-gray-200 text-gray-400 cursor-not-allowed"
@@ -184,12 +185,15 @@ export default function PdfViewer({
           className={`
                 absolute top-4 right-4 z-30
                 px-3 py-2 rounded-lg text-sm font-medium
-                bg-black/70 text-white hover:bg-black/90 transition
+                bg-transparent border-outline-none  transition
                 ${showControls ? "opacity-100" : "opacity-0"}
+                ${isFullscreen ? "text-white" : "text-black"}
                 md:opacity-0 md:group-hover:opacity-100
+                focus:outline-none focus:ring-0 outline-none ring-0
+
             `}
         >
-          {isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+          {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
         </button>
 
         {/* ===== PDF DOCUMENT ===== */}
@@ -244,6 +248,7 @@ export default function PdfViewer({
                 p-3 rounded-full transition-all
                 ${showControls ? "opacity-100" : "opacity-0"}
                 md:opacity-0 md:group-hover:opacity-100
+                focus:outline-none focus:ring-0 outline-none ring-0
                 ${
                   page === totalPages
                     ? "bg-gray-200 text-gray-400 cursor-not-allowed"
