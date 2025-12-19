@@ -168,6 +168,22 @@ export function useRoles() {
         return result;
     }, []);
 
+    // ✅ Update user permissions
+    const handleUpdateUser = useCallback(async (userData) => {
+        setLoading(true);
+        setError(null);
+
+        const result = await RoleService.updateUsers(userData);
+        if (result.success) {
+            await fetchRoles(); // Refresh list
+        } else {
+            setError(result.message);
+        }
+
+        setLoading(false);
+        return result;
+    }, [fetchRoles]);
+
     // ✅ Initial load
     useEffect(() => {
         Promise.all([fetchRoles(), fetchMenus()]);
@@ -187,5 +203,6 @@ export function useRoles() {
         fetchAnalytics,
         handleCreateCategory,
         handleCreateSubCategory,
+        handleUpdateUser
     };
 }

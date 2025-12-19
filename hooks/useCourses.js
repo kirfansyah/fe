@@ -131,6 +131,25 @@ export function useCourses(contentId = null) {
         return result;
     }, [dataKaryawans]);
 
+    // ✅ DELETE content
+    const deleteContent= useCallback(async (courseId) => {
+        setIsDeleting(courseId);
+        setError(null);
+        
+        const deletedBy = dataKaryawans?.nama || "System";
+        const result = await ManagementService.deleteContent(courseId, deletedBy);
+        
+        if (result.success) {
+            setCourses((prev) => prev.filter((c) => c.id_course !== courseId));
+        } else {
+            setError(result.message);
+        }
+        
+        setIsDeleting(null);
+        return result;
+    }, [dataKaryawans]);
+
+
     // ✅ SAVE/UPDATE pre-test
     const handleSavePreTest = useCallback(async (pretestData) => {
         setIsSaving(true);
@@ -313,6 +332,7 @@ export function useCourses(contentId = null) {
         fetchProfileInfo,
         fetchCompanyUnits,
         fetchEnrollData,
-        addGroupEnroll
+        addGroupEnroll,
+        deleteContent
     };
 }

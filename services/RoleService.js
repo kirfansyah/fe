@@ -268,6 +268,29 @@ class RoleService {
             };
         }
     }
+
+    /**
+     * Update existing role
+     * @param {Object} userData - User data
+     * @returns {Promise} API response
+     */
+    static async updateUsers(userData) {
+        try {
+            const response = await API.put("/user/roles/update", userData);
+            return {
+                success: true,
+                data: response.data.data,
+                message: response.data.message || 'Role User updated successfully'
+            };
+        } catch (error) {
+            console.error('RoleService.updateUsers Error:', error);
+            return {
+                success: false,
+                data: null,
+                message: error.response?.data?.message || 'Failed to update role user'
+            };
+        }
+    }
 }
 
 export default RoleService;
