@@ -66,13 +66,8 @@ export default function PdfViewer({ file, onPageChange, onError = null }) {
           file={file}
           onLoadSuccess={({ numPages }) => setTotalPages(numPages)}
           onLoadError={(err) => {
-            // console.error("PDF failed:", err);
-            // toast.error("Gagal memuat PDF: " + err);
-            console.group("📄 PDF LOAD ERROR");
-            console.error("Raw error:", err);
-            // console.error("Name:", err?.name);
-            // console.error("Message:", err?.message);
-            // console.error("Stack:", err?.stack);
+            // console.group("📄 PDF LOAD ERROR");
+            // console.error("Raw error:", err);
 
             // pdfjs kadang simpan detail di .cause
             if (err?.cause) {
@@ -84,23 +79,15 @@ export default function PdfViewer({ file, onPageChange, onError = null }) {
               console.error("Details:", err.details);
             }
 
-            console.groupEnd();
-
-            // toast.error(
-            //   err?.message
-            //     ? `PDF Error: ${err.message}`
-            //     : "PDF gagal dimuat (unknown error)"
-            // );
+            toast.error(
+              err?.message
+                ? `PDF Error: ${err.message}`
+                : "PDF gagal dimuat (unknown error)"
+            );
 
             if (onError) {
               onError(err?.message || "PDF gagal dimuat");
             }
-
-            // if (onError) onError();
-
-            // if (onError) {
-            //   onError("Path File tidak ditemukan");
-            // }
           }}
           loading={<div className="text-center p-4">Loading PDF...</div>}
           error={

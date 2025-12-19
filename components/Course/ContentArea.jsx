@@ -655,10 +655,10 @@ export default function ContentArea({ exitCourse }) {
           <Button
             onClick={handleNext}
             className="bg-blue-900 text-white"
-            // disabled={
-            //   (step.type === "pdf" && !pdfFinished) ||
-            //   (step.type === "video" && !videoFinished)
-            // }
+            disabled={
+              (step.type === "pdf" && !pdfFinished) ||
+              (step.type === "video" && !videoFinished)
+            }
           >
             Next: {nextStep.content_title}
           </Button>
