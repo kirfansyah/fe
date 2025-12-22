@@ -5990,3 +5990,9 @@ select {
   background-color: #941d05 !important;
   box-shadow: none !important;
 }
+
+@media (max-width: 639px) {
+  .mobile-full {
+    width: 100%;
+  }
+}

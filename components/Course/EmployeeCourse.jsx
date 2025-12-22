@@ -47,7 +47,6 @@ export default function CoursePage({ link }) {
     // clear timeout kalau component unmount
     return () => clearTimeout(timer);
   }, []);
-  //   console.log("fetchEmployees:", fetchEmployees);
 
   // tampilkan 2 item per halaman di UI
   const itemsPerPage = 8;
@@ -84,23 +83,6 @@ export default function CoursePage({ link }) {
     filterCategory,
   ]);
 
-  //   const filteredCourses = courses.filter((course) => {
-  //     const matchSearch = course.course_title
-  //       ?.toLowerCase()
-  //       .includes(searchQuery.toLowerCase());
-
-  //     const matchFilter =
-  //       filterCategory === "All" ||
-  //       (course.enrollment_categories || [])
-  //         .filter(Boolean) // buang null, undefined, ""
-  //         .some(
-  //           (cat) => (cat ?? "").toLowerCase() === filterCategory.toLowerCase()
-  //         );
-
-  //     return matchSearch && matchFilter;
-  //   });
-  //   console.log("courses : ", courses);
-
   const filteredCourses = [...courses];
 
   const handleSearch = (e) => {
@@ -132,7 +114,9 @@ export default function CoursePage({ link }) {
       {/* Search + Toolbar */}
       <div className="w-full mt-5">
         <div className="flex flex-row items-center justify-between gap-4 flex-wrap">
-          <div className="relative flex-shrink-0 w-72">
+          {/* <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"> */}
+          {/* <div className="relative flex-shrink-0 w-72"> */}
+          <div className="relative w-96 mobile-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
             <Input
               type="text"
@@ -143,7 +127,8 @@ export default function CoursePage({ link }) {
             />
           </div>
 
-          <div className="flex items-center gap-3 flex-wrap justify-end">
+          {/* <div className="flex items-center gap-3 flex-wrap justify-end"> */}
+          <div className="flex flex-wrap sm:flex-nowrap gap-2 sm:gap-3 sm:justify-end">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="flex items-center gap-2">
@@ -198,7 +183,7 @@ export default function CoursePage({ link }) {
               >
                 ‹
               </Button>
-              <span className="px-4 text-sm font-medium">
+              <span className="px-1 text-sm font-medium">
                 {currentPage} / {totalPages}
               </span>
               <Button
@@ -235,14 +220,6 @@ export default function CoursePage({ link }) {
 
       {filteredCourses.length > 0 ? (
         <>
-          {/* <div
-            className={
-              viewMode === "tiles"
-                ? "flex flex-wrap gap-5 mt-5 justify-start"
-                : "flex flex-col gap-3 mt-5"
-            }
-          > */}
-
           <AnimatePresence mode="wait">
             <motion.div
               key={viewMode}
@@ -251,8 +228,11 @@ export default function CoursePage({ link }) {
               exit={{ opacity: 0, scale: 0.95, y: -10 }}
               transition={{ duration: 0.25 }}
               className={
+                // viewMode === "tiles"
+                //   ? "flex flex-wrap gap-5 mt-5 justify-start"
+                //   : "flex flex-col gap-3 mt-5"
                 viewMode === "tiles"
-                  ? "flex flex-wrap gap-5 mt-5 justify-start"
+                  ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-5"
                   : "flex flex-col gap-3 mt-5"
               }
             >
@@ -360,7 +340,8 @@ export default function CoursePage({ link }) {
                     </Card>
                   ) : (
                     /* ================= TILES MODE (ORIGINAL CARD) ================= */
-                    <Card className="w-96 relative">
+                    // <Card className="w-96 relative">
+                    <Card className="md:w-96 sm:w-full xs:w-full relative">
                       {/* <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
