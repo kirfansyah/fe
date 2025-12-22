@@ -83,6 +83,29 @@ export default function CoursePage({ link }) {
     filterCategory,
   ]);
 
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 639px)");
+
+    const handleChange = (e) => {
+      if (e.matches) {
+        setViewMode("list");
+      } else {
+        setViewMode("tiles");
+      }
+    };
+
+    // cek pertama kali
+    if (mediaQuery.matches) {
+      setViewMode("list");
+    }
+
+    mediaQuery.addEventListener("change", handleChange);
+
+    return () => {
+      mediaQuery.removeEventListener("change", handleChange);
+    };
+  }, []);
+
   const filteredCourses = [...courses];
 
   const handleSearch = (e) => {
@@ -183,7 +206,7 @@ export default function CoursePage({ link }) {
               >
                 ‹
               </Button>
-              <span className="px-1 text-sm font-medium">
+              <span className="px-3 text-sm font-medium">
                 {currentPage} / {totalPages}
               </span>
               <Button
@@ -251,7 +274,7 @@ export default function CoursePage({ link }) {
                         <div className="w-32 flex-shrink-0">
                           <img
                             src={
-                              course?.thumbnail ||
+                              course?.thumbnail_url ||
                               "/img/course/Course app-bro.png"
                             }
                             onError={(e) =>
