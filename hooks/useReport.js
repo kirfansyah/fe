@@ -14,6 +14,7 @@ export function useReport() {
   const [position, setPosition] = useState([]);
   const [dept, setDept] = useState([]);
   const [company, setCompany] = useState([]);
+  const [employee, setEmployee] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -63,7 +64,7 @@ export function useReport() {
     }
   }, []);
 
-  // save data ebook
+  // save data certificate
   const addOfflineLearning = useCallback(
     async (offlineLearningData) => {
       setLoadingOffline(true);
@@ -88,6 +89,36 @@ export function useReport() {
         throw err;
       } finally {
         setLoadingOffline(false);
+      }
+    },
+    [fetchOfflineLearning]
+  );
+
+  // Update certificate
+  const updateOfflineLearning = useCallback(
+    async (id, offlineLearningData) => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const updateOfflineLearning = await API.updateOfflineLearning(
+          id,
+          offlineLearningData
+        );
+
+        await fetchOfflineLearning();
+
+        return updateOfflineLearning.data;
+      } catch (err) {
+        const errorMessage = err.message || "Failed to update certificate";
+        setError(errorMessage);
+        console.error("Error updating certificate:", err);
+
+        alert(`Failed to update certificate: ${errorMessage}`);
+
+        throw err;
+      } finally {
+        setLoading(false);
       }
     },
     [fetchOfflineLearning]
@@ -140,11 +171,36 @@ export function useReport() {
     }
   }, []);
 
+  const fetchEmployee = useCallback(async (companyId, employeeId) => {
+    if (!companyId || !employeeId) return null;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const res = await API.getEmployee(companyId, employeeId);
+      return res;
+    } catch (err) {
+      setError(err.message || "Employee not found");
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchOnlineLearning();
     fetchOfflineLearning();
-    fetchPosition(), fetchDept(), fetchCompany();
-  }, [fetchOnlineLearning, fetchOfflineLearning, fetchDept]);
+    fetchPosition();
+    fetchDept();
+    fetchCompany();
+  }, [
+    fetchOnlineLearning,
+    fetchOfflineLearning,
+    fetchPosition,
+    fetchDept,
+    fetchCompany,
+  ]);
 
   return {
     onlineLearning,
@@ -159,11 +215,14 @@ export function useReport() {
     position,
     dept,
     company,
+    employee,
     loading,
     error,
 
+    fetchEmployee,
     fetchOnlineLearning,
     fetchOfflineLearning,
     addOfflineLearning,
+    updateOfflineLearning,
   };
 }

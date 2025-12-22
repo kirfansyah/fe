@@ -1,13 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Search, ChevronLeft, ChevronRight } from "lucide-react";
-import { CirclePlus, AlertCircle, CheckCircle } from "lucide-react";
+import { CirclePlus, AlertCircle, CheckCircle, Edit } from "lucide-react";
+import { useReport } from "../../hooks/useReport";
 
 export default function OfflineLearningView({
   offlineLearning,
   onSave,
+  onUpdate,
   position,
   dept,
   company,
+  employee,
 }) {
   const [selectedOfflineLearning, setSelectedOfflineLearning] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -84,7 +87,9 @@ export default function OfflineLearningView({
 
   const handleSelectAll = (checked) => {
     if (checked) {
-      setSelectedOfflineLearning(paginatedOfflineLearning.map((emp) => emp.id));
+      setSelectedOfflineLearning(
+        paginatedOfflineLearning.map((emp) => emp.id_training_certificate)
+      );
     } else {
       setSelectedOfflineLearning([]);
     }
@@ -111,7 +116,11 @@ export default function OfflineLearningView({
     setCurrentPage(1); // Reset to first page
   };
 
+  const { fetchEmployee } = useReport();
+
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [currentCertificateId, setCurrentCertificateId] = useState(null);
   const [employeeId, setemployeeId] = useState("");
   const [employeeName, setemployeeName] = useState("");
   const [employeePosition, setemployeePosition] = useState("");
@@ -120,9 +129,11 @@ export default function OfflineLearningView({
   const [trainingTitle, settrainingTitle] = useState("");
   const [provider, setprovider] = useState("");
   const [certificateId, setcertificateId] = useState("");
+  const [certificateUrl, setcertificateUrl] = useState("");
   const [issueDate, setissueDate] = useState("");
   const [expiredDate, setexpiredDate] = useState("");
   const [uploadCertificate, setuploadCertificate] = useState(null);
+  const [existingCertificate, setExistingCertificate] = useState("");
 
   const [errors, setErrors] = useState({
     employeeId: "",
@@ -133,6 +144,7 @@ export default function OfflineLearningView({
     trainingTitle: "",
     provider: "",
     certificateId: "",
+    certificateUrl: "",
     issueDate: "",
     expiredDate: "",
     uploadCertificate: "",
@@ -147,12 +159,37 @@ export default function OfflineLearningView({
     trainingTitle: false,
     provider: false,
     certificateId: false,
+    certificateUrl: false,
     issueDate: false,
     expiredDate: false,
     uploadCertificate: false,
   });
 
   const handleOpenAddModal = () => {
+    setIsEditMode(false);
+    setCurrentCertificateId(null);
+    resetForm();
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEditModal = (offlineLearning) => {
+    setIsEditMode(true);
+    setCurrentCertificateId(offlineLearning.id_training_certificate);
+
+    // Populate form with existing data
+    setemployeeId(offlineLearning.employee_id || "");
+    setemployeeName(offlineLearning.full_name || "");
+    setemployeePosition(offlineLearning.position_id?.toString() || "");
+    setemployeeDept(offlineLearning.department_id?.toString() || "");
+    setemployeeComp(offlineLearning.company_id?.toString() || "");
+    settrainingTitle(offlineLearning.training_title || "");
+    setprovider(offlineLearning.issuing_organization || "");
+    setcertificateId(offlineLearning.credential_id || "");
+    setcertificateUrl(offlineLearning.credential_url || "");
+    setissueDate(offlineLearning.issue_date || "");
+    setexpiredDate(offlineLearning.expiration_date || "");
+    setExistingCertificate(offlineLearning.certificate_url || "");
+    setuploadCertificate(null);
     setIsModalOpen(true);
   };
 
@@ -173,19 +210,19 @@ export default function OfflineLearningView({
         break;
 
       case "employeePosition":
-        if (!value || value.trim() === "") {
+        if (!value) {
           error = "Employee position is required";
         }
         break;
 
       case "employeeDept":
-        if (!value || value.trim() === "") {
+        if (!value) {
           error = "Employee department is required";
         }
         break;
 
       case "employeeComp":
-        if (!value || value.trim() === "") {
+        if (!value) {
           error = "Company is required";
         }
         break;
@@ -202,9 +239,15 @@ export default function OfflineLearningView({
         }
         break;
 
+      case "certificateUrl":
+        if (!value || value.trim() === "") {
+          error = "Credential URL is required";
+        }
+        break;
+
       case "certificateId":
         if (!value || value.trim() === "") {
-          error = "Certificate ID is required";
+          error = "Credential ID is required";
         }
         break;
 
@@ -221,7 +264,7 @@ export default function OfflineLearningView({
         break;
 
       case "uploadCertificate":
-        if (!value) {
+        if (!isEditMode && !value) {
           error = "Certificate file is required";
         }
         break;
@@ -262,6 +305,9 @@ export default function OfflineLearningView({
         break;
       case "certificateId":
         value = certificateId;
+        break;
+      case "certificateUrl":
+        value = certificateUrl;
         break;
       case "issueDate":
         value = issueDate;
@@ -360,6 +406,16 @@ export default function OfflineLearningView({
     }
   };
 
+  const handleCertificateUrlChange = (e) => {
+    const value = e.target.value;
+    setcertificateUrl(value);
+
+    if (touched.certificateUrl) {
+      const error = validateField("certificateUrl", value);
+      setErrors((prev) => ({ ...prev, certificateUrl: error }));
+    }
+  };
+
   const handleIssueDateChange = (e) => {
     const value = e.target.value;
     setissueDate(value);
@@ -383,6 +439,7 @@ export default function OfflineLearningView({
   const handleUploadCertificateChange = (e) => {
     const file = e.target.files[0];
     setuploadCertificate(file);
+    console.log(file);
 
     if (touched.uploadCertificate) {
       const error = validateField("uploadCertificate", file);
@@ -402,6 +459,7 @@ export default function OfflineLearningView({
     const trainingTitleError = validateField("trainingTitle", trainingTitle);
     const providerError = validateField("provider", provider);
     const certificateIdError = validateField("certificateId", certificateId);
+    const certificateUrlError = validateField("certificateUrl", certificateUrl);
     const issueDateError = validateField("issueDate", issueDate);
     const expiredDateError = validateField("expiredDate", expiredDate);
     const uploadCertificateError = validateField(
@@ -472,6 +530,7 @@ export default function OfflineLearningView({
     }
 
     const offlineLearningData = {
+      id_training_certificate: currentCertificateId,
       employee_id: employeeId,
       full_name: employeeName,
       position_id: employeePosition,
@@ -480,18 +539,23 @@ export default function OfflineLearningView({
       training_title: trainingTitle,
       issuing_organization: provider,
       credential_id: certificateId,
+      credential_url: certificateUrl,
       issue_date: issueDate,
       expiration_date: expiredDate,
-      certificate_file: uploadCertificate,
+      certificate: uploadCertificate,
       created_by: "Rahul",
       created_device: "PC Rahul",
     };
 
     try {
-      await onSave(offlineLearningData);
-      resetForm();
+      if (isEditMode) {
+        await onUpdate(currentCertificateId, offlineLearningData);
+      } else {
+        await onSave(offlineLearningData);
+      }
+      handleCancel();
     } catch (error) {
-      console.error("Error saving training:", error);
+      console.error("Error saving ebook:", error);
     }
   };
 
@@ -504,9 +568,11 @@ export default function OfflineLearningView({
     settrainingTitle("");
     setprovider("");
     setcertificateId("");
+    setcertificateUrl("");
     setissueDate("");
     setexpiredDate("");
     setuploadCertificate(null);
+    setExistingCertificate("");
 
     setErrors({
       employeeId: "",
@@ -517,6 +583,7 @@ export default function OfflineLearningView({
       trainingTitle: "",
       provider: "",
       certificateId: "",
+      certificateUrl: "",
       issueDate: "",
       expiredDate: "",
       uploadCertificate: "",
@@ -531,6 +598,7 @@ export default function OfflineLearningView({
       trainingTitle: false,
       provider: false,
       certificateId: false,
+      certificateUrl: false,
       issueDate: false,
       expiredDate: false,
       uploadCertificate: false,
@@ -540,7 +608,29 @@ export default function OfflineLearningView({
   const handleCancel = () => {
     resetForm();
     setIsModalOpen(false);
+    setIsEditMode(false);
+    setCurrentCertificateId(null);
   };
+
+  useEffect(() => {
+    if (!employeeComp || employeeId.length < 5) return;
+
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetchEmployee(employeeComp, employeeId);
+
+        if (res?.success && res.data) {
+          setemployeeName(res.data.nama || "");
+          setemployeePosition(res.data.position_id || "");
+          setemployeeDept(res.data.department_id || "");
+        }
+      } catch (err) {
+        console.warn("Employee not found");
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [employeeComp, employeeId, fetchEmployee]);
 
   return (
     <div className="w-full mx-auto p-6 bg-white">
@@ -732,17 +822,8 @@ export default function OfflineLearningView({
         <table className="w-full">
           <thead className="bg-gray-50">
             <tr>
-              <th className="w-12 px-4 py-3">
-                <input
-                  type="checkbox"
-                  checked={
-                    selectedOfflineLearning.length ===
-                      paginatedOfflineLearning.length &&
-                    paginatedOfflineLearning.length > 0
-                  }
-                  onChange={(e) => handleSelectAll(e.target.checked)}
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
+              <th className="text-left px-4 py-3 font-medium text-gray-700">
+                Action
               </th>
               <th className="text-left px-4 py-3 font-medium text-gray-700">
                 Name
@@ -769,10 +850,13 @@ export default function OfflineLearningView({
                 Certificate ID
               </th>
               <th className="text-left px-4 py-3 font-medium text-gray-700">
-                Date
+                Issued Date
               </th>
               <th className="text-left px-4 py-3 font-medium text-gray-700">
-                Expire
+                Refreshment Date
+              </th>
+              <th className="text-left px-4 py-3 font-medium text-gray-700">
+                *Download lampiran
               </th>
             </tr>
           </thead>
@@ -780,24 +864,21 @@ export default function OfflineLearningView({
             {paginatedOfflineLearning.length > 0 ? (
               paginatedOfflineLearning.map((offlineLearning) => (
                 <tr
-                  key={offlineLearning.id}
+                  key={offlineLearning.id_training_certificate}
                   className="border-t border-gray-200 hover:bg-gray-50"
                 >
-                  <td className="px-4 py-3">
-                    <input
-                      type="checkbox"
-                      checked={selectedOfflineLearning.includes(
-                        offlineLearning.id
-                      )}
-                      onChange={(e) =>
-                        handleSelectOfflineLearning(
-                          offlineLearning.id,
-                          e.target.checked
-                        )
-                      }
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
+                  <td className="px-4 py-3 text-gray-900">
+                    <div className="flex items-center gap-2">
+                      {/* Tombol Edit */}
+                      <button
+                        onClick={() => handleOpenEditModal(offlineLearning)}
+                        className="flex items-center space-x-2 px-3 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded"
+                      >
+                        <Edit className="w-4 h-4 text-gray-400" />
+                      </button>
+                    </div>
                   </td>
+
                   <td className="px-4 py-3 text-gray-900">
                     {offlineLearning.full_name}
                   </td>
@@ -831,6 +912,20 @@ export default function OfflineLearningView({
                     {new Date(
                       offlineLearning.expiration_date
                     ).toLocaleDateString("id-ID")}
+                  </td>
+                  <td className="px-4 py-3 text-left">
+                    {offlineLearning.certificate ? (
+                      <button
+                        onClick={() =>
+                          window.open(offlineLearning.certificate, "_blank")
+                        }
+                        className="flex items-center gap-2 text-blue-600 hover:text-blue-800"
+                      >
+                        📥 Download
+                      </button>
+                    ) : (
+                      <span className="text-gray-400">Tidak ada</span>
+                    )}
                   </td>
                 </tr>
               ))
@@ -894,7 +989,7 @@ export default function OfflineLearningView({
         </div>
       </div>
 
-      {/* Modal for Add Training Certificate */}
+      {/* Modal for Add & Edit Training Certificate */}
       {isModalOpen && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
@@ -908,13 +1003,63 @@ export default function OfflineLearningView({
             <div className="flex items-center gap-2 rounded-t-xl border-b bg-gradient-to-b from-gray-50 to-white px-6 py-4 flex-shrink-0">
               <CirclePlus className="h-6 w-6 text-green-600" />
               <h3 className="text-base font-semibold text-gray-900">
-                Add Training Certificate
+                {isEditMode
+                  ? "Edit Training Certificate"
+                  : "Add Training Certificate"}
               </h3>
             </div>
 
             {/* Body */}
             <div className="overflow-y-auto px-6 py-4 flex-1">
               <div className="space-y-4">
+                <input
+                  type="hidden"
+                  value={currentCertificateId}
+                  className={getInputClass(
+                    "w-full rounded-md border px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-opacity-30 transition-colors"
+                  )}
+                  placeholder="Type Employee Name..."
+                />
+                {/* Company Unit */}
+                <div className="grid grid-cols-12 gap-4 items-start">
+                  <label className="col-span-3 text-sm font-medium text-gray-700 pt-2">
+                    Company Unit <span className="text-red-500">*</span>
+                  </label>
+                  <div className="col-span-7">
+                    <select
+                      value={employeeComp}
+                      onChange={(e) => setemployeeComp(e.target.value)}
+                      className={getInputClass(
+                        "employeeComp",
+                        "w-full rounded-md border px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-opacity-30 transition-colors"
+                      )}
+                    >
+                      <option value="">Select Company...</option>
+                      {company?.map((company) => (
+                        <option key={company.id} value={company.id}>
+                          {company.company_name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="col-span-2 flex items-center pt-2">
+                    {touched.employeeComp && errors.employeeComp && (
+                      <span className="text-xs text-red-600 flex items-center gap-1">
+                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                        <span className="truncate">{errors.employeeComp}</span>
+                      </span>
+                    )}
+                    {touched.employeeComp &&
+                      !errors.employeeComp &&
+                      employeeDept && (
+                        <span className="text-xs text-green-600 flex items-center gap-1">
+                          <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                          <span>Valid</span>
+                        </span>
+                      )}
+                  </div>
+                </div>
+
                 {/* EMPLOYEE ID */}
                 <div className="grid grid-cols-12 gap-4 items-start">
                   <label className="col-span-3 text-sm font-medium text-gray-700 pt-2">
@@ -924,13 +1069,12 @@ export default function OfflineLearningView({
                     <input
                       type="text"
                       value={employeeId}
-                      onChange={handleEmployeeIdChange}
-                      onBlur={() => handleBlur("employeeId")}
+                      onChange={(e) => setemployeeId(e.target.value)}
+                      placeholder="Employee ID"
                       className={getInputClass(
                         "employeeId",
                         "w-full rounded-md border px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-opacity-30 transition-colors"
                       )}
-                      placeholder="Type Employee ID..."
                     />
                   </div>
                   <div className="col-span-2 flex items-center pt-2">
@@ -988,7 +1132,7 @@ export default function OfflineLearningView({
                 {/* Position */}
                 <div className="grid grid-cols-12 gap-4 items-start">
                   <label className="col-span-3 text-sm font-medium text-gray-700 pt-2">
-                    Posiiton <span className="text-red-500">*</span>
+                    Position <span className="text-red-500">*</span>
                   </label>
                   <div className="col-span-7">
                     <select
@@ -1069,47 +1213,6 @@ export default function OfflineLearningView({
                   </div>
                 </div>
 
-                {/* Company Unit */}
-                <div className="grid grid-cols-12 gap-4 items-start">
-                  <label className="col-span-3 text-sm font-medium text-gray-700 pt-2">
-                    Company Unit <span className="text-red-500">*</span>
-                  </label>
-                  <div className="col-span-7">
-                    <select
-                      value={employeeComp}
-                      onChange={handleEmployeeCompChange}
-                      onBlur={() => handleBlur("employeeComp")}
-                      className={getInputClass(
-                        "employeeComp",
-                        "w-full rounded-md border px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-opacity-30 transition-colors"
-                      )}
-                    >
-                      <option value="">Select Company...</option>
-                      {company?.map((company) => (
-                        <option key={company.id} value={company.id}>
-                          {company.company_name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="col-span-2 flex items-center pt-2">
-                    {touched.employeeComp && errors.employeeComp && (
-                      <span className="text-xs text-red-600 flex items-center gap-1">
-                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                        <span className="truncate">{errors.employeeComp}</span>
-                      </span>
-                    )}
-                    {touched.employeeComp &&
-                      !errors.employeeComp &&
-                      employeeDept && (
-                        <span className="text-xs text-green-600 flex items-center gap-1">
-                          <CheckCircle className="w-4 h-4 flex-shrink-0" />
-                          <span>Valid</span>
-                        </span>
-                      )}
-                  </div>
-                </div>
-
                 {/* Training Title */}
                 <div className="grid grid-cols-12 gap-4 items-start">
                   <label className="col-span-3 text-sm font-medium text-gray-700 pt-2">
@@ -1180,10 +1283,10 @@ export default function OfflineLearningView({
                   </div>
                 </div>
 
-                {/* Certificate ID */}
+                {/* Credential ID */}
                 <div className="grid grid-cols-12 gap-4 items-start">
                   <label className="col-span-3 text-sm font-medium text-gray-700 pt-2">
-                    Certificate ID <span className="text-red-500">*</span>
+                    Credential ID <span className="text-red-500">*</span>
                   </label>
                   <div className="col-span-7">
                     <input
@@ -1195,7 +1298,7 @@ export default function OfflineLearningView({
                         "certificateId",
                         "w-full rounded-md border px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-opacity-30 transition-colors"
                       )}
-                      placeholder="Type Certificate ID..."
+                      placeholder="Type Credential ID..."
                     />
                   </div>
                   <div className="col-span-2 flex items-center pt-2">
@@ -1216,6 +1319,44 @@ export default function OfflineLearningView({
                   </div>
                 </div>
 
+                {/* Credential URL */}
+                <div className="grid grid-cols-12 gap-4 items-start">
+                  <label className="col-span-3 text-sm font-medium text-gray-700 pt-2">
+                    Credential URL <span className="text-red-500">*</span>
+                  </label>
+                  <div className="col-span-7">
+                    <input
+                      type="text"
+                      value={certificateUrl}
+                      onChange={handleCertificateUrlChange}
+                      onBlur={() => handleBlur("certificateUrl")}
+                      className={getInputClass(
+                        "certificateUrl",
+                        "w-full rounded-md border px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-opacity-30 transition-colors"
+                      )}
+                      placeholder="Type Credential URL..."
+                    />
+                  </div>
+                  <div className="col-span-2 flex items-center pt-2">
+                    {touched.certificateUrl && errors.certificateUrl && (
+                      <span className="text-xs text-red-600 flex items-center gap-1">
+                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                        <span className="truncate">
+                          {errors.certificateUrl}
+                        </span>
+                      </span>
+                    )}
+                    {touched.certificateUrl &&
+                      !errors.certificateUrl &&
+                      certificateUrl && (
+                        <span className="text-xs text-green-600 flex items-center gap-1">
+                          <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                          <span>Valid</span>
+                        </span>
+                      )}
+                  </div>
+                </div>
+
                 {/* Issued Date */}
                 <div className="grid grid-cols-12 gap-4 items-start">
                   <label className="col-span-3 text-sm font-medium text-gray-700 pt-2">
@@ -1223,7 +1364,7 @@ export default function OfflineLearningView({
                   </label>
                   <div className="col-span-7">
                     <input
-                      type="text"
+                      type="date"
                       value={issueDate}
                       onChange={handleIssueDateChange}
                       onBlur={() => handleBlur("issueDate")}
@@ -1257,7 +1398,7 @@ export default function OfflineLearningView({
                   </label>
                   <div className="col-span-7">
                     <input
-                      type="text"
+                      type="date"
                       value={expiredDate}
                       onChange={handleExpiredDateChange}
                       onBlur={() => handleBlur("expiredDate")}
@@ -1286,7 +1427,7 @@ export default function OfflineLearningView({
                   </div>
                 </div>
 
-                {/* UPLOAD CERTIFICATE */}
+                {/* Upload Cover */}
                 <div className="grid grid-cols-12 gap-4 items-start">
                   <label className="col-span-3 text-sm font-medium text-gray-700 pt-2">
                     Upload Certificate <span className="text-red-500">*</span>
@@ -1294,36 +1435,62 @@ export default function OfflineLearningView({
                   <div className="col-span-7">
                     <input
                       type="file"
-                      accept=".pdf,.jpg,.png"
+                      accept="image/*"
                       onChange={handleUploadCertificateChange}
                       onBlur={() => handleBlur("uploadCertificate")}
                       className={getInputClass(
                         "uploadCertificate",
-                        "w-full rounded-md border px-3 py-2 text-gray-900 focus:outline-none focus:ring-2"
+                        "w-full rounded-md border px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-opacity-30 transition-colors"
                       )}
                     />
+                    {isEditMode &&
+                      existingCertificate &&
+                      !uploadCertificate && (
+                        <p className="text-xs text-gray-600 mt-1">
+                          Current:{" "}
+                          <a
+                            href={existingCertificate}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:underline"
+                          >
+                            View existing certificate
+                          </a>
+                        </p>
+                      )}
                     {uploadCertificate && (
                       <p className="text-xs text-gray-600 mt-1">
-                        File selected: {uploadCertificate.name}
+                        New file selected: {uploadCertificate.name}
                       </p>
                     )}
                   </div>
                   <div className="col-span-2 flex items-center pt-2">
                     {touched.uploadCertificate && errors.uploadCertificate && (
                       <span className="text-xs text-red-600 flex items-center gap-1">
-                        <AlertCircle className="w-4 h-4" />
-                        {errors.uploadCertificate}
+                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                        <span className="truncate">
+                          {errors.uploadCertificate}
+                        </span>
                       </span>
                     )}
 
                     {touched.uploadCertificate &&
                       !errors.uploadCertificate &&
-                      uploadCertificate && (
+                      (uploadCertificate ? (
                         <span className="text-xs text-green-600 flex items-center gap-1">
-                          <CheckCircle className="w-4 h-4" />
-                          Valid
+                          <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                          <span>
+                            {uploadCertificate.name
+                              ? `File: ${uploadCertificate.name}`
+                              : "Valid"}
+                          </span>
                         </span>
-                      )}
+                      ) : isEditMode && existingCertificate ? (
+                        <span className="text-xs text-green-600 flex items-center gap-1">
+                          <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                          <span>Valid</span>
+                        </span>
+                      ) : null)}
                   </div>
                 </div>
               </div>

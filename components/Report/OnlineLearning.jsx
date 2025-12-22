@@ -329,19 +329,25 @@ export default function OnlineLearningView({ onlineLearning }) {
                 Company Unit
               </th>
               <th className="text-left px-4 py-3 font-medium text-gray-700">
-                Course
+                Course Name
+              </th>
+              <th className="text-left px-4 py-3 font-medium text-gray-700">
+                Pretest
+              </th>
+              <th className="text-left px-4 py-3 font-medium text-gray-700">
+                Posttest
               </th>
               <th className="text-left px-4 py-3 font-medium text-gray-700">
                 Status
               </th>
               <th className="text-left px-4 py-3 font-medium text-gray-700">
-                Score
+                Course Attempt
               </th>
               <th className="text-left px-4 py-3 font-medium text-gray-700">
                 Date
               </th>
               <th className="text-left px-4 py-3 font-medium text-gray-700">
-                Expire
+                Refreshment Date
               </th>
             </tr>
           </thead>
