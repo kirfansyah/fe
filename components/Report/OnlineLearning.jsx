@@ -116,7 +116,7 @@ export default function OnlineLearningView({ onlineLearning }) {
 
   return (
     <div className="w-full mx-auto p-6 bg-white">
-      <div className="flex items-center justify-between mb-6 gap-6">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
         <div className="flex items-center gap-6 flex-1 min-w-0">
           <div className="relative flex-1 min-w-0 max-w-md">
             <Search
@@ -235,8 +235,9 @@ export default function OnlineLearningView({ onlineLearning }) {
 
       {(selectedCompanyUnit ||
         selectedDepartment ||
-        selectedOnlineLearning ||
-        selectedStatus) && (
+        selectedCourse ||
+        selectedStatus ||
+        selectedDate) && (
         <div className="mb-4 flex items-center gap-2 flex-wrap">
           <span className="text-sm text-gray-600">Active filters:</span>
           {selectedCompanyUnit && (
@@ -265,7 +266,7 @@ export default function OnlineLearningView({ onlineLearning }) {
             <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm flex items-center gap-2">
               {selectedCourse}
               <button
-                onClick={() => selectedCourse("")}
+                onClick={() => setSelectedCourse("")}
                 className="hover:text-purple-900"
               >
                 ×
@@ -297,8 +298,8 @@ export default function OnlineLearningView({ onlineLearning }) {
         </div>
       )}
 
-      <div className="border border-gray-200 rounded-lg overflow-hidden">
-        <table className="w-full">
+      <div className="border border-gray-200 rounded-lg overflow-x-auto">
+        <table className="min-w-[1200px] w-full">
           <thead className="bg-gray-50">
             <tr>
               <th className="w-12 px-4 py-3">
@@ -429,7 +430,7 @@ export default function OnlineLearningView({ onlineLearning }) {
         </table>
       </div>
 
-      <div className="flex items-center justify-between mt-4">
+      <div className="flex flex-col sm:flex-row sm:justify-between gap-4 mt-4">
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-600 w-full">Rows per page:</span>
           <select

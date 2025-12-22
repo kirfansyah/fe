@@ -10,7 +10,6 @@ export default function OfflineLearningView({
   position,
   dept,
   company,
-  employee,
 }) {
   const [selectedOfflineLearning, setSelectedOfflineLearning] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -634,7 +633,7 @@ export default function OfflineLearningView({
 
   return (
     <div className="w-full mx-auto p-6 bg-white">
-      <div className="flex items-center justify-between mb-6 gap-6">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
         <button
           onClick={handleOpenAddModal}
           className="flex-shrink-0 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500"
@@ -756,8 +755,9 @@ export default function OfflineLearningView({
 
       {(selectedCompanyUnit ||
         selectedDepartment ||
-        selectedOfflineLearning ||
-        selectedStatus) && (
+        selectedCourse ||
+        selectedStatus ||
+        selectedDate) && (
         <div className="mb-4 flex items-center gap-2 flex-wrap">
           <span className="text-sm text-gray-600">Active filters:</span>
           {selectedCompanyUnit && (
@@ -786,7 +786,7 @@ export default function OfflineLearningView({
             <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm flex items-center gap-2">
               {selectedCourse}
               <button
-                onClick={() => selectedCourse("")}
+                onClick={() => setSelectedCourse("")}
                 className="hover:text-purple-900"
               >
                 ×
@@ -818,8 +818,8 @@ export default function OfflineLearningView({
         </div>
       )}
 
-      <div className="border border-gray-200 rounded-lg overflow-hidden">
-        <table className="w-full">
+      <div className="border border-gray-200 rounded-lg overflow-x-auto">
+        <table className="min-w-[1200px] w-full">
           <thead className="bg-gray-50">
             <tr>
               <th className="text-left px-4 py-3 font-medium text-gray-700">
@@ -943,7 +943,7 @@ export default function OfflineLearningView({
         </table>
       </div>
 
-      <div className="flex items-center justify-between mt-4">
+      <div className="flex flex-col sm:flex-row sm:justify-between gap-4 mt-4">
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-600 w-full">Rows per page:</span>
           <select
@@ -1021,7 +1021,7 @@ export default function OfflineLearningView({
                   placeholder="Type Employee Name..."
                 />
                 {/* Company Unit */}
-                <div className="grid grid-cols-12 gap-4 items-start">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
                   <label className="col-span-3 text-sm font-medium text-gray-700 pt-2">
                     Company Unit <span className="text-red-500">*</span>
                   </label>
@@ -1061,7 +1061,7 @@ export default function OfflineLearningView({
                 </div>
 
                 {/* EMPLOYEE ID */}
-                <div className="grid grid-cols-12 gap-4 items-start">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
                   <label className="col-span-3 text-sm font-medium text-gray-700 pt-2">
                     Employee ID <span className="text-red-500">*</span>
                   </label>
@@ -1094,7 +1094,7 @@ export default function OfflineLearningView({
                 </div>
 
                 {/* EMPLOYEE NAME */}
-                <div className="grid grid-cols-12 gap-4 items-start">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
                   <label className="col-span-3 text-sm font-medium text-gray-700 pt-2">
                     Employee Name <span className="text-red-500">*</span>
                   </label>
@@ -1130,7 +1130,7 @@ export default function OfflineLearningView({
                 </div>
 
                 {/* Position */}
-                <div className="grid grid-cols-12 gap-4 items-start">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
                   <label className="col-span-3 text-sm font-medium text-gray-700 pt-2">
                     Position <span className="text-red-500">*</span>
                   </label>
@@ -1173,7 +1173,7 @@ export default function OfflineLearningView({
                 </div>
 
                 {/* Department */}
-                <div className="grid grid-cols-12 gap-4 items-start">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
                   <label className="col-span-3 text-sm font-medium text-gray-700 pt-2">
                     Department <span className="text-red-500">*</span>
                   </label>
@@ -1214,7 +1214,7 @@ export default function OfflineLearningView({
                 </div>
 
                 {/* Training Title */}
-                <div className="grid grid-cols-12 gap-4 items-start">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
                   <label className="col-span-3 text-sm font-medium text-gray-700 pt-2">
                     Training Title <span className="text-red-500">*</span>
                   </label>
@@ -1250,7 +1250,7 @@ export default function OfflineLearningView({
                 </div>
 
                 {/* Provider */}
-                <div className="grid grid-cols-12 gap-4 items-start">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
                   <label className="col-span-3 text-sm font-medium text-gray-700 pt-2">
                     Provider <span className="text-red-500">*</span>
                   </label>
@@ -1284,7 +1284,7 @@ export default function OfflineLearningView({
                 </div>
 
                 {/* Credential ID */}
-                <div className="grid grid-cols-12 gap-4 items-start">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
                   <label className="col-span-3 text-sm font-medium text-gray-700 pt-2">
                     Credential ID <span className="text-red-500">*</span>
                   </label>
@@ -1320,7 +1320,7 @@ export default function OfflineLearningView({
                 </div>
 
                 {/* Credential URL */}
-                <div className="grid grid-cols-12 gap-4 items-start">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
                   <label className="col-span-3 text-sm font-medium text-gray-700 pt-2">
                     Credential URL <span className="text-red-500">*</span>
                   </label>
@@ -1358,7 +1358,7 @@ export default function OfflineLearningView({
                 </div>
 
                 {/* Issued Date */}
-                <div className="grid grid-cols-12 gap-4 items-start">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
                   <label className="col-span-3 text-sm font-medium text-gray-700 pt-2">
                     Issued Date <span className="text-red-500">*</span>
                   </label>
@@ -1392,7 +1392,7 @@ export default function OfflineLearningView({
                 </div>
 
                 {/* Expired Date */}
-                <div className="grid grid-cols-12 gap-4 items-start">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
                   <label className="col-span-3 text-sm font-medium text-gray-700 pt-2">
                     Expired Date <span className="text-red-500">*</span>
                   </label>
@@ -1428,7 +1428,7 @@ export default function OfflineLearningView({
                 </div>
 
                 {/* Upload Cover */}
-                <div className="grid grid-cols-12 gap-4 items-start">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
                   <label className="col-span-3 text-sm font-medium text-gray-700 pt-2">
                     Upload Certificate <span className="text-red-500">*</span>
                   </label>

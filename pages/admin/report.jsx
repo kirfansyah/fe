@@ -13,7 +13,6 @@ export default function Report() {
     position,
     dept,
     company,
-    employee,
     addOfflineLearning,
     updateOfflineLearning,
   } = useReport();
@@ -74,7 +73,6 @@ export default function Report() {
             position={position}
             dept={dept}
             company={company}
-            employee={employee}
           />
         )}
       </div>
