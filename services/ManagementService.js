@@ -155,6 +155,36 @@ class ManagementService {
     }
 
     /**
+     * Delete content
+     * @param {number} contentId - Content ID
+     * @param {string} deletedBy - User who deleted
+     * @returns {Promise} API response
+     */
+    static async deleteContent(contentId, deletedBy) {
+        try {
+            const payload = {
+                id_course_content: contentId,
+                deleted_by: deletedBy,
+                deleted_device: "web"
+            };
+            const response = await API.delete("/trainer/course/content/delete", { 
+                data: payload,
+                headers: { 'Content-Type': 'application/json' }
+            });
+            return {
+                success: true,
+                message: response.data.message || 'Content deleted successfully'
+            };
+        } catch (error) {
+            console.error('ManagementService.deleteContent Error:', error);
+            return {
+                success: false,
+                message: error.response?.data?.message || `Failed to delete content ${contentId}`
+            };
+        }
+    }
+
+    /**
      * Delete course
      * @param {number} enrollmentId - Course ID
      * @param {string} deletedBy - User who deleted
@@ -268,7 +298,7 @@ class ManagementService {
             formData.append('FolderType', ManagementService.getFolderTypeByContentType(fileData.contentTypeId));
             formData.append('idCourse', fileData.courseId);
             formData.append('Section', fileData.section);
-
+            console.log('ManagementService.uploadContentFile formData:', formData);
             const response = await API.post("/course/content/upload-file", formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data'
@@ -300,11 +330,11 @@ class ManagementService {
      */
     static getFolderTypeByContentType(contentTypeId) {
         const mapping = {
-            '4': 'pdfs', 
-            '5': 'videos', 
-            '6': 'docs'     
+            '4': 'pdf', 
+            '5': 'video', 
+            '6': 'doc'     
         };
-        return mapping[contentTypeId] || 'others';
+        return mapping[contentTypeId] || 'other';
     }
 
     /**

@@ -99,79 +99,87 @@ export default function RatingFeedback() {
         </div>
       </div>
 
-      {/* Main Tabs Card - Course / Ebook */}
-      <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden mb-6">
-        <div className="flex border-b border-gray-200">
-          <button
-            onClick={() => {
-              setMainTab("course");
-              setActiveTab("rating");
-            }}
-            className={`flex items-center gap-3 px-8 py-4 font-medium text-sm transition-all duration-200 relative ${
-              mainTab === "course"
-                ? "text-blue-600 bg-blue-50"
-                : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-            }`}
-          >
-            <BookOpen className="w-5 h-5" />
-            <span>Course</span>
-            {mainTab === "course" && (
-              <div className="absolute bottom-0 left-0 right-0 h-1 bg-blue-600"></div>
-            )}
-          </button>
+      {/* Main Content Card */}
+      <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+        {/* Main Tabs + Sub Tabs - Combined in one section */}
+        <div className="border-b border-gray-200">
+          {/* Main Tabs Row - Course / eBook */}
+          <div className="flex gap-3 p-4 bg-gray-50 border-b border-gray-200">
+            <button
+              onClick={() => {
+                setMainTab("course");
+                setActiveTab("rating");
+              }}
+              className={`flex items-center gap-2 px-6 py-3 font-semibold text-sm rounded-lg transition-all duration-200 ${
+                mainTab === "course"
+                  ? "bg-blue-600 text-white shadow-md"
+                  : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
+              }`}
+            >
+              <BookOpen className="w-5 h-5" />
+              <span>Course</span>
+            </button>
 
-          <button
-            onClick={() => {
-              setMainTab("ebook");
-              setActiveTab("rating");
-            }}
-            className={`flex items-center gap-3 px-8 py-4 font-medium text-sm transition-all duration-200 relative ${
-              mainTab === "ebook"
-                ? "text-blue-600 bg-blue-50"
-                : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-            }`}
-          >
-            <Book className="w-5 h-5" />
-            <span>eBook</span>
-            {mainTab === "ebook" && (
-              <div className="absolute bottom-0 left-0 right-0 h-1 bg-blue-600"></div>
-            )}
-          </button>
-        </div>
-      </div>
+            <button
+              onClick={() => {
+                setMainTab("ebook");
+                setActiveTab("rating");
+              }}
+              className={`flex items-center gap-2 px-6 py-3 font-semibold text-sm rounded-lg transition-all duration-200 ${
+                mainTab === "ebook"
+                  ? "bg-green-600 text-white shadow-md"
+                  : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
+              }`}
+            >
+              <Book className="w-5 h-5" />
+              <span>eBook</span>
+            </button>
+          </div>
 
-      {/* Sub Tabs Card - Rating / Feedback */}
-      <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden mb-8">
-        <div className="flex border-b border-gray-200">
-          <button
-            onClick={() => setActiveTab("rating")}
-            className={`flex items-center gap-3 px-8 py-4 font-medium text-sm transition-all duration-200 relative ${
-              activeTab === "rating"
-                ? "text-blue-600 bg-blue-50"
-                : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-            }`}
-          >
-            <Star className="w-5 h-5" />
-            <span>Rating</span>
-            {activeTab === "rating" && (
-              <div className="absolute bottom-0 left-0 right-0 h-1 bg-blue-600"></div>
-            )}
-          </button>
+          {/* Sub Tabs Row - Rating / Feedback (Smaller) */}
+          <div className="flex bg-white px-4">
+            <button
+              onClick={() => setActiveTab("rating")}
+              className={`flex items-center gap-2 px-5 py-2.5 text-xs font-medium transition-all duration-200 relative ${
+                activeTab === "rating"
+                  ? mainTab === "course"
+                    ? "text-blue-600"
+                    : "text-green-600"
+                  : "text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              <Star className="w-4 h-4" />
+              <span>Rating</span>
+              {activeTab === "rating" && (
+                <div
+                  className={`absolute bottom-0 left-0 right-0 h-0.5 ${
+                    mainTab === "course" ? "bg-blue-600" : "bg-green-600"
+                  }`}
+                ></div>
+              )}
+            </button>
 
-          <button
-            onClick={() => setActiveTab("feedback")}
-            className={`flex items-center gap-3 px-8 py-4 font-medium text-sm transition-all duration-200 relative ${
-              activeTab === "feedback"
-                ? "text-blue-600 bg-blue-50"
-                : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-            }`}
-          >
-            <MessageSquare className="w-5 h-5" />
-            <span>Feedback</span>
-            {activeTab === "feedback" && (
-              <div className="absolute bottom-0 left-0 right-0 h-1 bg-blue-600"></div>
-            )}
-          </button>
+            <button
+              onClick={() => setActiveTab("feedback")}
+              className={`flex items-center gap-2 px-5 py-2.5 text-xs font-medium transition-all duration-200 relative ${
+                activeTab === "feedback"
+                  ? mainTab === "course"
+                    ? "text-blue-600"
+                    : "text-green-600"
+                  : "text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              <MessageSquare className="w-4 h-4" />
+              <span>Feedback</span>
+              {activeTab === "feedback" && (
+                <div
+                  className={`absolute bottom-0 left-0 right-0 h-0.5 ${
+                    mainTab === "course" ? "bg-blue-600" : "bg-green-600"
+                  }`}
+                ></div>
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Content Section with Padding */}

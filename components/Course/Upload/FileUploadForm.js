@@ -169,7 +169,7 @@ const FileUploadForm = ({
         }
         const section = 'content';
         try {
-            await uploadFile(file, { contentTypeId,courseId,section });
+            const result = await uploadFile(file, { contentTypeId,courseId,section });
             showSuccess('File uploaded successfully');
             setExistingFileUrl(null); // Clear existing when new file uploaded
         } catch (err) {

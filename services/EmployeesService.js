@@ -105,7 +105,7 @@ class EmployeesService {
       const response = await API.get(`/learner/course/content/detail/${id}`, {
         validateStatus: (status) => status >= 200 && status < 500,
       });
-      console.log("✅ response:", response);
+      //   console.log("✅ response:", response);
 
       const content = response.data?.data;
       // jika 404 / tidak ada data

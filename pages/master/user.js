@@ -1,202 +1,92 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { 
-    Trash2, 
     Edit,
     Search,
     Home,
     ChevronRight,
-    Lock,
-    UserPlus,
     Eye,
-    EyeOff
+    Building,
+    Users,
+    RefreshCw,
 } from 'lucide-react';
 import Admin from "layouts/Admin.js";
+import { useCourses } from "@/hooks/useCourses";
+import { useSweetAlert } from '@/hooks/useSweetAlert';
+import { useRoles } from "../../hooks/useRoles";
+import { ProfileContext } from '@/contexts/profile/ProfileContext';
+import { getDeviceInfo } from '@/lib/deviceHelper';
 export default function UserManagement() {
-    // State Management
-    const [users, setUsers] = useState([]);
-    const [roles, setRoles] = useState([]);
-    const [departments, setDepartments] = useState([]);
+    const { employeeData, fetchEmployeeData, loading: apiLoading } = useCourses();
+    const { roles: masterRoles, handleUpdateUser } = useRoles();
+    const { showLoading, showSuccess, showError, confirmAction } = useSweetAlert();
+    const { getKaryawan, dataKaryawan } = useContext(ProfileContext);
+    const dataKaryawans = dataKaryawan?.length ? dataKaryawan[0] : [];
     const [loading, setLoading] = useState(true);
     const [entriesPerPage, setEntriesPerPage] = useState(10);
     const [currentPage, setCurrentPage] = useState(1);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterRole, setFilterRole] = useState('all');
     const [filterStatus, setFilterStatus] = useState('all');
+    const [filterCompany, setFilterCompany] = useState('all');
     const [showModal, setShowModal] = useState(false);
-    const [modalMode, setModalMode] = useState('add');
+    const [modalMode, setModalMode] = useState('view'); // Only 'view' or 'edit'
     const [selectedUser, setSelectedUser] = useState(null);
-    const [showPassword, setShowPassword] = useState(false);
     const [formData, setFormData] = useState({ 
-        username: '',
-        email: '',
-        full_name: '',
-        phone: '',
-        department: '',
-        role: '',
-        status: 'Active',
-        password: '',
-        confirm_password: ''
+        employee_id: '',
+        nama: '',
+        no_ktp: '',
+        id_role: null,
+        user_is_active: true,
     });
 
-    // Sample data
+    const availableRoles = masterRoles || [];
+
+    // Get unique values for filters
+    const getUniqueRoles = () => {
+        if (!employeeData?.data) return [];
+        const roles = new Set();
+        employeeData.data.forEach(emp => {
+            emp.roles?.forEach(role => roles.add(role.role_name));
+        });
+        return Array.from(roles);
+    };
+
+    const getUniqueCompanies = () => {
+        if (!employeeData?.data) return [];
+        const companies = new Map();
+        employeeData.data.forEach(emp => {
+            if (emp.company_id && emp.company_name) {
+                companies.set(emp.company_id, emp.company_name);
+            }
+        });
+        return Array.from(companies, ([id, name]) => ({ id, name }));
+    };
+
     useEffect(() => {
-        setTimeout(() => {
-            setUsers([
-                { 
-                    id: 1, 
-                    username: 'john.doe',
-                    email: 'john.doe@company.com',
-                    full_name: 'John Doe',
-                    phone: '+62 812-3456-7890',
-                    department: 'IT Department',
-                    role: 'Admin',
-                    status: 'Active',
-                    last_login: '2024-03-15 09:30:00',
-                    created_at: '2024-01-15'
-                },
-                { 
-                    id: 2, 
-                    username: 'jane.smith',
-                    email: 'jane.smith@company.com',
-                    full_name: 'Jane Smith',
-                    phone: '+62 812-9876-5432',
-                    department: 'HR Department',
-                    role: 'Manager',
-                    status: 'Active',
-                    last_login: '2024-03-14 14:20:00',
-                    created_at: '2024-01-20'
-                },
-                { 
-                    id: 3, 
-                    username: 'mike.johnson',
-                    email: 'mike.johnson@company.com',
-                    full_name: 'Mike Johnson',
-                    phone: '+62 813-1111-2222',
-                    department: 'Finance',
-                    role: 'Staff',
-                    status: 'Active',
-                    last_login: '2024-03-13 10:15:00',
-                    created_at: '2024-02-01'
-                },
-                { 
-                    id: 4, 
-                    username: 'sarah.wilson',
-                    email: 'sarah.wilson@company.com',
-                    full_name: 'Sarah Wilson',
-                    phone: '+62 813-3333-4444',
-                    department: 'Marketing',
-                    role: 'Manager',
-                    status: 'Active',
-                    last_login: '2024-03-12 16:45:00',
-                    created_at: '2024-02-10'
-                },
-                { 
-                    id: 5, 
-                    username: 'david.brown',
-                    email: 'david.brown@company.com',
-                    full_name: 'David Brown',
-                    phone: '+62 813-5555-6666',
-                    department: 'Operations',
-                    role: 'Staff',
-                    status: 'Inactive',
-                    last_login: '2024-02-28 11:30:00',
-                    created_at: '2024-02-15'
-                },
-                { 
-                    id: 6, 
-                    username: 'emily.davis',
-                    email: 'emily.davis@company.com',
-                    full_name: 'Emily Davis',
-                    phone: '+62 813-7777-8888',
-                    department: 'Sales',
-                    role: 'Staff',
-                    status: 'Active',
-                    last_login: '2024-03-15 08:00:00',
-                    created_at: '2024-03-01'
-                },
-                { 
-                    id: 7, 
-                    username: 'robert.miller',
-                    email: 'robert.miller@company.com',
-                    full_name: 'Robert Miller',
-                    phone: '+62 813-9999-0000',
-                    department: 'IT Department',
-                    role: 'Super Admin',
-                    status: 'Active',
-                    last_login: '2024-03-15 10:00:00',
-                    created_at: '2024-01-10'
-                },
-                { 
-                    id: 8, 
-                    username: 'lisa.garcia',
-                    email: 'lisa.garcia@company.com',
-                    full_name: 'Lisa Garcia',
-                    phone: '+62 814-1111-2222',
-                    department: 'HR Department',
-                    role: 'Staff',
-                    status: 'Active',
-                    last_login: '2024-03-14 13:30:00',
-                    created_at: '2024-03-05'
-                },
-                { 
-                    id: 9, 
-                    username: 'james.martinez',
-                    email: 'james.martinez@company.com',
-                    full_name: 'James Martinez',
-                    phone: '+62 814-3333-4444',
-                    department: 'Finance',
-                    role: 'Manager',
-                    status: 'Suspended',
-                    last_login: '2024-03-01 09:00:00',
-                    created_at: '2024-02-20'
-                },
-                { 
-                    id: 10, 
-                    username: 'mary.anderson',
-                    email: 'mary.anderson@company.com',
-                    full_name: 'Mary Anderson',
-                    phone: '+62 814-5555-6666',
-                    department: 'Marketing',
-                    role: 'Staff',
-                    status: 'Active',
-                    last_login: '2024-03-15 11:45:00',
-                    created_at: '2024-03-10'
-                }
-            ]);
-
-            setRoles([
-                'Super Admin',
-                'Admin',
-                'Manager',
-                'Staff',
-                'Viewer'
-            ]);
-
-            setDepartments([
-                'IT Department',
-                'HR Department',
-                'Finance',
-                'Marketing',
-                'Sales',
-                'Operations'
-            ]);
-
+        if (employeeData) {
             setLoading(false);
-        }, 500);
-    }, []);
+        }
+    }, [employeeData]);
 
     // Filter data based on search and filters
-    const filteredData = users.filter(user => {
+    const filteredData = (employeeData?.data || []).filter(user => {
         const matchesSearch = 
-            user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            user.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            user.department.toLowerCase().includes(searchTerm.toLowerCase());
+            user.nama?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            user.employee_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            user.no_ktp?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            user.dept_abbr?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            user.company_name?.toLowerCase().includes(searchTerm.toLowerCase());
         
-        const matchesRole = filterRole === 'all' || user.role === filterRole;
-        const matchesStatus = filterStatus === 'all' || user.status === filterStatus;
+        const matchesRole = filterRole === 'all' || 
+            user.roles?.some(r => r.role_name === filterRole);
         
-        return matchesSearch && matchesRole && matchesStatus;
+        const matchesStatus = filterStatus === 'all' || 
+            (filterStatus === 'active' ? user.user_is_active : !user.user_is_active);
+        
+        const matchesCompany = filterCompany === 'all' || 
+            user.company_id?.toString() === filterCompany;
+        
+        return matchesSearch && matchesRole && matchesStatus && matchesCompany;
     });
 
     // Pagination
@@ -205,14 +95,6 @@ export default function UserManagement() {
     const startIndex = (currentPage - 1) * entriesPerPage;
     const endIndex = Math.min(startIndex + entriesPerPage, totalEntries);
     const currentData = filteredData.slice(startIndex, endIndex);
-
-    // Format date
-    const formatDate = (dateString) => {
-        if (!dateString) return '-';
-        const date = new Date(dateString);
-        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        return `${date.getDate()} ${months[date.getMonth()]}, ${date.getFullYear()}`;
-    };
 
     // Format datetime
     const formatDateTime = (dateTimeString) => {
@@ -227,6 +109,12 @@ export default function UserManagement() {
         });
     };
 
+    // Get initials from name
+    const getInitials = (name) => {
+        if (!name) return '?';
+        return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+    };
+
     // Handle functions
     const handleView = (user) => {
         setSelectedUser(user);
@@ -237,101 +125,147 @@ export default function UserManagement() {
     const handleEdit = (user) => {
         setSelectedUser(user);
         setFormData({ 
-            username: user.username,
-            email: user.email,
-            full_name: user.full_name,
-            phone: user.phone,
-            department: user.department,
-            role: user.role,
-            status: user.status,
-            password: '',
-            confirm_password: ''
+            employee_id: user.employee_id,
+            nama: user.nama,
+            no_ktp: user.no_ktp,
+            id_role: user.roles?.[0]?.id_role || null,
+            user_is_active: user.user_is_active ?? true,
         });
         setModalMode('edit');
         setShowModal(true);
     };
 
-    const handleDelete = (user) => {
-        setSelectedUser(user);
-        setModalMode('delete');
-        setShowModal(true);
+    const handleRefresh = async () => {
+        try {
+            showLoading('Refreshing data...');
+            await fetchEmployeeData();
+            showSuccess('Data refreshed successfully');
+        } catch (error) {
+            showError('Failed to refresh data');
+        }
     };
 
-    const handleResetPassword = (user) => {
-        setSelectedUser(user);
-        setModalMode('reset-password');
-        setShowModal(true);
-    };
-
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         
-        if (modalMode === 'add') {
-            const newUser = {
-                id: users.length + 1,
-                ...formData,
-                last_login: null,
-                created_at: new Date().toISOString()
+        try {
+            // Validate role selected
+            if (!formData.id_role) {
+                showError('Please select a role');
+                return;
+            }
+            const deviceInfo = getDeviceInfo();
+            const result = await confirmAction({
+                title: 'Update User',
+                text: 'Are you sure you want to update this user?',
+                icon: 'question'
+            });
+            
+            if (!result.isConfirmed) return;
+            
+            showLoading('Updating user...');
+            
+            const updateData = {
+                id_role: [formData.id_role],
+                no_ktp: formData.no_ktp,
+                is_active: formData.user_is_active,
+                updated_by: dataKaryawans.nama || 'System',
+                updated_device: deviceInfo.device,
             };
-            setUsers([...users, newUser]);
-        } else if (modalMode === 'edit') {
-            setUsers(users.map(u => 
-                u.id === selectedUser.id 
-                    ? { ...u, ...formData }
-                    : u
-            ));
-        } else if (modalMode === 'delete') {
-            setUsers(users.filter(u => u.id !== selectedUser.id));
+           
+            await handleUpdateUser(updateData);
+            showSuccess('User updated successfully');
+            
+            setShowModal(false);
+            setSelectedUser(null);
+            await fetchEmployeeData();
+            
+        } catch (error) {
+            console.error('Error:', error);
+            showError(error.message || 'Failed to update user');
         }
+    };
+
+    // Get role badge color
+    const getRoleBadgeColor = (roleName) => {
+        switch (roleName) {
+            case 'Administrator':
+            case 'Super Admin':
+            case 'Super Admin update':
+                return 'bg-red-100 text-red-800';
+            case 'Trainer':
+                return 'bg-purple-100 text-purple-800';
+            case 'Learner A':
+                return 'bg-blue-100 text-blue-800';
+            case 'Learner B':
+                return 'bg-teal-100 text-teal-800';
+            default:
+                return 'bg-gray-100 text-gray-800';
+        }
+    };
+
+    // Render role badges
+    const renderRoles = (roles) => {
+        if (!roles || roles.length === 0) return <span className="text-gray-400">-</span>;
         
-        setShowModal(false);
-        setFormData({ 
-            username: '',
-            email: '',
-            full_name: '',
-            phone: '',
-            department: '',
-            role: '',
-            status: 'Active',
-            password: '',
-            confirm_password: ''
-        });
+        const role = roles[0];
+        return (
+            <span 
+                className={`inline-flex px-2 py-1 text-xs rounded-full ${getRoleBadgeColor(role.role_name)}`}
+            >
+                {role.role_name}
+            </span>
+        );
     };
 
-    // Export users
-    const handleExport = () => {
-        console.log('Exporting users...');
-        // Implementation for export functionality
-    };
-
-    // Import users
-    const handleImport = () => {
-        console.log('Importing users...');
-        // Implementation for import functionality
+    // Render groupings
+    const renderGroupings = (groupings) => {
+        if (!groupings || groupings.length === 0) return <span className="text-gray-400">-</span>;
+        
+        return (
+            <div className="flex flex-wrap gap-1">
+                {groupings.slice(0, 2).map(group => (
+                    <span 
+                        key={group.id_grouping} 
+                        className="inline-flex px-1.5 py-0.5 text-xs rounded bg-green-100 text-green-800"
+                    >
+                        {group.grouping_name}
+                    </span>
+                ))}
+                {groupings.length > 2 && (
+                    <span className="inline-flex px-1.5 py-0.5 text-xs rounded bg-gray-100 text-gray-600">
+                        +{groupings.length - 2}
+                    </span>
+                )}
+            </div>
+        );
     };
 
     return (
         <div className="p-6 bg-gray-50 min-h-screen">
-            <div className="mb-8 p-6 rounded-2xl bg-gradient-to-r from-[#5577B5] via-[#6B8BC5] to-[#7B9DD8] shadow-lg">
+            {/* Header */}
+            <div className="mb-6 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 <div className="flex justify-between items-center">
                     <div>
-                        <h1 className="text-3xl font-bold text-white mb-2">Master</h1>
-                        <p className="text-blue-100">Manage your master</p>
+                        <h1 className="text-2xl font-bold text-gray-900 mb-1">User Management</h1>
+                        <p className="text-gray-600 text-sm">Manage system users and their access</p>
                     </div>
                     
-                    {/* Modern Breadcrumb */}
-                    <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-lg">
-                        <Home className="w-4 h-4 text-blue-100" />
-                        <span className="text-blue-100 text-sm">Home</span>
-                        <ChevronRight className="w-4 h-4 text-blue-100" />
-                        <span className="text-white text-sm font-medium">Mastering</span>
+                    <div className="flex items-center gap-2 text-sm">
+                        <Home className="w-4 h-4 text-gray-400" />
+                        <span className="text-gray-500">Home</span>
+                        <ChevronRight className="w-4 h-4 text-gray-400" />
+                        <span className="text-gray-500">Master</span>
+                        <ChevronRight className="w-4 h-4 text-gray-400" />
+                        <span className="text-gray-900 font-medium">User Management</span>
                     </div>
                 </div>
             </div>
+
             {/* Main Container */}
             <div className="bg-white rounded-lg shadow-sm">
-                {/* Controls */}
                 <div className="p-6">
+                    {/* Controls */}
                     <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
                         {/* Left Controls */}
                         <div className="flex flex-wrap items-center gap-4">
@@ -358,49 +292,53 @@ export default function UserManagement() {
                             <select
                                 className="py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                                 value={filterRole}
-                                onChange={(e) => setFilterRole(e.target.value)}
+                                onChange={(e) => {
+                                    setFilterRole(e.target.value);
+                                    setCurrentPage(1);
+                                }}
                             >
                                 <option value="all">All Roles</option>
-                                {roles.map(role => (
+                                {getUniqueRoles().map(role => (
                                     <option key={role} value={role}>{role}</option>
                                 ))}
                             </select>
 
                             <select
                                 className="py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                value={filterCompany}
+                                onChange={(e) => {
+                                    setFilterCompany(e.target.value);
+                                    setCurrentPage(1);
+                                }}
+                            >
+                                <option value="all">All Companies</option>
+                                {getUniqueCompanies().map(company => (
+                                    <option key={company.id} value={company.id}>{company.name}</option>
+                                ))}
+                            </select>
+
+                            <select
+                                className="py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                                 value={filterStatus}
-                                onChange={(e) => setFilterStatus(e.target.value)}
+                                onChange={(e) => {
+                                    setFilterStatus(e.target.value);
+                                    setCurrentPage(1);
+                                }}
                             >
                                 <option value="all">All Status</option>
-                                <option value="Active">Active</option>
-                                <option value="Inactive">Inactive</option>
-                                <option value="Suspended">Suspended</option>
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
                             </select>
                         </div>
 
                         {/* Right Controls */}
                         <div className="flex items-center gap-4">
-                            {/* Add Button */}
                             <button
-                                onClick={() => {
-                                    setModalMode('add');
-                                    setFormData({ 
-                                        username: '',
-                                        email: '',
-                                        full_name: '',
-                                        phone: '',
-                                        department: '',
-                                        role: '',
-                                        status: 'Active',
-                                        password: '',
-                                        confirm_password: ''
-                                    });
-                                    setShowModal(true);
-                                }}
-                                className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2"
+                                onClick={handleRefresh}
+                                className="px-3 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors flex items-center gap-2"
+                                title="Refresh Data"
                             >
-                                <UserPlus className="w-4 h-4" />
-                                Add New User
+                                <RefreshCw className="w-4 h-4" />
                             </button>
 
                             {/* Search */}
@@ -408,8 +346,8 @@ export default function UserManagement() {
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                                 <input
                                     type="text"
-                                    placeholder="Search..."
-                                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    placeholder="Search name, ID, KTP..."
+                                    className="w-64 pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     value={searchTerm}
                                     onChange={(e) => {
                                         setSearchTerm(e.target.value);
@@ -421,7 +359,7 @@ export default function UserManagement() {
                     </div>
 
                     {/* Table */}
-                    {loading ? (
+                    {loading || apiLoading ? (
                         <div className="flex justify-center items-center py-12">
                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                         </div>
@@ -432,16 +370,19 @@ export default function UserManagement() {
                                     <thead>
                                         <tr className="border-b border-gray-200">
                                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                User
+                                                Employee
                                             </th>
                                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Contact
+                                                Company
                                             </th>
                                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                 Department
                                             </th>
                                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                 Role
+                                            </th>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Groupings
                                             </th>
                                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                 Status
@@ -456,52 +397,58 @@ export default function UserManagement() {
                                     </thead>
                                     <tbody className="divide-y divide-gray-200">
                                         {currentData.map((user) => (
-                                            <tr key={user.id} className="hover:bg-gray-50">
+                                            <tr key={user.employee_id} className="hover:bg-gray-50">
                                                 <td className="px-4 py-3">
                                                     <div className="flex items-center">
-                                                        <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center mr-3">
-                                                            <span className="text-xs font-medium text-gray-600">
-                                                                {user.full_name.split(' ').map(n => n[0]).join('')}
+                                                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mr-3">
+                                                            <span className="text-xs font-medium text-white">
+                                                                {getInitials(user.nama)}
                                                             </span>
                                                         </div>
                                                         <div>
                                                             <div className="text-sm font-medium text-gray-900">
-                                                                {user.full_name}
+                                                                {user.nama}
                                                             </div>
                                                             <div className="text-xs text-gray-500">
-                                                                @{user.username}
+                                                                ID: {user.employee_id}
                                                             </div>
                                                         </div>
                                                     </div>
                                                 </td>
                                                 <td className="px-4 py-3">
-                                                    <div className="text-sm text-gray-900">{user.email}</div>
-                                                    <div className="text-xs text-gray-500">{user.phone}</div>
-                                                </td>
-                                                <td className="px-4 py-3 text-sm text-gray-600">
-                                                    {user.department}
+                                                    <div className="text-sm text-gray-900 max-w-[200px] truncate" title={user.company_name}>
+                                                        {user.company_name || '-'}
+                                                    </div>
                                                 </td>
                                                 <td className="px-4 py-3">
-                                                    <span className="inline-flex px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-800">
-                                                        {user.role}
+                                                    <span className={`inline-flex px-2 py-1 text-xs rounded ${
+                                                        user.dept_abbr 
+                                                            ? 'bg-gray-100 text-gray-800' 
+                                                            : 'text-gray-400'
+                                                    }`}>
+                                                        {user.dept_abbr || '-'}
                                                     </span>
                                                 </td>
-                                                <td className="px-4 py-3 text-sm">
+                                                <td className="px-4 py-3">
+                                                    {renderRoles(user.roles)}
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    {renderGroupings(user.groupings)}
+                                                </td>
+                                                <td className="px-4 py-3">
                                                     <span className={`inline-flex px-2 py-1 text-xs rounded-full ${
-                                                        user.status === 'Active' 
+                                                        user.user_is_active 
                                                             ? 'bg-green-100 text-green-800' 
-                                                            : user.status === 'Inactive'
-                                                            ? 'bg-gray-100 text-gray-600'
-                                                            : 'bg-red-100 text-red-800'
+                                                            : 'bg-gray-100 text-gray-600'
                                                     }`}>
-                                                        {user.status}
+                                                        {user.user_is_active ? 'Active' : 'Inactive'}
                                                     </span>
                                                 </td>
                                                 <td className="px-4 py-3 text-sm text-gray-600">
                                                     {formatDateTime(user.last_login)}
                                                 </td>
                                                 <td className="px-4 py-3 text-center">
-                                                    <div className="flex items-center justify-center gap-2">
+                                                    <div className="flex items-center justify-center gap-1">
                                                         <button
                                                             onClick={() => handleView(user)}
                                                             className="p-1.5 text-gray-600 hover:text-green-600 transition-colors"
@@ -516,27 +463,13 @@ export default function UserManagement() {
                                                         >
                                                             <Edit className="w-4 h-4" />
                                                         </button>
-                                                        <button
-                                                            onClick={() => handleResetPassword(user)}
-                                                            className="p-1.5 text-gray-600 hover:text-orange-600 transition-colors"
-                                                            title="Reset Password"
-                                                        >
-                                                            <Lock className="w-4 h-4" />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleDelete(user)}
-                                                            className="p-1.5 text-gray-600 hover:text-red-600 transition-colors"
-                                                            title="Delete"
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </button>
                                                     </div>
                                                 </td>
                                             </tr>
                                         ))}
                                         {currentData.length === 0 && (
                                             <tr>
-                                                <td colSpan="7" className="px-4 py-8 text-center text-gray-500">
+                                                <td colSpan="8" className="px-4 py-8 text-center text-gray-500">
                                                     No data available
                                                 </td>
                                             </tr>
@@ -546,7 +479,11 @@ export default function UserManagement() {
                             </div>
 
                             {/* Pagination */}
-                            <div className="flex sm:flex-row justify-between items-center gap-4 mt-6">
+                            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-6">
+                                <div className="text-sm text-gray-600">
+                                    Showing {totalEntries > 0 ? startIndex + 1 : 0} to {endIndex} of {totalEntries} entries
+                                </div>
+                                
                                 <div className="flex items-center gap-2">
                                     <button
                                         onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
@@ -556,31 +493,40 @@ export default function UserManagement() {
                                         Previous
                                     </button>
                                     
-                                    {[...Array(totalPages)].map((_, index) => (
-                                        <button
-                                            key={index + 1}
-                                            onClick={() => setCurrentPage(index + 1)}
-                                            className={`px-3 py-1 rounded-md text-sm transition-colors ${
-                                                currentPage === index + 1
-                                                    ? 'bg-blue-600 text-white'
-                                                    : 'border border-gray-300 hover:bg-gray-50'
-                                            }`}
-                                        >
-                                            {index + 1}
-                                        </button>
-                                    ))}
+                                    {[...Array(Math.min(totalPages, 5))].map((_, index) => {
+                                        let pageNum;
+                                        if (totalPages <= 5) {
+                                            pageNum = index + 1;
+                                        } else if (currentPage <= 3) {
+                                            pageNum = index + 1;
+                                        } else if (currentPage >= totalPages - 2) {
+                                            pageNum = totalPages - 4 + index;
+                                        } else {
+                                            pageNum = currentPage - 2 + index;
+                                        }
+                                        
+                                        return (
+                                            <button
+                                                key={pageNum}
+                                                onClick={() => setCurrentPage(pageNum)}
+                                                className={`px-3 py-1 rounded-md text-sm transition-colors ${
+                                                    currentPage === pageNum
+                                                        ? 'bg-blue-600 text-white'
+                                                        : 'border border-gray-300 hover:bg-gray-50'
+                                                }`}
+                                            >
+                                                {pageNum}
+                                            </button>
+                                        );
+                                    })}
                                     
                                     <button
                                         onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                                        disabled={currentPage === totalPages}
+                                        disabled={currentPage === totalPages || totalPages === 0}
                                         className="px-3 py-1 border border-gray-300 rounded-md text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                     >
                                         Next
                                     </button>
-                                </div>
-
-                                <div className="text-sm text-gray-600">
-                                    Showing {startIndex + 1} to {endIndex} of {totalEntries} entries
                                 </div>
                             </div>
                         </>
@@ -588,248 +534,180 @@ export default function UserManagement() {
                 </div>
             </div>
 
-            {/* Modal */}
+            {/* Modal - View & Edit Only */}
             {showModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                    <div className={`bg-white rounded-lg shadow-xl w-full ${modalMode === 'view' ? 'max-w-2xl' : 'max-w-lg'}`}>
+                    <div className={`bg-white rounded-lg shadow-xl w-full ${modalMode === 'view' ? 'max-w-3xl' : 'max-w-lg'}`}>
                         <div className="px-6 py-4 border-b border-gray-200">
                             <h3 className="text-lg font-semibold text-gray-900">
-                                {modalMode === 'add' && 'Add New User'}
-                                {modalMode === 'edit' && 'Edit User'}
-                                {modalMode === 'delete' && 'Delete User'}
-                                {modalMode === 'view' && 'User Details'}
-                                {modalMode === 'reset-password' && 'Reset Password'}
+                                {modalMode === 'edit' ? 'Edit User' : 'User Details'}
                             </h3>
                         </div>
                         
                         <form onSubmit={handleSubmit}>
                             <div className="p-6 max-h-[60vh] overflow-y-auto">
-                                {modalMode === 'delete' ? (
-                                    <div>
-                                        <p className="text-gray-600">
-                                            Are you sure you want to delete this user?
-                                        </p>
-                                        <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                                            <p className="font-semibold text-gray-900">
-                                                {selectedUser?.full_name}
-                                            </p>
-                                            <p className="text-sm text-gray-600">
-                                                @{selectedUser?.username}
-                                            </p>
-                                            <p className="text-sm text-gray-600">
-                                                {selectedUser?.email}
-                                            </p>
-                                        </div>
-                                    </div>
-                                ) : modalMode === 'view' ? (
-                                    <div className="space-y-4">
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                    Username
-                                                </label>
-                                                <p className="text-sm text-gray-900">@{selectedUser?.username}</p>
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                    Full Name
-                                                </label>
-                                                <p className="text-sm text-gray-900">{selectedUser?.full_name}</p>
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                    Email
-                                                </label>
-                                                <p className="text-sm text-gray-900">{selectedUser?.email}</p>
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                    Phone
-                                                </label>
-                                                <p className="text-sm text-gray-900">{selectedUser?.phone}</p>
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                    Department
-                                                </label>
-                                                <p className="text-sm text-gray-900">{selectedUser?.department}</p>
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                    Role
-                                                </label>
-                                                <p className="text-sm text-gray-900">{selectedUser?.role}</p>
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                    Status
-                                                </label>
-                                                <span className={`inline-flex px-2 py-1 text-xs rounded-full ${
-                                                    selectedUser?.status === 'Active' 
-                                                        ? 'bg-green-100 text-green-800' 
-                                                        : selectedUser?.status === 'Inactive'
-                                                        ? 'bg-gray-100 text-gray-600'
-                                                        : 'bg-red-100 text-red-800'
-                                                }`}>
-                                                    {selectedUser?.status}
+                                {modalMode === 'view' ? (
+                                    <div className="space-y-6">
+                                        {/* User Header */}
+                                        <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
+                                            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                                                <span className="text-xl font-medium text-white">
+                                                    {getInitials(selectedUser?.nama)}
                                                 </span>
                                             </div>
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                <h4 className="text-xl font-semibold text-gray-900">{selectedUser?.nama}</h4>
+                                                <p className="text-sm text-gray-600">ID: {selectedUser?.employee_id}</p>
+                                                <p className="text-sm text-gray-600">KTP: {selectedUser?.no_ktp}</p>
+                                            </div>
+                                        </div>
+
+                                        {/* Details Grid */}
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="p-3 bg-gray-50 rounded-lg">
+                                                <label className="block text-xs font-medium text-gray-500 mb-1">
+                                                    <Building className="w-3 h-3 inline mr-1" />
+                                                    Company
+                                                </label>
+                                                <p className="text-sm text-gray-900">{selectedUser?.company_name || '-'}</p>
+                                            </div>
+                                            <div className="p-3 bg-gray-50 rounded-lg">
+                                                <label className="block text-xs font-medium text-gray-500 mb-1">
+                                                    Department
+                                                </label>
+                                                <p className="text-sm text-gray-900">{selectedUser?.dept_abbr || '-'}</p>
+                                            </div>
+                                            <div className="p-3 bg-gray-50 rounded-lg">
+                                                <label className="block text-xs font-medium text-gray-500 mb-1">
+                                                    Position
+                                                </label>
+                                                <p className="text-sm text-gray-900">{selectedUser?.position_name || '-'}</p>
+                                            </div>
+                                            <div className="p-3 bg-gray-50 rounded-lg">
+                                                <label className="block text-xs font-medium text-gray-500 mb-1">
+                                                    Status
+                                                </label>
+                                                <span className={`inline-flex px-2 py-1 text-xs rounded-full ${
+                                                    selectedUser?.user_is_active 
+                                                        ? 'bg-green-100 text-green-800' 
+                                                        : 'bg-gray-100 text-gray-600'
+                                                }`}>
+                                                    {selectedUser?.user_is_active ? 'Active' : 'Inactive'}
+                                                </span>
+                                            </div>
+                                            <div className="p-3 bg-gray-50 rounded-lg col-span-2">
+                                                <label className="block text-xs font-medium text-gray-500 mb-1">
                                                     Last Login
                                                 </label>
                                                 <p className="text-sm text-gray-900">{formatDateTime(selectedUser?.last_login)}</p>
                                             </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                    Created Date
-                                                </label>
-                                                <p className="text-sm text-gray-900">{formatDate(selectedUser?.created_at)}</p>
-                                            </div>
                                         </div>
-                                    </div>
-                                ) : modalMode === 'reset-password' ? (
-                                    <div>
-                                        <p className="text-gray-600 mb-4">
-                                            Reset password for user:
-                                        </p>
-                                        <div className="p-3 bg-gray-50 rounded-lg mb-4">
-                                            <p className="font-semibold text-gray-900">
-                                                {selectedUser?.full_name}
-                                            </p>
-                                            <p className="text-sm text-gray-600">
-                                                @{selectedUser?.username}
-                                            </p>
+
+                                        {/* Role */}
+                                        <div className="p-3 bg-gray-50 rounded-lg">
+                                            <label className="block text-xs font-medium text-gray-500 mb-2">
+                                                <Users className="w-3 h-3 inline mr-1" />
+                                                Role
+                                            </label>
+                                            {renderRoles(selectedUser?.roles)}
                                         </div>
-                                        <div className="space-y-4">
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                    New Password
-                                                </label>
-                                                <div className="relative">
-                                                    <input
-                                                        type={showPassword ? "text" : "password"}
-                                                        required
-                                                        className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                        placeholder="Enter new password"
-                                                    />
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setShowPassword(!showPassword)}
-                                                        className="absolute right-2 top-2"
+
+                                        {/* Groupings */}
+                                        <div className="p-3 bg-gray-50 rounded-lg">
+                                            <label className="block text-xs font-medium text-gray-500 mb-2">
+                                                Groupings
+                                            </label>
+                                            <div className="flex flex-wrap gap-2">
+                                                {selectedUser?.groupings?.map(group => (
+                                                    <span 
+                                                        key={group.id_grouping}
+                                                        className="inline-flex px-2 py-1 text-xs rounded-full bg-green-100 text-green-800"
                                                     >
-                                                        {showPassword ? (
-                                                            <EyeOff className="w-4 h-4 text-gray-400" />
-                                                        ) : (
-                                                            <Eye className="w-4 h-4 text-gray-400" />
-                                                        )}
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                    Confirm Password
-                                                </label>
-                                                <input
-                                                    type={showPassword ? "text" : "password"}
-                                                    required
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                    placeholder="Confirm new password"
-                                                />
+                                                        {group.grouping_name}
+                                                    </span>
+                                                )) || <span className="text-gray-400">-</span>}
                                             </div>
                                         </div>
                                     </div>
                                 ) : (
                                     <div className="space-y-4">
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                    Username
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    required
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                    value={formData.username}
-                                                    onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                                                    placeholder="Enter username"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                    Full Name
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    required
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                    value={formData.full_name}
-                                                    onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                                                    placeholder="Enter full name"
-                                                />
-                                            </div>
+                                        {/* Edit form */}
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                ID Karyawan
+                                            </label>
+                                            <input
+                                                type="text"
+                                                disabled
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100"
+                                                value={formData.employee_id}
+                                            />
                                         </div>
 
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                    Email
-                                                </label>
-                                                <input
-                                                    type="email"
-                                                    required
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                    value={formData.email}
-                                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                                    placeholder="Enter email"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                    Phone
-                                                </label>
-                                                <input
-                                                    type="tel"
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                    value={formData.phone}
-                                                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                                    placeholder="Enter phone number"
-                                                />
-                                            </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                Full Name
+                                            </label>
+                                            <input
+                                                type="text"
+                                                disabled
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100"
+                                                value={formData.nama}
+                                            />
                                         </div>
 
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                    Department
-                                                </label>
-                                                <select
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                    value={formData.department}
-                                                    onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                                                    required
-                                                >
-                                                    <option value="">Select Department</option>
-                                                    {departments.map(dept => (
-                                                        <option key={dept} value={dept}>{dept}</option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                    Role
-                                                </label>
-                                                <select
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                    value={formData.role}
-                                                    onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                                                    required
-                                                >
-                                                    <option value="">Select Role</option>
-                                                    {roles.map(role => (
-                                                        <option key={role} value={role}>{role}</option>
-                                                    ))}
-                                                </select>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                No KTP <span className="text-red-500">*</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                required
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                value={formData.no_ktp}
+                                                onChange={(e) => setFormData({ ...formData, no_ktp: e.target.value })}
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                <Users className="w-4 h-4 inline mr-1" />
+                                                Role <span className="text-red-500">*</span>
+                                            </label>
+                                            <div className="border border-gray-200 rounded-md p-3 max-h-48 overflow-y-auto space-y-2">
+                                                {availableRoles.length === 0 ? (
+                                                    <p className="text-sm text-gray-500">Loading roles...</p>
+                                                ) : (
+                                                    availableRoles.filter(role => role.is_active).map(role => (
+                                                        <label 
+                                                            key={role.id_role} 
+                                                            className={`flex items-center p-2 rounded-lg cursor-pointer transition-colors ${
+                                                                formData.id_role === role.id_role
+                                                                    ? 'bg-blue-50 border border-blue-200'
+                                                                    : 'hover:bg-gray-50 border border-transparent'
+                                                            }`}
+                                                        >
+                                                            <input
+                                                                type="radio"
+                                                                name="role"
+                                                                className="w-4 h-4 text-blue-600 mr-3"
+                                                                checked={formData.id_role === role.id_role}
+                                                                onChange={() => setFormData({ ...formData, id_role: role.id_role })}
+                                                            />
+                                                            <div className="flex-1">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className={`inline-flex px-2 py-0.5 text-xs rounded-full ${getRoleBadgeColor(role.role_name)}`}>
+                                                                        {role.role_name}
+                                                                    </span>
+                                                                    <span className="text-xs text-gray-500">({role.role_code})</span>
+                                                                </div>
+                                                                {role.role_description && (
+                                                                    <p className="text-xs text-gray-500 mt-1">{role.role_description}</p>
+                                                                )}
+                                                            </div>
+                                                        </label>
+                                                    ))
+                                                )}
                                             </div>
                                         </div>
 
@@ -839,50 +717,18 @@ export default function UserManagement() {
                                             </label>
                                             <select
                                                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                value={formData.status}
-                                                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                                                value={formData.user_is_active}
+                                                onChange={(e) => setFormData({ ...formData, user_is_active: e.target.value === 'true' })}
                                             >
-                                                <option value="Active">Active</option>
-                                                <option value="Inactive">Inactive</option>
-                                                <option value="Suspended">Suspended</option>
+                                                <option value="true">Active</option>
+                                                <option value="false">Inactive</option>
                                             </select>
                                         </div>
-
-                                        {modalMode === 'add' && (
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                        Password
-                                                    </label>
-                                                    <input
-                                                        type="password"
-                                                        required
-                                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                        value={formData.password}
-                                                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                                        placeholder="Enter password"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                        Confirm Password
-                                                    </label>
-                                                    <input
-                                                        type="password"
-                                                        required
-                                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                        value={formData.confirm_password}
-                                                        onChange={(e) => setFormData({ ...formData, confirm_password: e.target.value })}
-                                                        placeholder="Confirm password"
-                                                    />
-                                                </div>
-                                            </div>
-                                        )}
                                     </div>
                                 )}
                             </div>
                             
-                            <div className="px-6 py-4 bg-gray-50 flex justify-end gap-3">
+                            <div className="px-6 py-4 bg-gray-50 flex justify-end gap-3 rounded-b-lg">
                                 <button
                                     type="button"
                                     onClick={() => setShowModal(false)}
@@ -890,21 +736,12 @@ export default function UserManagement() {
                                 >
                                     {modalMode === 'view' ? 'Close' : 'Cancel'}
                                 </button>
-                                {modalMode !== 'view' && (
+                                {modalMode === 'edit' && (
                                     <button
                                         type="submit"
-                                        className={`px-4 py-2 text-sm text-white rounded-md transition-colors ${
-                                            modalMode === 'delete'
-                                                ? 'bg-red-600 hover:bg-red-700'
-                                                : modalMode === 'reset-password'
-                                                ? 'bg-orange-600 hover:bg-orange-700'
-                                                : 'bg-blue-600 hover:bg-blue-700'
-                                        }`}
+                                        className="px-4 py-2 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
                                     >
-                                        {modalMode === 'add' && 'Add User'}
-                                        {modalMode === 'edit' && 'Save Changes'}
-                                        {modalMode === 'delete' && 'Delete'}
-                                        {modalMode === 'reset-password' && 'Reset Password'}
+                                        Save Changes
                                     </button>
                                 )}
                             </div>
@@ -915,4 +752,5 @@ export default function UserManagement() {
         </div>
     );
 }
+
 UserManagement.layout = Admin;

@@ -15,7 +15,7 @@ import 'react-quill/dist/quill.snow.css';
 import { useCourses } from "../../hooks/useCourses";
 import { ProfileContext } from "../../contexts/profile/ProfileContext";
 import { useSweetAlert } from '../../hooks/useSweetAlert';
-
+import { getDeviceInfo } from '@/lib/deviceHelper';
 const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });
 
 export default function AddContent({
@@ -120,7 +120,7 @@ export default function AddContent({
         });
         
         if (!result.isConfirmed) return;
-        
+        const deviceInfo = getDeviceInfo();
         const pretestData = {   
             id_course: courseId,
             id_content_type: selectedContentTypeId,
@@ -129,10 +129,10 @@ export default function AddContent({
             ...(mode === 'edit' ? {
                 id_course_content: contentData.id_course_content,
                 updated_by: dataKaryawans.nama,
-                updated_device: "system"
+                updated_device: deviceInfo.device
             } : {
                 created_by: dataKaryawans.nama,
-                created_device: "system"
+                created_device: deviceInfo.device
             })
         };
         

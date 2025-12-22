@@ -1,4 +1,4 @@
-import React, { useState, useEffect, use } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
     Trash2, 
     Edit,
@@ -26,6 +26,7 @@ import {
 import Admin from "layouts/Admin.js";
 import { useRoles } from "../../hooks/useRoles";
 import { useSweetAlert } from '@/hooks/useSweetAlert';
+
 export default function MenuManagement() {
     // State Management
     const [loading, setLoading] = useState(true);
@@ -42,6 +43,7 @@ export default function MenuManagement() {
         menu_icon: '',
         parent_id: null,
         menu_type: 'header',
+        is_active: true,
         id_role: [],
         created_by: 'SYSTEM', 
         created_device: 'WEB'
@@ -65,11 +67,17 @@ export default function MenuManagement() {
         { name: 'icon-profile', icon: User },
         { name: 'icon-course-mgmt', icon: Folder }
     ];
-    const {menus, roles, handleCreateMenus} = useRoles();
-    const { showLoading, showSuccess, showError, showWarning, confirmAction } = useSweetAlert();
+
+    const { menus, roles, handleCreateMenus, handleDeleteMenu } = useRoles();
+    const { showLoading, showSuccess, showError, confirmAction } = useSweetAlert();
+    
+    // Available roles - dipindah ke atas sebelum digunakan
+    const availableRoles = roles || [];
+
     useEffect(() => {
         setLoading(false);
     }, []);
+
     // Toggle row expansion
     const toggleRowExpansion = (menuId) => {
         if (expandedRows.includes(menuId)) {
@@ -79,52 +87,86 @@ export default function MenuManagement() {
         }
     };
 
-    // Get all parent menus for dropdown
-    const getParentMenus = () => {
+    // Get all parent menus for dropdown (header + submenu untuk 3 level)
+    const getParentMenus = (menuType) => {
+        if (menuType === 'submenu') {
+            // Untuk submenu, parent hanya header
+            return menus.filter(menu => menu.menu_type === 'header');
+        } else if (menuType === 'subsubmenu') {
+            // Untuk subsubmenu, parent adalah submenu
+            const submenus = [];
+            menus.forEach(menu => {
+                if (menu.submenu && menu.submenu.length > 0) {
+                    menu.submenu.forEach(sub => {
+                        submenus.push({
+                            ...sub,
+                            parent_name: menu.menu_name // Untuk display
+                        });
+                    });
+                }
+            });
+            return submenus;
+        }
         return menus.filter(menu => menu.menu_type === 'header');
+    };
+
+    // Get all expandable menu IDs (untuk Expand All)
+    const getAllExpandableIds = () => {
+        const ids = [];
+        menus.forEach(menu => {
+            if ((menu.submenu && menu.submenu.length > 0) || 
+                (menu.subsubmenu && menu.subsubmenu.length > 0)) {
+                ids.push(menu.id_menu);
+            }
+            if (menu.submenu) {
+                menu.submenu.forEach(sub => {
+                    if (sub.subsubmenu && sub.subsubmenu.length > 0) {
+                        ids.push(sub.id_menu);
+                    }
+                });
+            }
+        });
+        return ids;
     };
 
     // Filter data based on search and filters
     const filterMenus = (menuList) => {
+        if (!menuList) return [];
         return menuList.filter(menu => {
             const matchesSearch = 
-                menu.menu_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                menu.menu_url.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                menu.menu_code.toLowerCase().includes(searchTerm.toLowerCase());
+                menu.menu_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                menu.menu_url?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                menu.menu_code?.toLowerCase().includes(searchTerm.toLowerCase());
             
             const matchesType = filterType === 'all' || menu.menu_type === filterType;
+
+            const isActive = menu.id_active ?? menu.is_active ?? true;
             const matchesStatus = filterStatus === 'all' || 
-                (filterStatus === 'active' ? menu.is_active : !menu.is_active);
-            
+            (filterStatus === 'active' ? isActive : !isActive);
             return matchesSearch && matchesType && matchesStatus;
         });
     };
 
-    // Format datetime
-    const formatDateTime = (dateTimeString) => {
-        if (!dateTimeString) return '-';
-        const date = new Date(dateTimeString);
-        return date.toLocaleString('en-US', { 
-            day: '2-digit',
-            month: 'short',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-    };
-
     // Handle functions
-    const handleAdd = (parentId = null) => {
+    const handleAdd = (parentId = null, parentType = null) => {
         setModalMode('add');
+        
+        let menuType = 'header';
+        if (parentType === 'header') {
+            menuType = 'submenu';
+        } else if (parentType === 'submenu') {
+            menuType = 'subsubmenu';
+        }
+        
         setFormData({ 
             menu_name: '',
             menu_url: '',
             menu_icon: '',
             parent_id: parentId,
-            menu_type: parentId ? 'submenu' : 'header',
+            menu_type: menuType,
             is_active: true,
             id_role: [],
-            created_by: 'SYSTEM', // Should be from current user
+            created_by: 'SYSTEM',
             created_device: 'WEB'
         });
         setShowModal(true);
@@ -137,15 +179,16 @@ export default function MenuManagement() {
             const role = availableRoles.find(r => r.role_name === roleName);
             return role ? role.id_role : null;
         }).filter(id => id !== null) : [];
+        
         setFormData({ 
             menu_name: menu.menu_name,
             menu_url: menu.menu_url,
             menu_icon: menu.menu_icon || '',
             parent_id: menu.parent_id,
             menu_type: menu.menu_type,
-            is_active: menu.is_active,
+            is_active: menu.id_active ?? menu.is_active ?? true,
             id_role: roleIds,
-            created_by: 'SYSTEM', // Should be from current user
+            created_by: 'SYSTEM',
             created_device: 'WEB'
         });
         setModalMode('edit');
@@ -159,61 +202,115 @@ export default function MenuManagement() {
     };
 
     const handleDuplicate = (menu) => {
+        // Convert role names to role IDs
+        const roleIds = menu.roles ? menu.roles.map(roleName => {
+            const role = availableRoles.find(r => r.role_name === roleName);
+            return role ? role.id_role : null;
+        }).filter(id => id !== null) : [];
+
         setFormData({ 
-            menu_code: `${menu.menu_code}_COPY`,
             menu_name: `${menu.menu_name} (Copy)`,
             menu_url: menu.menu_url,
             menu_icon: menu.menu_icon || '',
             parent_id: menu.parent_id,
             menu_type: menu.menu_type,
-            menu_order: menu.menu_order + 1,
             is_active: menu.is_active,
-            roles: menu.roles
+            id_role: roleIds,
+            created_by: 'SYSTEM',
+            created_device: 'WEB'
         });
         setModalMode('add');
         setShowModal(true);
     };
 
-    const handleSubmit = async(e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         
-        if (modalMode === 'add') {
-            console.log('Adding menu:', formData);
-            const result = await confirmAction({
-                title: 'Add New Menu',
-                text: 'Are you sure you want to add this new menu?',
-                icon: 'question'
-            });
-            if (!result.isConfirmed) return;
-            try {
+        try {
+            if (modalMode === 'add') {
+                const result = await confirmAction({
+                    title: 'Add New Menu',
+                    text: 'Are you sure you want to add this new menu?',
+                    icon: 'question'
+                });
+                
+                if (!result.isConfirmed) return;
+                
                 showLoading('Adding new menu...');
                 await handleCreateMenus(formData);
                 showSuccess('Menu added successfully');
-            } catch (error) {
-                showError(error.message || 'Failed to add menu');
-            }
-        } else if (modalMode === 'edit') {
-            console.log('Editing menu:', formData);
-        } else if (modalMode === 'delete') {
-            console.log('Deleting menu:', selectedMenu);
-        }
-        
-        setShowModal(false);
-        setFormData({ 
-            menu_code: '',
-            menu_name: '',
-            menu_url: '',
-            menu_icon: '',
-            parent_id: null,
-            menu_type: 'header',
-            menu_order: 1,
-            is_active: true,
-            roles: []
-        });
-    };
+                
+            } else if (modalMode === 'edit') {
+                const result = await confirmAction({
+                    title: 'Update Menu',
+                    text: 'Are you sure you want to update this menu?',
+                    icon: 'question'
+                });
+                
+                if (!result.isConfirmed) return;
+                
+                showLoading('Updating menu...');
+                
+                const updateData = {
+                    id_role: formData.id_role,
+                    id_menu: selectedMenu.id_menu,
+                    menu_name: formData.menu_name,
+                    menu_icon: formData.menu_icon || '',
+                    menu_url: formData.menu_url || '',
+                    parent_id: formData.parent_id,
+                    menu_type: formData.menu_type,
+                    is_active: formData.is_active,
+                    updated_by: 'SYSTEM',
+                    updated_device: 'WEB'
+                };
+                console.log('Update Data:', updateData);
+                await handleCreateMenus(updateData);
+                showSuccess('Menu updated successfully');
+                
+            } else if (modalMode === 'delete') {
+                const hasChildren = 
+                    (selectedMenu.submenu && selectedMenu.submenu.length > 0) ||
+                    (selectedMenu.subsubmenu && selectedMenu.subsubmenu.length > 0);
+                
+                const childCount = 
+                    (selectedMenu.submenu?.length || 0) + 
+                    (selectedMenu.subsubmenu?.length || 0);
 
-    // Available roles
-    const availableRoles = roles || [];
+                const result = await confirmAction({
+                    title: 'Delete Menu',
+                    text: hasChildren 
+                        ? `This menu has ${childCount} child menu(s). They will also be deleted. Continue?`
+                        : 'Are you sure you want to delete this menu?',
+                    icon: 'warning',
+                    confirmButtonText: 'Yes, delete it!'
+                });
+                
+                if (!result.isConfirmed) return;
+                
+                showLoading('Deleting menu...');
+                await handleDeleteMenu(selectedMenu.id_menu);
+                showSuccess('Menu deleted successfully');
+            }
+            
+            setShowModal(false);
+            setSelectedMenu(null);
+            setFormData({ 
+                menu_name: '',
+                menu_url: '',
+                menu_icon: '',
+                parent_id: null,
+                menu_type: 'header',
+                is_active: true,
+                id_role: [],
+                created_by: 'SYSTEM',
+                created_device: 'WEB'
+            });
+            
+        } catch (error) {
+            console.error('Error:', error);
+            showError(error.message || `Failed to ${modalMode} menu`);
+        }
+    };
 
     // Get icon component
     const getIconComponent = (iconName) => {
@@ -225,11 +322,37 @@ export default function MenuManagement() {
         return null;
     };
 
-    // Render menu rows with hierarchy
+    // Get menu type badge color
+    const getMenuTypeBadge = (menuType) => {
+        switch (menuType) {
+            case 'header':
+                return 'bg-purple-100 text-purple-800';
+            case 'submenu':
+                return 'bg-blue-100 text-blue-800';
+            case 'subsubmenu':
+                return 'bg-teal-100 text-teal-800';
+            default:
+                return 'bg-gray-100 text-gray-800';
+        }
+    };
+
+    // Check if menu can have children
+    const canHaveChildren = (menuType) => {
+        return menuType === 'header' || menuType === 'submenu';
+    };
+
+    // Render menu rows with 3-level hierarchy
     const renderMenuRow = (menu, level = 0) => {
-        const hasChildren = menu.submenu && menu.submenu.length > 0;
+        // Determine children based on level
+        const children = level === 0 
+            ? menu.submenu 
+            : level === 1 
+                ? menu.subsubmenu 
+                : [];
+        
+        const hasChildren = children && children.length > 0;
         const isExpanded = expandedRows.includes(menu.id_menu);
-        const filteredChildren = hasChildren ? filterMenus(menu.submenu) : [];
+        const filteredChildren = hasChildren ? filterMenus(children) : [];
 
         return (
             <React.Fragment key={menu.id_menu}>
@@ -266,13 +389,7 @@ export default function MenuManagement() {
                         {menu.menu_url || '-'}
                     </td>
                     <td className="px-4 py-3">
-                        <span className={`inline-flex px-2 py-1 text-xs rounded-full ${
-                            menu.menu_type === 'header' 
-                                ? 'bg-purple-100 text-purple-800'
-                                : menu.menu_type === 'submenu'
-                                ? 'bg-blue-100 text-blue-800'
-                                : 'bg-gray-100 text-gray-800'
-                        }`}>
+                        <span className={`inline-flex px-2 py-1 text-xs rounded-full ${getMenuTypeBadge(menu.menu_type)}`}>
                             {menu.menu_type}
                         </span>
                     </td>
@@ -281,34 +398,35 @@ export default function MenuManagement() {
                     </td>
                     <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-1">
-                            {menu.roles.slice(0, 2).map(role => (
+                            {menu.roles?.slice(0, 2).map(role => (
                                 <span key={role} className="inline-flex px-1.5 py-0.5 text-xs rounded bg-gray-100 text-gray-600">
                                     {role}
                                 </span>
                             ))}
-                            {menu.roles.length > 2 && (
+                            {menu.roles?.length > 2 && (
                                 <span className="inline-flex px-1.5 py-0.5 text-xs rounded bg-gray-100 text-gray-600">
                                     +{menu.roles.length - 2}
                                 </span>
                             )}
                         </div>
                     </td>
-                    <td className="px-4 py-3">
-                        <span className={`inline-flex px-2 py-1 text-xs rounded-full ${
-                            menu.is_active 
+                   <td className="px-4 py-3">
+                            <span className={`inline-flex px-2 py-1 text-xs rounded-full ${
+                            (menu.id_active ?? menu.is_active) 
                                 ? 'bg-green-100 text-green-800' 
                                 : 'bg-gray-100 text-gray-600'
                         }`}>
-                            {menu.is_active ? 'Active' : 'Inactive'}
+                            {(menu.id_active ?? menu.is_active) ? 'Active' : 'Inactive'}
                         </span>
-                    </td>
+                    </td>                           
                     <td className="px-4 py-3 text-center">
                         <div className="flex items-center justify-center gap-1">
-                            {menu.menu_type === 'header' && (
+                            {/* Add child button - only for header and submenu */}
+                            {canHaveChildren(menu.menu_type) && (
                                 <button
-                                    onClick={() => handleAdd(menu.id_menu)}
+                                    onClick={() => handleAdd(menu.id_menu, menu.menu_type)}
                                     className="p-1.5 text-gray-600 hover:text-green-600 transition-colors"
-                                    title="Add Submenu"
+                                    title={menu.menu_type === 'header' ? 'Add Submenu' : 'Add Sub-submenu'}
                                 >
                                     <Plus className="w-4 h-4" />
                                 </button>
@@ -346,6 +464,7 @@ export default function MenuManagement() {
                         </div>
                     </td>
                 </tr>
+                {/* Render children recursively */}
                 {hasChildren && isExpanded && filteredChildren.map(child => 
                     renderMenuRow(child, level + 1)
                 )}
@@ -360,19 +479,19 @@ export default function MenuManagement() {
             <div className="mb-6 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 <div className="flex justify-between items-center">
                     <div>
-                        <h1 className="text-2xl font-bold text-gray-900 mb-1">Course Management</h1>
-                        <p className="text-gray-600 text-sm">Manage your courses and enrollments</p>
+                        <h1 className="text-2xl font-bold text-gray-900 mb-1">Menu Management</h1>
+                        <p className="text-gray-600 text-sm">Manage application menus (3 levels: Header → Submenu → Sub-submenu)</p>
                     </div>
                     
-                    {/* ✅ FIXED: Minimalis Breadcrumb */}
                     <div className="flex items-center gap-2 text-sm">
                         <Home className="w-4 h-4 text-gray-400" />
                         <span className="text-gray-500">Home</span>
                         <ChevronRight className="w-4 h-4 text-gray-400" />
-                        <span className="text-gray-900 font-medium">Course Management</span>
+                        <span className="text-gray-900 font-medium">Menu Management</span>
                     </div>
                 </div>
             </div>
+
             {/* Main Container */}
             <div className="bg-white rounded-lg shadow-sm">
                 <div className="p-6">
@@ -380,13 +499,14 @@ export default function MenuManagement() {
                         {/* Filters */}
                         <div className="flex flex-wrap items-center gap-4">
                             <select
-                                className="py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                className="py-1.5 px-3 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                                 value={filterType}
                                 onChange={(e) => setFilterType(e.target.value)}
                             >
                                 <option value="all">All Types</option>
                                 <option value="header">Header</option>
                                 <option value="submenu">Submenu</option>
+                                <option value="subsubmenu">Sub-submenu</option>
                             </select>
 
                             <select
@@ -400,7 +520,7 @@ export default function MenuManagement() {
                             </select>
 
                             <button
-                                onClick={() => setExpandedRows(menus.map(m => m.id_menu))}
+                                onClick={() => setExpandedRows(getAllExpandableIds())}
                                 className="px-3 py-1.5 text-sm text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
                             >
                                 Expand All
@@ -420,7 +540,7 @@ export default function MenuManagement() {
                                 className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2"
                             >
                                 <Plus className="w-4 h-4" />
-                                Add New Menu
+                                Add Header Menu
                             </button>
 
                             <div className="relative">
@@ -490,11 +610,11 @@ export default function MenuManagement() {
 
             {/* Modal */}
             {showModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50  flex items-center justify-center p-4 z-50">
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
                     <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl">
                         <div className="px-6 py-4 border-b border-gray-200">
                             <h3 className="text-lg font-semibold text-gray-900">
-                                {modalMode === 'add' && 'Add New Menu'}
+                                {modalMode === 'add' && `Add New ${formData.menu_type === 'header' ? 'Header Menu' : formData.menu_type === 'submenu' ? 'Submenu' : 'Sub-submenu'}`}
                                 {modalMode === 'edit' && 'Edit Menu'}
                                 {modalMode === 'delete' && 'Delete Menu'}
                             </h3>
@@ -515,17 +635,29 @@ export default function MenuManagement() {
                                                 Code: {selectedMenu?.menu_code}
                                             </p>
                                             <p className="text-sm text-gray-600">
-                                                URL: {selectedMenu?.menu_url}
+                                                Type: {selectedMenu?.menu_type}
                                             </p>
-                                            {selectedMenu?.submenu && selectedMenu.submenu.length > 0 && (
+                                            <p className="text-sm text-gray-600">
+                                                URL: {selectedMenu?.menu_url || '-'}
+                                            </p>
+                                            {((selectedMenu?.submenu && selectedMenu.submenu.length > 0) ||
+                                              (selectedMenu?.subsubmenu && selectedMenu.subsubmenu.length > 0)) && (
                                                 <p className="text-red-600 text-sm mt-2">
-                                                    Warning: This menu has {selectedMenu.submenu.length} submenu(s). They will also be deleted.
+                                                    Warning: This menu has {(selectedMenu.submenu?.length || 0) + (selectedMenu.subsubmenu?.length || 0)} child menu(s). They will also be deleted.
                                                 </p>
                                             )}
                                         </div>
                                     </div>
                                 ) : (
                                     <div className="space-y-4">
+                                        {/* Menu Type Info */}
+                                        <div className="p-3 bg-blue-50 rounded-lg">
+                                            <p className="text-sm text-blue-800">
+                                                <strong>Menu Type:</strong> {formData.menu_type}
+                                                {formData.parent_id && ` (Child of parent ID: ${formData.parent_id})`}
+                                            </p>
+                                        </div>
+
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                                 Menu Name <span className="text-red-500">*</span>
@@ -577,44 +709,6 @@ export default function MenuManagement() {
                                             </div>
                                         </div>
 
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                    Menu Type
-                                                </label>
-                                                <select
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                    value={formData.menu_type}
-                                                    onChange={(e) => setFormData({ ...formData, menu_type: e.target.value })}
-                                                    disabled={formData.parent_id !== null}
-                                                >
-                                                    <option value="header">Header</option>
-                                                    <option value="submenu">Submenu</option>
-                                                </select>
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                    Parent Menu
-                                                </label>
-                                                <select
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                    value={formData.parent_id || ''}
-                                                    onChange={(e) => setFormData({ 
-                                                        ...formData, 
-                                                        parent_id: e.target.value ? parseInt(e.target.value) : null,
-                                                        menu_type: e.target.value ? 'submenu' : 'header'
-                                                    })}
-                                                >
-                                                    <option value="">None</option>
-                                                    {getParentMenus().map(menu => (
-                                                        <option key={menu.id_menu} value={menu.id_menu}>
-                                                            {menu.menu_name}
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                        </div>
-
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                                 Status
@@ -633,43 +727,44 @@ export default function MenuManagement() {
                                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                                 Access Roles
                                             </label>
-                                            <div className="space-y-2 p-3 border border-gray-200 rounded-md">
-                                                {availableRoles.map(role => (
-                                                    <label key={role.id_role} className="flex items-center">
-                                                        <input
-                                                            type="checkbox"
-                                                            className="mr-2"
-                                                            checked={formData.id_role.includes(role.id_role)}
-                                                            onChange={(e) => {
-                                                                if (e.target.checked) {
-                                                                    setFormData({ 
-                                                                        ...formData, 
-                                                                        id_role: [...formData.id_role, role.id_role]
-                                                                    });
-                                                                } else {
-                                                                    setFormData({ 
-                                                                        ...formData, 
-                                                                        id_role: formData.id_role.filter(id => id !== role.id_role)
-                                                                    });
-                                                                }
-                                                            }}
-                                                        />
-                                                        <div className="flex-1">
-                                                            <span className="text-sm text-gray-700 font-medium">{role.role_name}</span>
-                                                            <span className="text-xs text-gray-500 ml-2">({role.role_code})</span>
-                                                            {role.role_description && (
-                                                                <p className="text-xs text-gray-500">{role.role_description}</p>
-                                                            )}
-                                                        </div>
-                                                    </label>
-                                                ))}
+                                            <div className="space-y-2 p-3 border border-gray-200 rounded-md max-h-48 overflow-y-auto">
+                                                {availableRoles.length === 0 ? (
+                                                    <p className="text-sm text-gray-500">No roles available</p>
+                                                ) : (
+                                                    availableRoles.map(role => (
+                                                        <label key={role.id_role} className="flex items-center">
+                                                            <input
+                                                                type="checkbox"
+                                                                className="mr-2"
+                                                                checked={formData.id_role.includes(role.id_role)}
+                                                                onChange={(e) => {
+                                                                    if (e.target.checked) {
+                                                                        setFormData({ 
+                                                                            ...formData, 
+                                                                            id_role: [...formData.id_role, role.id_role]
+                                                                        });
+                                                                    } else {
+                                                                        setFormData({ 
+                                                                            ...formData, 
+                                                                            id_role: formData.id_role.filter(id => id !== role.id_role)
+                                                                        });
+                                                                    }
+                                                                }}
+                                                            />
+                                                            <div className="flex-1">
+                                                                <span className="text-sm text-gray-700 font-medium">{role.role_name}</span>
+                                                                <span className="text-xs text-gray-500 ml-2">({role.role_code})</span>
+                                                            </div>
+                                                        </label>
+                                                    ))
+                                                )}
                                             </div>
                                         </div>
                                     </div>
                                 )}
                             </div>
                             
-                            <div className="px-6 py-4 bg-gray-50 flex justify-end gap-3">
+                            <div className="px-6 py-4 bg-gray-50 flex justify-end gap-3 rounded-b-lg">
                                 <button
                                     type="button"
                                     onClick={() => setShowModal(false)}

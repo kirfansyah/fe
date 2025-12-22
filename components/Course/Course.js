@@ -8,7 +8,7 @@ import { useRouter } from "next/router";
 import { useSweetAlert } from '../../hooks/useSweetAlert';
 import { ProfileContext } from '@/contexts/profile/ProfileContext';
 import { LoadingSpinner, CourseCardSkeleton, StatsCardSkeleton } from '@/components/Loading/Skeleton';
-export default function Course({ courses, onAddContent, onEditContent, onSave, onDelete,isLoading,isSaving,isDeleting }) {
+export default function Course({ courses, onAddContent, onEditContent, onSave, onDelete,isLoading,isSaving, onDeleteContent }) {
     const [expandedCourse, setExpandedCourse] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [courseName, setCourseName] = useState('');
@@ -118,6 +118,24 @@ export default function Course({ courses, onAddContent, onEditContent, onSave, o
             await showSuccess('Course deleted successfully!');
         } catch (error) {
             showError('Failed to delete course: ' + error.message);
+        }
+    };
+
+    const handleDeleteContent = async (contentId) => {
+        const result = await confirmAction({
+            title: 'Are you sure you want to delete this content?',  
+            text: "This action cannot be undone.",
+            confirmButtonText: 'Yes, delete it!'
+        });
+        
+        if (!result.isConfirmed) return;
+        
+        try {
+            showLoading('Deleting content...');
+            await onDeleteContent(contentId);
+            await showSuccess('Content deleted successfully!');
+        } catch (error) {
+            showError('Failed to delete content: ' + error.message);
         }
     };
 
@@ -548,6 +566,7 @@ export default function Course({ courses, onAddContent, onEditContent, onSave, o
                                                     <Edit className="w-4 h-4" />
                                                 </button>
                                                 <button 
+                                                    onClick={() => handleDeleteContent(content.id_course_content)}
                                                     className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                                                     title="Delete content"
                                                 >

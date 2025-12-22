@@ -11,6 +11,13 @@ import {
   Edit,
   AlertCircle,
   CheckCircle,
+  BookOpen,
+  ChevronDown,
+  ChevronRight,
+  Search,
+  Filter,
+  MoreVertical,
+  Building2,
 } from "lucide-react";
 import { useState, useEffect, useContext } from "react";
 import dynamic from "next/dynamic";
@@ -21,23 +28,29 @@ import { ProfileContext } from "contexts/profile/ProfileContext";
 
 const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });
 
-export default function Ebook({
+export default function EbookList({
   ebooks,
   categorys,
   subCategorys,
+  companys,
   onViewContent,
   onAddContent,
   onSave,
   onUpdate,
   onDelete,
 }) {
+  console.log("comp = ", companys);
   const [expandedEbook, setExpandedEbook] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [currentEbookId, setCurrentEbookId] = useState(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [ebookToDelete, setEbookToDelete] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(null);
 
+  // Form states
+  const [selectedCompany, setSelectedCompany] = useState("");
   const [ebookTitle, setEbookTitle] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedSubCategory, setSelectedSubCategory] = useState("");
@@ -53,6 +66,7 @@ export default function Ebook({
 
   // Validation states
   const [errors, setErrors] = useState({
+    company: "",
     ebookTitle: "",
     category: "",
     subCategory: "",
@@ -63,6 +77,7 @@ export default function Ebook({
   });
 
   const [touched, setTouched] = useState({
+    company: false,
     ebookTitle: false,
     category: false,
     subCategory: false,
@@ -82,6 +97,13 @@ export default function Ebook({
   const { getKaryawan, dataKaryawan } = useContext(ProfileContext);
 
   const dataKaryawans = dataKaryawan?.length ? dataKaryawan[0] : [];
+
+  // Filter ebooks based on search
+  const filteredEbooks = ebooks.filter(
+    (ebook) =>
+      ebook.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      ebook.author?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   // Filter subcategories ketika category dipilih
   useEffect(() => {
@@ -118,6 +140,7 @@ export default function Ebook({
     setCurrentEbookId(ebook.id_ebook);
 
     // Populate form with existing data
+    setSelectedCompany(ebook.company_id?.toString() || "");
     setEbookTitle(ebook.title || "");
     setSelectedCategory(ebook.id_category?.toString() || "");
     setSelectedSubCategory(ebook.id_subcategory?.toString() || "");
@@ -131,12 +154,14 @@ export default function Ebook({
     setEbookUpload(null);
 
     setIsModalOpen(true);
+    setMobileMenuOpen(null);
   };
 
   // Open delete confirmation modal
   const handleOpenDeleteModal = (ebook) => {
     setEbookToDelete(ebook);
     setIsDeleteModalOpen(true);
+    setMobileMenuOpen(null);
   };
 
   // Confirm delete
@@ -163,6 +188,11 @@ export default function Ebook({
     let error = "";
 
     switch (fieldName) {
+      case "company":
+        if (!value) {
+          error = "Company is required";
+        }
+        break;
       case "ebookTitle":
         if (!value || value.trim() === "") {
           error = "Title is required";
@@ -221,6 +251,9 @@ export default function Ebook({
 
     let value = "";
     switch (fieldName) {
+      case "company":
+        value = selectedCompany;
+        break;
       case "ebookTitle":
         value = ebookTitle;
         break;
@@ -249,6 +282,15 @@ export default function Ebook({
   };
 
   // Handle input changes with validation
+  const handleCompanyChange = (e) => {
+    const value = e.target.value;
+    setSelectedCompany(value);
+    if (touched.company) {
+      const error = validateField("company", value);
+      setErrors((prev) => ({ ...prev, company: error }));
+    }
+  };
+
   const handleEbookTitleChange = (e) => {
     const value = e.target.value;
     setEbookTitle(value);
@@ -313,6 +355,7 @@ export default function Ebook({
 
   // Validate all fields
   const validateAll = () => {
+    const companyError = validateField("company", selectedCompany);
     const titleError = validateField("ebookTitle", ebookTitle);
     const categoryError = validateField("category", selectedCategory);
     const subCategoryError = validateField("subCategory", selectedSubCategory);
@@ -322,6 +365,7 @@ export default function Ebook({
     const ebookError = validateField("ebookUpload", ebookUpload);
 
     setErrors({
+      company: companyError,
       ebookTitle: titleError,
       category: categoryError,
       subCategory: subCategoryError,
@@ -332,6 +376,7 @@ export default function Ebook({
     });
 
     setTouched({
+      company: true,
       ebookTitle: true,
       category: true,
       subCategory: true,
@@ -342,6 +387,7 @@ export default function Ebook({
     });
 
     return (
+      !companyError &&
       !titleError &&
       !categoryError &&
       !subCategoryError &&
@@ -372,6 +418,7 @@ export default function Ebook({
     }
 
     const ebookData = {
+      company_id: selectedCompany,
       title: ebookTitle,
       id_category: selectedCategory,
       id_subcategory: selectedSubCategory,
@@ -397,6 +444,7 @@ export default function Ebook({
 
   // Reset form
   const resetForm = () => {
+    setSelectedCompany("");
     setEbookTitle("");
     setSelectedCategory("");
     setSelectedSubCategory("");
@@ -407,6 +455,7 @@ export default function Ebook({
     setExistingCoverUrl("");
     setExistingEbookUrl("");
     setErrors({
+      company: "",
       ebookTitle: "",
       category: "",
       subCategory: "",
@@ -416,6 +465,7 @@ export default function Ebook({
       ebookUpload: "",
     });
     setTouched({
+      company: false,
       ebookTitle: false,
       category: false,
       subCategory: false,
@@ -459,128 +509,275 @@ export default function Ebook({
   ];
 
   return (
-    <div className="bg-white p-4 rounded-lg shadow">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-semibold">eBook List</h2>
+    <div className="p-4 sm:p-6">
+      {/* Header Section */}
+      <div className="sm:flex-row items-right sm:justify-between gap-4 mb-6">
         <button
           onClick={handleOpenAddModal}
-          className="bg-green-600 text-white px-4 py-2 rounded flex items-center hover:bg-green-700 transition-colors"
+          className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-green-600 text-white px-4 sm:px-5 py-2.5 rounded-lg font-medium shadow-sm hover:from-green-600 hover:to-green-700 transition-all duration-200 w-100 sm:w-auto"
         >
-          <Plus className="w-4 h-4 mr-2" /> Add eBook
+          <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+          <span>Add eBook</span>
         </button>
       </div>
 
-      <div className="bg-slate-100">
-        <div className="bg-gray">
-          {ebooks.map((ebook) => (
-            <div key={ebook.id_ebook} className="border-b border-gray-200">
+      {/* Search Bar */}
+      <div className="mb-6">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search ebooks by title or author..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 sm:pl-11 pr-4 py-2.5 sm:py-3 border border-gray-200 rounded-xl text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+          />
+        </div>
+      </div>
+
+      {/* eBook List */}
+      <div className="space-y-3">
+        {filteredEbooks.length === 0 ? (
+          <div className="text-center py-12 bg-gray-50 rounded-xl">
+            <BookOpen className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+            <p className="text-gray-500 text-sm sm:text-base">
+              No ebooks found
+            </p>
+            <p className="text-gray-400 text-xs sm:text-sm mt-1">
+              Try adjusting your search or add a new ebook
+            </p>
+          </div>
+        ) : (
+          filteredEbooks.map((ebook) => (
+            <div
+              key={ebook.id_ebook}
+              className="bg-white border border-gray-100 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200"
+            >
               {/* Main ebook Row */}
-              <div className="flex items-center justify-between py-4 px-6 hover:bg-gray-50 transition-colors">
-                <div className="flex items-center space-x-4">
+              <div className="flex items-center justify-between p-4 sm:p-5">
+                <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
                   <button
                     onClick={() => toggleEbook(ebook.id_ebook)}
-                    className="p-1"
+                    className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
                   >
-                    <Menu className="w-6 h-6 text-gray-600" />
+                    {expandedEbook === ebook.id_ebook ? (
+                      <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500" />
+                    ) : (
+                      <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500" />
+                    )}
                   </button>
-                  <span className="text-lg font-medium text-gray-900 tracking-wide">
-                    {ebook.title}
-                  </span>
+
+                  {/* Book Icon with gradient background */}
+                  <div className="hidden sm:flex p-2.5 bg-gradient-to-br from-blue-50 to-indigo-100 rounded-lg flex-shrink-0">
+                    <BookOpen className="w-5 h-5 text-blue-600" />
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-sm sm:text-base font-medium text-gray-900 truncate">
+                      {ebook.title}
+                    </h3>
+                    <p className="text-xs sm:text-sm text-gray-500 truncate">
+                      {ebook.author || "Unknown Author"} •{" "}
+                      {ebook.contents?.length || 0} chapters
+                    </p>
+                  </div>
                 </div>
 
-                <div className="flex items-center space-x-6">
+                {/* Desktop Actions */}
+                <div className="hidden md:flex items-center gap-2">
                   <button
                     onClick={() =>
                       onViewContent && onViewContent(ebook.id_ebook)
                     }
-                    className="flex items-center space-x-2 px-3 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded"
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                   >
-                    <EyeIcon className="w-4 h-4 text-gray-400" />
+                    <EyeIcon className="w-4 h-4" />
                     <span>View</span>
                   </button>
                   <button
                     onClick={() => handleOpenEditModal(ebook)}
-                    className="flex items-center space-x-2 px-3 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded"
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
                   >
-                    <Edit className="w-4 h-4 text-gray-400" />
+                    <Edit className="w-4 h-4" />
                     <span>Edit</span>
                   </button>
                   <button
                     onClick={() => handleOpenDeleteModal(ebook)}
-                    className="flex items-center space-x-2 px-3 py-1 text-sm text-red-700 hover:bg-red-50 rounded"
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                   >
-                    <CircleX className="w-4 h-4 text-red-400" />
+                    <Trash2 className="w-4 h-4" />
                     <span>Delete</span>
                   </button>
                 </div>
+
+                {/* Mobile Actions Menu */}
+                <div className="md:hidden relative">
+                  <button
+                    onClick={() =>
+                      setMobileMenuOpen(
+                        mobileMenuOpen === ebook.id_ebook
+                          ? null
+                          : ebook.id_ebook
+                      )
+                    }
+                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    <MoreVertical className="w-5 h-5 text-gray-500" />
+                  </button>
+
+                  {mobileMenuOpen === ebook.id_ebook && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-10"
+                        onClick={() => setMobileMenuOpen(null)}
+                      />
+                      <div className="absolute right-0 top-full mt-1 w-40 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-20">
+                        <button
+                          onClick={() => {
+                            onViewContent && onViewContent(ebook.id_ebook);
+                            setMobileMenuOpen(null);
+                          }}
+                          className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
+                        >
+                          <EyeIcon className="w-4 h-4 text-gray-400" />
+                          <span>View</span>
+                        </button>
+                        <button
+                          onClick={() => handleOpenEditModal(ebook)}
+                          className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
+                        >
+                          <Edit className="w-4 h-4 text-gray-400" />
+                          <span>Edit</span>
+                        </button>
+                        <button
+                          onClick={() => handleOpenDeleteModal(ebook)}
+                          className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          <span>Delete</span>
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
 
-              {/* Expanded Modules */}
-              {expandedEbook === ebook.id_ebook && (
-                <div className="bg-white">
-                  {ebook.contents?.map((module) => (
-                    <div
-                      key={module.id_ebook_content}
-                      className="flex items-center justify-between py-1 px-6 ml-10 border-l-2 border-gray-300 hover:bg-white transition-colors"
-                    >
-                      <div className="flex items-center space-x-4">
-                        <Menu className="w-2 h-5 text-gray-500" />
-                        <span className="text-gray-700">
-                          {module.content_type_name}
-                        </span>
-                      </div>
+              {/* Expanded Chapters */}
+              {expandedEbook === ebook.id_ebook &&
+                ebook.contents?.length > 0 && (
+                  <div className="border-t border-gray-100 bg-gray-50/50">
+                    {ebook.contents.map((module, index) => (
+                      <div
+                        key={module.id_ebook_content}
+                        className="flex items-center justify-between py-3 px-4 sm:px-6 ml-8 sm:ml-12 border-l-2 border-blue-200 hover:bg-white transition-colors"
+                      >
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <span className="text-xs font-medium text-blue-600 bg-blue-100 px-2 py-0.5 rounded">
+                            {index + 1}
+                          </span>
+                          <span className="text-sm text-gray-700 truncate">
+                            {module.content_type_name}
+                          </span>
+                        </div>
 
-                      <div className="flex items-center space-x-4">
-                        {module.content_type_name && (
-                          <span className="bg-green-500 text-white text-xs px-2 rounded font-medium">
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <span className="hidden sm:inline-flex bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full font-medium">
                             Preview
                           </span>
-                        )}
-
-                        <button className="w-2 h-5 text-gray-400 hover:text-gray-600">
-                          <SquarePen className="w-2 h-5" />
-                        </button>
-
-                        <button className="w-2 h-5 text-gray-400 hover:text-red-500">
-                          <Trash2 className="w-2 h-5" />
-                        </button>
+                          <button className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded">
+                            <SquarePen className="w-3.5 h-3.5" />
+                          </button>
+                          <button className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    ))}
+                  </div>
+                )}
             </div>
-          ))}
-        </div>
+          ))
+        )}
       </div>
 
       {/* Modal for Add/Edit ebook */}
       {isModalOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
           onClick={handleCancel}
         >
           <div
-            className="rounded-xl border border-gray-200 bg-white shadow-xl w-full max-w-5xl mx-4 max-h-[90vh] flex flex-col"
+            className="rounded-2xl bg-white shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header - Fixed */}
-            <div className="flex items-center gap-2 rounded-t-xl border-b bg-gradient-to-b from-gray-50 to-white px-6 py-4 flex-shrink-0">
-              <CirclePlus className="h-6 w-6 text-green-600" />
-              <h3 className="text-base font-semibold text-gray-900">
-                {isEditMode ? "Edit eBook" : "Add New eBook"}
-              </h3>
+            <div className="flex items-center gap-3 border-b bg-gradient-to-r from-green-50 to-emerald-50 px-4 sm:px-6 py-4 flex-shrink-0">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <CirclePlus className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
+              </div>
+              <div>
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900">
+                  {isEditMode ? "Edit eBook" : "Add New eBook"}
+                </h3>
+                <p className="text-xs sm:text-sm text-gray-500">
+                  {isEditMode
+                    ? "Update ebook information"
+                    : "Fill in the details below"}
+                </p>
+              </div>
             </div>
 
             {/* Body - Scrollable */}
-            <div className="overflow-y-auto px-6 py-4 flex-1">
-              <div className="space-y-4">
+            <div className="overflow-y-auto px-4 sm:px-6 py-4 sm:py-6 flex-1">
+              <div className="space-y-4 sm:space-y-5">
+                {/* Company */}
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 sm:gap-4 items-start">
+                  <label className="sm:col-span-3 text-sm font-medium text-gray-700 sm:pt-2.5">
+                    Company <span className="text-red-500">*</span>
+                  </label>
+                  <div className="sm:col-span-7">
+                    <div className="relative">
+                      <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <select
+                        value={selectedCompany}
+                        onChange={handleCompanyChange}
+                        onBlur={() => handleBlur("company")}
+                        className={getInputClass(
+                          "company",
+                          "w-full rounded-lg border pl-10 pr-3 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-opacity-30 transition-colors appearance-none bg-white"
+                        )}
+                      >
+                        <option value="">Select company...</option>
+                        {companys?.map((company) => (
+                          <option key={company.id} value={company.id}>
+                            {company.company_name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="sm:col-span-2 flex items-center sm:pt-2.5">
+                    {touched.company && errors.company && (
+                      <span className="text-xs text-red-600 flex items-center gap-1">
+                        <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                        <span className="truncate">{errors.company}</span>
+                      </span>
+                    )}
+                    {touched.company && !errors.company && selectedCompany && (
+                      <span className="text-xs text-green-600 flex items-center gap-1">
+                        <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                        <span>Valid</span>
+                      </span>
+                    )}
+                  </div>
+                </div>
+
                 {/* Ebook Title */}
-                <div className="grid grid-cols-12 gap-4 items-start">
-                  <label className="col-span-3 text-sm font-medium text-gray-700 pt-2">
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 sm:gap-4 items-start">
+                  <label className="sm:col-span-3 text-sm font-medium text-gray-700 sm:pt-2.5">
                     Ebook Title <span className="text-red-500">*</span>
                   </label>
-                  <div className="col-span-7">
+                  <div className="sm:col-span-7">
                     <input
                       type="text"
                       value={ebookTitle}
@@ -588,21 +785,21 @@ export default function Ebook({
                       onBlur={() => handleBlur("ebookTitle")}
                       className={getInputClass(
                         "ebookTitle",
-                        "w-full rounded-md border px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-opacity-30 transition-colors"
+                        "w-full rounded-lg border px-3 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-opacity-30 transition-colors"
                       )}
                       placeholder="Type ebook title..."
                     />
                   </div>
-                  <div className="col-span-2 flex items-center pt-2">
+                  <div className="sm:col-span-2 flex items-center sm:pt-2.5">
                     {touched.ebookTitle && errors.ebookTitle && (
                       <span className="text-xs text-red-600 flex items-center gap-1">
-                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                        <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
                         <span className="truncate">{errors.ebookTitle}</span>
                       </span>
                     )}
                     {touched.ebookTitle && !errors.ebookTitle && ebookTitle && (
                       <span className="text-xs text-green-600 flex items-center gap-1">
-                        <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                        <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" />
                         <span>Valid</span>
                       </span>
                     )}
@@ -610,18 +807,18 @@ export default function Ebook({
                 </div>
 
                 {/* Category */}
-                <div className="grid grid-cols-12 gap-4 items-start">
-                  <label className="col-span-3 text-sm font-medium text-gray-700 pt-2">
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 sm:gap-4 items-start">
+                  <label className="sm:col-span-3 text-sm font-medium text-gray-700 sm:pt-2.5">
                     Category <span className="text-red-500">*</span>
                   </label>
-                  <div className="col-span-7">
+                  <div className="sm:col-span-7">
                     <select
                       value={selectedCategory}
                       onChange={handleCategoryChange}
                       onBlur={() => handleBlur("category")}
                       className={getInputClass(
                         "category",
-                        "w-full rounded-md border px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-opacity-30 transition-colors"
+                        "w-full rounded-lg border px-3 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-opacity-30 transition-colors"
                       )}
                     >
                       <option value="">Select category...</option>
@@ -635,10 +832,10 @@ export default function Ebook({
                       ))}
                     </select>
                   </div>
-                  <div className="col-span-2 flex items-center pt-2">
+                  <div className="sm:col-span-2 flex items-center sm:pt-2.5">
                     {touched.category && errors.category && (
                       <span className="text-xs text-red-600 flex items-center gap-1">
-                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                        <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
                         <span className="truncate">{errors.category}</span>
                       </span>
                     )}
@@ -646,7 +843,7 @@ export default function Ebook({
                       !errors.category &&
                       selectedCategory && (
                         <span className="text-xs text-green-600 flex items-center gap-1">
-                          <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                          <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" />
                           <span>Valid</span>
                         </span>
                       )}
@@ -654,11 +851,11 @@ export default function Ebook({
                 </div>
 
                 {/* Sub Category */}
-                <div className="grid grid-cols-12 gap-4 items-start">
-                  <label className="col-span-3 text-sm font-medium text-gray-700 pt-2">
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 sm:gap-4 items-start">
+                  <label className="sm:col-span-3 text-sm font-medium text-gray-700 sm:pt-2.5">
                     Sub Category <span className="text-red-500">*</span>
                   </label>
-                  <div className="col-span-7">
+                  <div className="sm:col-span-7">
                     <select
                       value={selectedSubCategory}
                       onChange={handleSubCategoryChange}
@@ -668,7 +865,7 @@ export default function Ebook({
                       }
                       className={getInputClass(
                         "subCategory",
-                        "w-full rounded-md border px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-opacity-30 transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed disabled:border-gray-300"
+                        "w-full rounded-lg border px-3 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-opacity-30 transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed disabled:border-gray-300"
                       )}
                     >
                       <option value="">
@@ -688,12 +885,12 @@ export default function Ebook({
                       ))}
                     </select>
                   </div>
-                  <div className="col-span-2 flex items-center pt-2">
+                  <div className="sm:col-span-2 flex items-center sm:pt-2.5">
                     {touched.subCategory &&
                       errors.subCategory &&
                       selectedCategory && (
                         <span className="text-xs text-red-600 flex items-center gap-1">
-                          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                          <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
                           <span className="truncate">{errors.subCategory}</span>
                         </span>
                       )}
@@ -701,7 +898,7 @@ export default function Ebook({
                       !errors.subCategory &&
                       selectedSubCategory && (
                         <span className="text-xs text-green-600 flex items-center gap-1">
-                          <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                          <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" />
                           <span>Valid</span>
                         </span>
                       )}
@@ -709,11 +906,11 @@ export default function Ebook({
                 </div>
 
                 {/* Author */}
-                <div className="grid grid-cols-12 gap-4 items-start">
-                  <label className="col-span-3 text-sm font-medium text-gray-700 pt-2">
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 sm:gap-4 items-start">
+                  <label className="sm:col-span-3 text-sm font-medium text-gray-700 sm:pt-2.5">
                     Author <span className="text-red-500">*</span>
                   </label>
-                  <div className="col-span-7">
+                  <div className="sm:col-span-7">
                     <input
                       type="text"
                       value={author}
@@ -721,21 +918,21 @@ export default function Ebook({
                       onBlur={() => handleBlur("author")}
                       className={getInputClass(
                         "author",
-                        "w-full rounded-md border px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-opacity-30 transition-colors"
+                        "w-full rounded-lg border px-3 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-opacity-30 transition-colors"
                       )}
                       placeholder="Type author name..."
                     />
                   </div>
-                  <div className="col-span-2 flex items-center pt-2">
+                  <div className="sm:col-span-2 flex items-center sm:pt-2.5">
                     {touched.author && errors.author && (
                       <span className="text-xs text-red-600 flex items-center gap-1">
-                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                        <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
                         <span className="truncate">{errors.author}</span>
                       </span>
                     )}
                     {touched.author && !errors.author && author && (
                       <span className="text-xs text-green-600 flex items-center gap-1">
-                        <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                        <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" />
                         <span>Valid</span>
                       </span>
                     )}
@@ -743,15 +940,15 @@ export default function Ebook({
                 </div>
 
                 {/* Description */}
-                <div className="grid grid-cols-12 gap-4 items-start">
-                  <label className="col-span-3 text-sm font-medium text-gray-700 pt-2">
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 sm:gap-4 items-start">
+                  <label className="sm:col-span-3 text-sm font-medium text-gray-700 sm:pt-2.5">
                     Description <span className="text-red-500">*</span>
                   </label>
-                  <div className="col-span-7">
+                  <div className="sm:col-span-7">
                     <div
                       className={getInputClass(
                         "description",
-                        "rounded-md border transition-colors"
+                        "rounded-lg border transition-colors overflow-hidden"
                       )}
                       onBlur={() => handleBlur("description")}
                     >
@@ -767,10 +964,10 @@ export default function Ebook({
                     </div>
                     <div className="mb-12"></div>
                   </div>
-                  <div className="col-span-2 flex items-center pt-2">
+                  <div className="sm:col-span-2 flex items-center sm:pt-2.5">
                     {touched.description && errors.description && (
                       <span className="text-xs text-red-600 flex items-center gap-1">
-                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                        <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
                         <span className="truncate">{errors.description}</span>
                       </span>
                     )}
@@ -779,7 +976,7 @@ export default function Ebook({
                       description &&
                       description !== "<p><br></p>" && (
                         <span className="text-xs text-green-600 flex items-center gap-1">
-                          <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                          <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" />
                           <span>Valid</span>
                         </span>
                       )}
@@ -787,11 +984,11 @@ export default function Ebook({
                 </div>
 
                 {/* Upload Cover */}
-                <div className="grid grid-cols-12 gap-4 items-start">
-                  <label className="col-span-3 text-sm font-medium text-gray-700 pt-2">
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 sm:gap-4 items-start">
+                  <label className="sm:col-span-3 text-sm font-medium text-gray-700 sm:pt-2.5">
                     Upload Cover <span className="text-red-500">*</span>
                   </label>
-                  <div className="col-span-7">
+                  <div className="sm:col-span-7">
                     <input
                       type="file"
                       accept="image/*"
@@ -799,11 +996,11 @@ export default function Ebook({
                       onBlur={() => handleBlur("coverUpload")}
                       className={getInputClass(
                         "coverUpload",
-                        "w-full rounded-md border px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-opacity-30 transition-colors"
+                        "w-full rounded-lg border px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-opacity-30 transition-colors file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                       )}
                     />
                     {isEditMode && existingCoverUrl && !coverUpload && (
-                      <p className="text-xs text-gray-600 mt-1">
+                      <p className="text-xs text-gray-600 mt-2">
                         Current:{" "}
                         <a
                           href={existingCoverUrl}
@@ -816,15 +1013,15 @@ export default function Ebook({
                       </p>
                     )}
                     {coverUpload && (
-                      <p className="text-xs text-gray-600 mt-1">
+                      <p className="text-xs text-gray-600 mt-2">
                         New file selected: {coverUpload.name}
                       </p>
                     )}
                   </div>
-                  <div className="col-span-2 flex items-center pt-2">
+                  <div className="sm:col-span-2 flex items-center sm:pt-2.5">
                     {touched.coverUpload && errors.coverUpload && (
                       <span className="text-xs text-red-600 flex items-center gap-1">
-                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                        <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
                         <span className="truncate">{errors.coverUpload}</span>
                       </span>
                     )}
@@ -833,16 +1030,12 @@ export default function Ebook({
                       !errors.coverUpload &&
                       (coverUpload ? (
                         <span className="text-xs text-green-600 flex items-center gap-1">
-                          <CheckCircle className="w-4 h-4 flex-shrink-0" />
-                          <span>
-                            {coverUpload.name
-                              ? `File: ${coverUpload.name}`
-                              : "Valid"}
-                          </span>
+                          <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                          <span>Valid</span>
                         </span>
                       ) : isEditMode && existingCoverUrl ? (
                         <span className="text-xs text-green-600 flex items-center gap-1">
-                          <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                          <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" />
                           <span>Valid</span>
                         </span>
                       ) : null)}
@@ -850,11 +1043,11 @@ export default function Ebook({
                 </div>
 
                 {/* Upload eBook */}
-                <div className="grid grid-cols-12 gap-4 items-start">
-                  <label className="col-span-3 text-sm font-medium text-gray-700 pt-2">
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 sm:gap-4 items-start">
+                  <label className="sm:col-span-3 text-sm font-medium text-gray-700 sm:pt-2.5">
                     Upload eBook <span className="text-red-500">*</span>
                   </label>
-                  <div className="col-span-7">
+                  <div className="sm:col-span-7">
                     <input
                       type="file"
                       accept=".pdf,.epub"
@@ -862,11 +1055,11 @@ export default function Ebook({
                       onBlur={() => handleBlur("ebookUpload")}
                       className={getInputClass(
                         "ebookUpload",
-                        "w-full rounded-md border px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-opacity-30 transition-colors"
+                        "w-full rounded-lg border px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-opacity-30 transition-colors file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                       )}
                     />
                     {isEditMode && existingEbookUrl && !ebookUpload && (
-                      <p className="text-xs text-gray-600 mt-1">
+                      <p className="text-xs text-gray-600 mt-2">
                         Current:{" "}
                         <a
                           href={existingEbookUrl}
@@ -879,15 +1072,15 @@ export default function Ebook({
                       </p>
                     )}
                     {ebookUpload && (
-                      <p className="text-xs text-gray-600 mt-1">
+                      <p className="text-xs text-gray-600 mt-2">
                         New file selected: {ebookUpload.name}
                       </p>
                     )}
                   </div>
-                  <div className="col-span-2 flex items-center pt-2">
+                  <div className="sm:col-span-2 flex items-center sm:pt-2.5">
                     {touched.ebookUpload && errors.ebookUpload && (
                       <span className="text-xs text-red-600 flex items-center gap-1">
-                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                        <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
                         <span className="truncate">{errors.ebookUpload}</span>
                       </span>
                     )}
@@ -895,16 +1088,12 @@ export default function Ebook({
                       !errors.ebookUpload &&
                       (ebookUpload ? (
                         <span className="text-xs text-green-600 flex items-center gap-1">
-                          <CheckCircle className="w-4 h-4 flex-shrink-0" />
-                          <span>
-                            {ebookUpload.name
-                              ? `File: ${ebookUpload.name}`
-                              : "Valid"}
-                          </span>
+                          <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                          <span>Valid</span>
                         </span>
                       ) : isEditMode && existingEbookUrl ? (
                         <span className="text-xs text-green-600 flex items-center gap-1">
-                          <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                          <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" />
                           <span>Valid</span>
                         </span>
                       ) : null)}
@@ -914,16 +1103,16 @@ export default function Ebook({
             </div>
 
             {/* Footer - Fixed */}
-            <div className="flex items-center justify-center gap-6 px-6 py-4 border-t bg-gray-50 rounded-b-xl flex-shrink-0">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 px-4 sm:px-6 py-4 border-t bg-gray-50 flex-shrink-0">
               <button
                 onClick={handleSave}
-                className="rounded-full bg-green-600 px-8 py-2 text-sm font-semibold text-white shadow hover:bg-green-700 transition-colors"
+                className="w-full sm:w-auto rounded-full bg-gradient-to-r from-green-500 to-green-600 px-8 py-2.5 text-sm font-semibold text-white shadow-sm hover:from-green-600 hover:to-green-700 transition-all"
               >
                 {isEditMode ? "Update" : "Save"}
               </button>
               <button
                 onClick={handleCancel}
-                className="rounded-full bg-red-600 px-8 py-2 text-sm font-semibold text-white shadow hover:bg-red-700 transition-colors"
+                className="w-full sm:w-auto rounded-full bg-gray-200 px-8 py-2.5 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-300 transition-colors"
               >
                 Cancel
               </button>
@@ -935,43 +1124,48 @@ export default function Ebook({
       {/* Delete Confirmation Modal */}
       {isDeleteModalOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
           onClick={handleCancelDelete}
         >
           <div
-            className="rounded-xl border border-gray-200 bg-white shadow-xl w-full max-w-md mx-4"
+            className="rounded-2xl bg-white shadow-2xl w-full max-w-md overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center gap-2 rounded-t-xl border-b bg-gradient-to-b from-red-50 to-white px-6 py-4">
-              <AlertCircle className="h-6 w-6 text-red-600" />
-              <h3 className="text-base font-semibold text-gray-900">
+            <div className="flex items-center gap-3 border-b bg-gradient-to-r from-red-50 to-rose-50 px-4 sm:px-6 py-4">
+              <div className="p-2 bg-red-100 rounded-lg">
+                <AlertCircle className="h-5 w-5 sm:h-6 sm:w-6 text-red-600" />
+              </div>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900">
                 Delete eBook
               </h3>
             </div>
 
             {/* Body */}
-            <div className="px-6 py-4">
-              <p className="text-gray-700">
+            <div className="px-4 sm:px-6 py-5">
+              <p className="text-gray-700 text-sm sm:text-base">
                 Are you sure you want to delete{" "}
-                <strong>"{ebookToDelete?.title}"</strong>?
+                <strong className="text-gray-900">
+                  "{ebookToDelete?.title}"
+                </strong>
+                ?
               </p>
-              <p className="text-sm text-gray-500 mt-2">
+              <p className="text-xs sm:text-sm text-gray-500 mt-2">
                 This action cannot be undone.
               </p>
             </div>
 
             {/* Footer */}
-            <div className="flex items-center justify-end gap-4 px-6 py-4 border-t bg-gray-50 rounded-b-xl">
+            <div className="flex flex-col sm:flex-row items-center justify-end gap-3 px-4 sm:px-6 py-4 border-t bg-gray-50">
               <button
                 onClick={handleCancelDelete}
-                className="rounded-full bg-gray-200 px-6 py-2 text-sm font-semibold text-gray-700 shadow hover:bg-gray-300 transition-colors"
+                className="w-full sm:w-auto rounded-full bg-gray-200 px-6 py-2.5 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-300 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleConfirmDelete}
-                className="rounded-full bg-red-600 px-6 py-2 text-sm font-semibold text-white shadow hover:bg-red-700 transition-colors"
+                className="w-full sm:w-auto rounded-full bg-gradient-to-r from-red-500 to-red-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:from-red-600 hover:to-red-700 transition-all"
               >
                 Delete
               </button>
