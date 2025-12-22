@@ -26,7 +26,9 @@ export default function OfflineLearningView({
   ];
   const dept_abbrs = [...new Set(offlineLearning.map((e) => e.dept_abbr))];
   const courses = [...new Set(offlineLearning.map((e) => e.training_title))];
-  const statuses = [...new Set(offlineLearning.map((e) => e.status))];
+  const statuses = [
+    ...new Set(offlineLearning.map((e) => e.issuing_organization)),
+  ];
   const start_times = [
     ...new Set(
       offlineLearning.map((e) =>
@@ -56,7 +58,8 @@ export default function OfflineLearningView({
     const matchCourse =
       !selectedCourse || offlineLearning.training_title === selectedCourse;
     const matchStatus =
-      !selectedStatus || offlineLearning.status === selectedStatus;
+      !selectedStatus ||
+      offlineLearning.issuing_organization === selectedStatus;
     const matchDate =
       !selectedDate ||
       new Date(offlineLearning.issue_date).toLocaleDateString("id-ID") ===
@@ -620,7 +623,7 @@ export default function OfflineLearningView({
 
         if (res?.success && res.data) {
           setemployeeName(res.data.nama || "");
-          setemployeePosition(res.data.position_id || "");
+          setemployeePosition(res.data.position_name || "");
           setemployeeDept(res.data.department_id || "");
         }
       } catch (err) {
@@ -725,7 +728,7 @@ export default function OfflineLearningView({
                  hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 
                  focus:ring-blue-500"
           >
-            <option value="">All Status</option>
+            <option value="">All Provider</option>
             {statuses.map((status) => (
               <option key={status} value={status}>
                 {status}
@@ -1060,7 +1063,7 @@ export default function OfflineLearningView({
                   </div>
                 </div>
 
-                {/* EMPLOYEE ID */}
+                {/* Employee Id */}
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
                   <label className="col-span-3 text-sm font-medium text-gray-700 pt-2">
                     Employee ID <span className="text-red-500">*</span>
@@ -1093,7 +1096,7 @@ export default function OfflineLearningView({
                   </div>
                 </div>
 
-                {/* EMPLOYEE NAME */}
+                {/* Employee Name */}
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
                   <label className="col-span-3 text-sm font-medium text-gray-700 pt-2">
                     Employee Name <span className="text-red-500">*</span>
@@ -1109,6 +1112,7 @@ export default function OfflineLearningView({
                         "w-full rounded-md border px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-opacity-30 transition-colors"
                       )}
                       placeholder="Type Employee Name..."
+                      readOnly
                     />
                   </div>
                   <div className="col-span-2 flex items-center pt-2">
@@ -1135,7 +1139,8 @@ export default function OfflineLearningView({
                     Position <span className="text-red-500">*</span>
                   </label>
                   <div className="col-span-7">
-                    <select
+                    <input
+                      type="text"
                       value={employeePosition}
                       onChange={handleEmployeePositionChange}
                       onBlur={() => handleBlur("employeePosition")}
@@ -1143,20 +1148,15 @@ export default function OfflineLearningView({
                         "employeePosition",
                         "w-full rounded-md border px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-opacity-30 transition-colors"
                       )}
-                    >
-                      <option value="">Select Position...</option>
-                      {position?.map((position) => (
-                        <option key={position.id} value={position.id}>
-                          {position.position_name}
-                        </option>
-                      ))}
-                    </select>
+                      placeholder="Type Employee Position..."
+                      readOnly
+                    />
                   </div>
-                  <div className="col-span-2 flex items-center pt-2">
+                  <div classPosition="col-span-2 flex items-center pt-2">
                     {touched.employeePosition && errors.employeePosition && (
-                      <span className="text-xs text-red-600 flex items-center gap-1">
-                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                        <span className="truncate">
+                      <span classPosition="text-xs text-red-600 flex items-center gap-1">
+                        <AlertCircle classPosition="w-4 h-4 flex-shrink-0" />
+                        <span classPosition="truncate">
                           {errors.employeePosition}
                         </span>
                       </span>
