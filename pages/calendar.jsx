@@ -79,6 +79,14 @@ export default function CalendarPage() {
     setEvents(parsed);
   }, [dataCalendar]);
 
+  useEffect(() => {
+    if (selectedDate && window.innerWidth < 1024) {
+      document
+        .getElementById("event-panel")
+        ?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [selectedDate]);
+
   // =====================================================
   // FILTER EVENT BY SELECTED DATE
   // =====================================================
@@ -117,10 +125,19 @@ export default function CalendarPage() {
     setCurrentMonth(new Date(year, month + 1, 1));
     setSelectedDate(null); // optional
   }
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   return (
     <CourseLayout>
-      <div className="p-6 space-y-4">
+      {/* <div className="p-6 space-y-4"> */}
+      <div className="p-3 sm:p-4 lg:p-6 space-y-4">
         {/* Breadcrumb */}
         <Card className="rounded-lg shadow-md bg-gradient-to-r from-blue-900 to-blue-500 text-white">
           <CardContent className="flex items-center text-base font-semibold space-x-3 p-6">
@@ -130,7 +147,17 @@ export default function CalendarPage() {
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-[5fr_3fr] gap-6 mt-4">
+        {/* <div className="grid grid-cols-[5fr_3fr] gap-6 mt-4"> */}
+        <div
+          className={`
+                mt-4
+                ${
+                  isMobile
+                    ? "flex flex-col gap-4"
+                    : "grid grid-cols-[5fr_3fr] gap-6"
+                }
+            `}
+        >
           {/* CALENDAR */}
           <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
             {/* Header */}
@@ -140,7 +167,10 @@ export default function CalendarPage() {
                   <div className="bg-orange-500 p-2 rounded-lg">
                     <CalendarIcon className="w-5 h-5 text-white" />
                   </div>
-                  <h2 className="text-lg font-bold text-gray-900">
+                  {/* <h2 className="text-lg font-bold text-gray-900">
+                    {monthName} {year}
+                  </h2> */}
+                  <h2 className="text-base sm:text-lg font-bold text-gray-900">
                     {monthName} {year}
                   </h2>
                 </div>
@@ -148,7 +178,7 @@ export default function CalendarPage() {
                 <div className="flex gap-2">
                   <button
                     onClick={prevMonth}
-                    className="p-2 hover:bg-white rounded-lg"
+                    className="p-1 sm:p-2 hover:bg-white rounded-lg"
                   >
                     <ChevronLeft className="w-5 h-5 text-gray-600" />
                   </button>
@@ -177,7 +207,8 @@ export default function CalendarPage() {
               </div>
 
               {/* Dates */}
-              <div className="grid grid-cols-7 gap-2 text-lg">
+              {/* <div className="grid grid-cols-7 gap-2 text-lg"> */}
+              <div className="grid grid-cols-7 gap-1 sm:gap-2 text-xs sm:text-sm lg:text-lg">
                 {daysArray.map((day, idx) => {
                   const dateStr = day
                     ? `${year}-${String(month + 1).padStart(2, "0")}-${String(
@@ -195,7 +226,7 @@ export default function CalendarPage() {
                       key={idx}
                       onClick={() => day && setSelectedDate(dateStr)}
                       className={`
-                        aspect-square flex items-center justify-center text-sm rounded-lg cursor-pointer transition-all
+                        aspect-square flex items-center justify-center text-xs sm:text-sm rounded-md sm:rounded-lg cursor-pointer transition-all
                         ${!day ? "text-gray-300" : ""}
                         ${
                           hasEvent
@@ -224,14 +255,22 @@ export default function CalendarPage() {
           </div>
 
           {/* RIGHT PANEL */}
-          <Card className="p-4 shadow-md max-w-full">
+          <Card
+            id="event-panel"
+            className={`
+                    p-3 sm:p-4 shadow-md w-full
+                    ${isMobile ? "overflow-hidden" : ""}
+                `}
+          >
             <CardHeader>
-              <CardTitle className="text-xl font-semibold">
+              <CardTitle className="text-lg sm:text-xl font-semibold">
                 Training Scheduled
               </CardTitle>
             </CardHeader>
 
-            <CardContent>
+            <CardContent
+              className={isMobile ? "max-h-[30vh] overflow-y-auto" : ""}
+            >
               <AnimatePresence mode="wait">
                 {eventsForSelected.length === 0 && events.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 text-center text-gray-500">
@@ -271,7 +310,7 @@ export default function CalendarPage() {
                     {events.map((e, i) => (
                       <li
                         key={i}
-                        className="border rounded-lg p-4 hover:bg-gray-50 transition"
+                        className="border rounded-lg p-3 sm:p-4 hover:bg-gray-50 transition"
                       >
                         <p className="font-semibold">
                           {new Date(e.dateFormatted).toDateString()}
