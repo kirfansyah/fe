@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { 
-    Trash2, 
+    PowerOff, 
     Edit,
     Search,
     Menu,
@@ -21,14 +21,23 @@ import {
     Calendar,
     Book,
     MessageSquare,
-    User
+    User,
+    Lock // ✅ Add Lock icon
 } from 'lucide-react';
 import Admin from "layouts/Admin.js";
 import { useRoles } from "../../hooks/useRoles";
 import { useSweetAlert } from '@/hooks/useSweetAlert';
+import { getDeviceInfo } from '@/lib/deviceHelper';
+import { ProfileContext } from '@/contexts/profile/ProfileContext';
+import { useMenuPermissions } from '@/hooks/useMenuPermissions'; // ✅ Import
 
 export default function MenuManagement() {
-    // State Management
+    // ✅ ALL HOOKS FIRST
+    const permissions = useMenuPermissions();
+    const { menus, roles, handleCreateMenus } = useRoles();
+    const { showLoading, showSuccess, showError, confirmAction } = useSweetAlert();
+    const { dataKaryawan } = useContext(ProfileContext);
+    
     const [loading, setLoading] = useState(true);
     const [expandedRows, setExpandedRows] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
@@ -37,6 +46,8 @@ export default function MenuManagement() {
     const [showModal, setShowModal] = useState(false);
     const [modalMode, setModalMode] = useState('add');
     const [selectedMenu, setSelectedMenu] = useState(null);
+    
+    const deviceInfo = getDeviceInfo();
     const [formData, setFormData] = useState({ 
         menu_name: '',
         menu_url: '',
@@ -45,10 +56,10 @@ export default function MenuManagement() {
         menu_type: 'header',
         is_active: true,
         id_role: [],
-        created_by: 'SYSTEM', 
-        created_device: 'WEB'
+        created_by: dataKaryawan.nama, 
+        created_device: deviceInfo.device
     });
-
+    
     // Available icons for menu
     const availableIcons = [
         { name: 'icon-home', icon: Home },
@@ -67,11 +78,7 @@ export default function MenuManagement() {
         { name: 'icon-profile', icon: User },
         { name: 'icon-course-mgmt', icon: Folder }
     ];
-
-    const { menus, roles, handleCreateMenus, handleDeleteMenu } = useRoles();
-    const { showLoading, showSuccess, showError, confirmAction } = useSweetAlert();
     
-    // Available roles - dipindah ke atas sebelum digunakan
     const availableRoles = roles || [];
 
     useEffect(() => {
@@ -87,20 +94,17 @@ export default function MenuManagement() {
         }
     };
 
-    // Get all parent menus for dropdown (header + submenu untuk 3 level)
     const getParentMenus = (menuType) => {
         if (menuType === 'submenu') {
-            // Untuk submenu, parent hanya header
             return menus.filter(menu => menu.menu_type === 'header');
         } else if (menuType === 'subsubmenu') {
-            // Untuk subsubmenu, parent adalah submenu
             const submenus = [];
             menus.forEach(menu => {
                 if (menu.submenu && menu.submenu.length > 0) {
                     menu.submenu.forEach(sub => {
                         submenus.push({
                             ...sub,
-                            parent_name: menu.menu_name // Untuk display
+                            parent_name: menu.menu_name
                         });
                     });
                 }
@@ -110,7 +114,6 @@ export default function MenuManagement() {
         return menus.filter(menu => menu.menu_type === 'header');
     };
 
-    // Get all expandable menu IDs (untuk Expand All)
     const getAllExpandableIds = () => {
         const ids = [];
         menus.forEach(menu => {
@@ -129,7 +132,6 @@ export default function MenuManagement() {
         return ids;
     };
 
-    // Filter data based on search and filters
     const filterMenus = (menuList) => {
         if (!menuList) return [];
         return menuList.filter(menu => {
@@ -139,16 +141,21 @@ export default function MenuManagement() {
                 menu.menu_code?.toLowerCase().includes(searchTerm.toLowerCase());
             
             const matchesType = filterType === 'all' || menu.menu_type === filterType;
-
             const isActive = menu.id_active ?? menu.is_active ?? true;
             const matchesStatus = filterStatus === 'all' || 
-            (filterStatus === 'active' ? isActive : !isActive);
+                (filterStatus === 'active' ? isActive : !isActive);
+            
             return matchesSearch && matchesType && matchesStatus;
         });
     };
 
-    // Handle functions
+    // ✅ Handle Add - Check permission
     const handleAdd = (parentId = null, parentType = null) => {
+        if (!permissions.can_create) {
+            showError('You do not have permission to create menus');
+            return;
+        }
+
         setModalMode('add');
         
         let menuType = 'header';
@@ -166,15 +173,20 @@ export default function MenuManagement() {
             menu_type: menuType,
             is_active: true,
             id_role: [],
-            created_by: 'SYSTEM',
-            created_device: 'WEB'
+            created_by: dataKaryawan.nama,
+            created_device: deviceInfo.device
         });
         setShowModal(true);
     };
 
+    // ✅ Handle Edit - Check permission
     const handleEdit = (menu) => {
+        if (!permissions.can_edit) {
+            showError('You do not have permission to edit menus');
+            return;
+        }
+
         setSelectedMenu(menu);
-        // Convert role names to role IDs for editing
         const roleIds = menu.roles ? menu.roles.map(roleName => {
             const role = availableRoles.find(r => r.role_name === roleName);
             return role ? role.id_role : null;
@@ -188,21 +200,32 @@ export default function MenuManagement() {
             menu_type: menu.menu_type,
             is_active: menu.id_active ?? menu.is_active ?? true,
             id_role: roleIds,
-            created_by: 'SYSTEM',
-            created_device: 'WEB'
+            created_by: dataKaryawan.nama,
+            created_device: deviceInfo.device
         });
         setModalMode('edit');
         setShowModal(true);
     };
 
+    // ✅ Handle Delete - Check permission
     const handleDelete = (menu) => {
+        if (!permissions.can_delete) {
+            showError('You do not have permission to delete menus');
+            return;
+        }
+
         setSelectedMenu(menu);
         setModalMode('delete');
         setShowModal(true);
     };
 
+    // ✅ Handle Duplicate - Check permission
     const handleDuplicate = (menu) => {
-        // Convert role names to role IDs
+        if (!permissions.can_create) {
+            showError('You do not have permission to create menus');
+            return;
+        }
+
         const roleIds = menu.roles ? menu.roles.map(roleName => {
             const role = availableRoles.find(r => r.role_name === roleName);
             return role ? role.id_role : null;
@@ -216,18 +239,24 @@ export default function MenuManagement() {
             menu_type: menu.menu_type,
             is_active: menu.is_active,
             id_role: roleIds,
-            created_by: 'SYSTEM',
-            created_device: 'WEB'
+            created_by: dataKaryawan.nama,
+            created_device: deviceInfo.device
         });
         setModalMode('add');
         setShowModal(true);
     };
 
+    // ✅ Handle Submit - Check permission based on mode
     const handleSubmit = async (e) => {
         e.preventDefault();
         
         try {
             if (modalMode === 'add') {
+                if (!permissions.can_create) {
+                    showError('You do not have permission to create menus');
+                    return;
+                }
+
                 const result = await confirmAction({
                     title: 'Add New Menu',
                     text: 'Are you sure you want to add this new menu?',
@@ -241,6 +270,11 @@ export default function MenuManagement() {
                 showSuccess('Menu added successfully');
                 
             } else if (modalMode === 'edit') {
+                if (!permissions.can_edit) {
+                    showError('You do not have permission to edit menus');
+                    return;
+                }
+
                 const result = await confirmAction({
                     title: 'Update Menu',
                     text: 'Are you sure you want to update this menu?',
@@ -260,14 +294,19 @@ export default function MenuManagement() {
                     parent_id: formData.parent_id,
                     menu_type: formData.menu_type,
                     is_active: formData.is_active,
-                    updated_by: 'SYSTEM',
-                    updated_device: 'WEB'
+                    updated_by: dataKaryawan.nama,
+                    updated_device: deviceInfo.device
                 };
-                console.log('Update Data:', updateData);
+                
                 await handleCreateMenus(updateData);
                 showSuccess('Menu updated successfully');
                 
             } else if (modalMode === 'delete') {
+                if (!permissions.can_delete) {
+                    showError('You do not have permission to delete menus');
+                    return;
+                }
+
                 const hasChildren = 
                     (selectedMenu.submenu && selectedMenu.submenu.length > 0) ||
                     (selectedMenu.subsubmenu && selectedMenu.subsubmenu.length > 0);
@@ -279,16 +318,27 @@ export default function MenuManagement() {
                 const result = await confirmAction({
                     title: 'Delete Menu',
                     text: hasChildren 
-                        ? `This menu has ${childCount} child menu(s). They will also be deleted. Continue?`
-                        : 'Are you sure you want to delete this menu?',
+                        ? `This menu has ${childCount} child menu(s). They will also be Inactive. Continue?`
+                        : 'Are you sure you want to In Active this menu?',
                     icon: 'warning',
                     confirmButtonText: 'Yes, delete it!'
                 });
                 
                 if (!result.isConfirmed) return;
-                
+                const updateData = {
+                    id_role: formData.id_role,
+                    id_menu: selectedMenu.id_menu,
+                    menu_name: formData.menu_name,
+                    menu_icon: formData.menu_icon || '',
+                    menu_url: formData.menu_url || '',
+                    parent_id: formData.parent_id,
+                    menu_type: formData.menu_type,
+                    is_active: false,
+                    updated_by: dataKaryawan.nama,
+                    updated_device: deviceInfo.device
+                };
                 showLoading('Deleting menu...');
-                await handleDeleteMenu(selectedMenu.id_menu);
+                await handleCreateMenus(updateData);
                 showSuccess('Menu deleted successfully');
             }
             
@@ -302,8 +352,8 @@ export default function MenuManagement() {
                 menu_type: 'header',
                 is_active: true,
                 id_role: [],
-                created_by: 'SYSTEM',
-                created_device: 'WEB'
+                created_by: dataKaryawan.nama,
+                created_device: deviceInfo.device
             });
             
         } catch (error) {
@@ -312,7 +362,6 @@ export default function MenuManagement() {
         }
     };
 
-    // Get icon component
     const getIconComponent = (iconName) => {
         const icon = availableIcons.find(i => i.name === iconName);
         if (icon) {
@@ -322,7 +371,6 @@ export default function MenuManagement() {
         return null;
     };
 
-    // Get menu type badge color
     const getMenuTypeBadge = (menuType) => {
         switch (menuType) {
             case 'header':
@@ -336,20 +384,13 @@ export default function MenuManagement() {
         }
     };
 
-    // Check if menu can have children
     const canHaveChildren = (menuType) => {
         return menuType === 'header' || menuType === 'submenu';
     };
 
-    // Render menu rows with 3-level hierarchy
+    // Render menu rows
     const renderMenuRow = (menu, level = 0) => {
-        // Determine children based on level
-        const children = level === 0 
-            ? menu.submenu 
-            : level === 1 
-                ? menu.subsubmenu 
-                : [];
-        
+        const children = level === 0 ? menu.submenu : level === 1 ? menu.subsubmenu : [];
         const hasChildren = children && children.length > 0;
         const isExpanded = expandedRows.includes(menu.id_menu);
         const filteredChildren = hasChildren ? filterMenus(children) : [];
@@ -371,9 +412,7 @@ export default function MenuManagement() {
                                     )}
                                 </button>
                             )}
-                            {!hasChildren && level > 0 && (
-                                <span className="mr-6"></span>
-                            )}
+                            {!hasChildren && level > 0 && <span className="mr-6"></span>}
                             <div className="flex items-center gap-2">
                                 {menu.menu_icon && getIconComponent(menu.menu_icon)}
                                 <span className="text-sm font-medium text-gray-900">
@@ -382,20 +421,14 @@ export default function MenuManagement() {
                             </div>
                         </div>
                     </td>
-                    <td className="px-4 py-3 text-xs font-mono text-gray-600">
-                        {menu.menu_code}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
-                        {menu.menu_url || '-'}
-                    </td>
+                    <td className="px-4 py-3 text-xs font-mono text-gray-600">{menu.menu_code}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{menu.menu_url || '-'}</td>
                     <td className="px-4 py-3">
                         <span className={`inline-flex px-2 py-1 text-xs rounded-full ${getMenuTypeBadge(menu.menu_type)}`}>
                             {menu.menu_type}
                         </span>
                     </td>
-                    <td className="px-4 py-3 text-center text-sm text-gray-900">
-                        {menu.menu_order}
-                    </td>
+                    <td className="px-4 py-3 text-center text-sm text-gray-900">{menu.menu_order}</td>
                     <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-1">
                             {menu.roles?.slice(0, 2).map(role => (
@@ -410,34 +443,58 @@ export default function MenuManagement() {
                             )}
                         </div>
                     </td>
-                   <td className="px-4 py-3">
-                            <span className={`inline-flex px-2 py-1 text-xs rounded-full ${
+                    <td className="px-4 py-3">
+                        <span className={`inline-flex px-2 py-1 text-xs rounded-full ${
                             (menu.id_active ?? menu.is_active) 
                                 ? 'bg-green-100 text-green-800' 
                                 : 'bg-gray-100 text-gray-600'
                         }`}>
                             {(menu.id_active ?? menu.is_active) ? 'Active' : 'Inactive'}
                         </span>
-                    </td>                           
+                    </td>
                     <td className="px-4 py-3 text-center">
                         <div className="flex items-center justify-center gap-1">
-                            {/* Add child button - only for header and submenu */}
+                            {/* ✅ Add child - Conditional */}
                             {canHaveChildren(menu.menu_type) && (
+                                permissions.can_create ? (
+                                    <button
+                                        onClick={() => handleAdd(menu.id_menu, menu.menu_type)}
+                                        className="p-1.5 text-gray-600 hover:text-green-600 transition-colors"
+                                        title={menu.menu_type === 'header' ? 'Add Submenu' : 'Add Sub-submenu'}
+                                    >
+                                        <Plus className="w-4 h-4" />
+                                    </button>
+                                ) : (
+                                    <button
+                                        disabled
+                                        className="p-1.5 text-gray-400 cursor-not-allowed"
+                                        title="No create permission"
+                                    >
+                                        <Lock className="w-4 h-4" />
+                                    </button>
+                                )
+                            )}
+                            
+                            {/* ✅ Edit - Conditional */}
+                            {permissions.can_edit ? (
                                 <button
-                                    onClick={() => handleAdd(menu.id_menu, menu.menu_type)}
-                                    className="p-1.5 text-gray-600 hover:text-green-600 transition-colors"
-                                    title={menu.menu_type === 'header' ? 'Add Submenu' : 'Add Sub-submenu'}
+                                    onClick={() => handleEdit(menu)}
+                                    className="p-1.5 text-gray-600 hover:text-blue-600 transition-colors"
+                                    title="Edit"
                                 >
-                                    <Plus className="w-4 h-4" />
+                                    <Edit className="w-4 h-4" />
+                                </button>
+                            ) : (
+                                <button
+                                    disabled
+                                    className="p-1.5 text-gray-400 cursor-not-allowed"
+                                    title="No edit permission"
+                                >
+                                    <Lock className="w-4 h-4" />
                                 </button>
                             )}
-                            <button
-                                onClick={() => handleEdit(menu)}
-                                className="p-1.5 text-gray-600 hover:text-blue-600 transition-colors"
-                                title="Edit"
-                            >
-                                <Edit className="w-4 h-4" />
-                            </button>
+                            
+                            {/* More Actions Dropdown */}
                             <div className="relative group">
                                 <button
                                     className="p-1.5 text-gray-600 hover:text-gray-800 transition-colors"
@@ -446,25 +503,44 @@ export default function MenuManagement() {
                                     <MoreVertical className="w-4 h-4" />
                                 </button>
                                 <div className="absolute right-0 mt-1 w-40 bg-white rounded-lg shadow-lg border border-gray-200 hidden group-hover:block z-10">
-                                    <button
-                                        onClick={() => handleDuplicate(menu)}
-                                        className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
-                                    >
-                                        <Copy className="w-3 h-3" /> Duplicate
-                                    </button>
+                                    {/* ✅ Duplicate - Conditional */}
+                                    {permissions.can_create ? (
+                                        <button
+                                            onClick={() => handleDuplicate(menu)}
+                                            className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
+                                        >
+                                            <Copy className="w-3 h-3" /> Duplicate
+                                        </button>
+                                    ) : (
+                                        <button
+                                            disabled
+                                            className="w-full px-3 py-2 text-left text-sm text-gray-400 cursor-not-allowed flex items-center gap-2"
+                                        >
+                                            <Lock className="w-3 h-3" /> Duplicate
+                                        </button>
+                                    )}
                                     <hr className="my-1" />
-                                    <button
-                                        onClick={() => handleDelete(menu)}
-                                        className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 text-red-600 flex items-center gap-2"
-                                    >
-                                        <Trash2 className="w-3 h-3" /> Delete
-                                    </button>
+                                    {/* ✅ Delete - Conditional */}
+                                    {permissions.can_delete ? (
+                                        <button
+                                            onClick={() => handleDelete(menu)}
+                                            className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 text-red-600 flex items-center gap-2"
+                                        >
+                                            <PowerOff className="w-3 h-3" /> In Active
+                                        </button>
+                                    ) : (
+                                        <button
+                                            disabled
+                                            className="w-full px-3 py-2 text-left text-sm text-gray-400 cursor-not-allowed flex items-center gap-2"
+                                        >
+                                            <Lock className="w-3 h-3" /> Delete
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         </div>
                     </td>
                 </tr>
-                {/* Render children recursively */}
                 {hasChildren && isExpanded && filteredChildren.map(child => 
                     renderMenuRow(child, level + 1)
                 )}
@@ -474,13 +550,51 @@ export default function MenuManagement() {
 
     const filteredMenus = filterMenus(menus);
 
+    // ✅ AFTER all hooks - Check view permission
+    if (!permissions.can_view) {
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-gray-50">
+                <div className="max-w-md text-center p-6">
+                    <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Lock className="w-8 h-8 text-red-600" />
+                    </div>
+                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
+                    <p className="text-gray-600 mb-6">
+                        You do not have permission to view menu management.
+                    </p>
+                    <button
+                        onClick={() => window.history.back()}
+                        className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                        Go Back
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="p-6 bg-gray-50 min-h-screen">
+            {/* Header */}
             <div className="mb-6 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 <div className="flex justify-between items-center">
                     <div>
-                        <h1 className="text-2xl font-bold text-gray-900 mb-1">Menu Management</h1>
-                        <p className="text-gray-600 text-sm">Manage application menus (3 levels: Header → Submenu → Sub-submenu)</p>
+                        <div className="flex items-center gap-3">
+                            <h1 className="text-2xl font-bold text-gray-900">Menu Management</h1>
+                            {/* ✅ Permission Badge */}
+                            {!permissions.can_edit && !permissions.can_create && !permissions.can_delete && (
+                                <span className="px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded-full flex items-center gap-1">
+                                    <Lock className="w-3 h-3" />
+                                    View Only
+                                </span>
+                            )}
+                        </div>
+                        <p className="text-gray-600 text-sm mt-1">
+                            {permissions.can_edit 
+                                ? 'Manage application menus (3 levels: Header → Submenu → Sub-submenu)'
+                                : 'View application menus (read-only mode)'
+                            }
+                        </p>
                     </div>
                     
                     <div className="flex items-center gap-2 text-sm">
@@ -491,6 +605,21 @@ export default function MenuManagement() {
                     </div>
                 </div>
             </div>
+
+            {/* ✅ Permission Warning Banner */}
+            {!permissions.can_edit && !permissions.can_create && !permissions.can_delete && (
+                <div className="mb-6 bg-blue-50 border-2 border-blue-200 rounded-xl p-5">
+                    <div className="flex items-center gap-3">
+                        <Shield className="w-6 h-6 text-blue-600 flex-shrink-0" />
+                        <div>
+                            <h4 className="text-sm font-bold text-blue-900 mb-1">View-Only Mode</h4>
+                            <p className="text-sm text-blue-700">
+                                You can view menu structure but cannot make changes. Contact your administrator for edit access.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Main Container */}
             <div className="bg-white rounded-lg shadow-sm">
@@ -535,14 +664,27 @@ export default function MenuManagement() {
                         </div>
 
                         <div className="flex items-center gap-4">
-                            <button
-                                onClick={() => handleAdd(null)}
-                                className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2"
-                            >
-                                <Plus className="w-4 h-4" />
-                                Add Header Menu
-                            </button>
+                            {/* ✅ Add Button - Conditional */}
+                            {permissions.can_create ? (
+                                <button
+                                    onClick={() => handleAdd(null)}
+                                    className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2"
+                                >
+                                    <Plus className="w-4 h-4" />
+                                    Add Header Menu
+                                </button>
+                            ) : (
+                                <button
+                                    disabled
+                                    className="px-4 py-2 bg-gray-300 text-gray-500 text-sm rounded-md cursor-not-allowed flex items-center gap-2"
+                                    title="No create permission"
+                                >
+                                    <Lock className="w-4 h-4" />
+                                    Add Header Menu
+                                </button>
+                            )}
 
+                            {/* Search */}
                             <div className="relative">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                                 <input

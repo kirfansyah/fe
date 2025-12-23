@@ -42,7 +42,7 @@ const ProfileContextProvider = ({ children }) => {
 
             dispatch({
                 type: "getKaryawan",
-                payload: [resData.data.user],
+                payload: resData.data.user,
             });
         } catch (err) {
             console.log(err);

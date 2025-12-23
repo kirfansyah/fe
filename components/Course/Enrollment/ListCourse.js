@@ -1,11 +1,10 @@
-import { Settings, Loader2, AlertCircle } from "lucide-react";
+import { Settings, Loader2, AlertCircle, Shield } from "lucide-react";
 import { useState, useMemo } from "react";
 import React from "react";
 import FilterSection from "./FilterSection";
 import CourseCard from "./CourseCard";
 import { useSweetAlert } from '../../../hooks/useSweetAlert';
 
-// ✅ Constants for type IDs
 const ENROLLMENT_TYPE_IDS = {
     GENERAL: 1,
     SPECIFIC: 2
@@ -22,17 +21,18 @@ export default function ListCourses({
     companyUnits = [],
     onCourseChange,
     deleteEnrolls,
+    onDeleteContentSuccess,
     loading = false,
     error = null,
+    permissions // ✅ Receive permissions
 }) {
     const [expanded, setExpanded] = useState(null);
     const [searchQuery, setSearchQuery] = useState("");
     const [filterCompany, setFilterCompany] = useState("all");
     const [filterStatus, setFilterStatus] = useState("all");
     
-    const { showSuccess, showError, showWarning, confirmAction,showLoading,closeLoading } = useSweetAlert();
+    const { showSuccess, showError, showWarning, confirmAction, showLoading, closeLoading } = useSweetAlert();
 
-    // Extract courses from enrollmentData
     const courses = useMemo(() => {
         if (!enrollmentData || typeof enrollmentData !== 'object') {
             return [];
@@ -47,7 +47,6 @@ export default function ListCourses({
         })).filter(course => course.id_course);
     }, [enrollmentData]);
 
-    // Filter courses
     const filteredCourses = useMemo(() => {
         return courses.filter(course => {
             if (searchQuery && !course.course_title.toLowerCase().includes(searchQuery.toLowerCase())) {
@@ -74,7 +73,12 @@ export default function ListCourses({
     };
 
     const addEnrollment = (courseId) => {
-        console.log('🔍 Adding enrollment for course:', courseId);
+        // ✅ Check permission
+        if (!permissions?.can_create) {
+            showError('You do not have permission to add enrollments');
+            return;
+        }
+
         const currentData = enrollmentData[courseId];
         
         if (!currentData) {
@@ -115,30 +119,6 @@ export default function ListCourses({
         showSuccess('New enrollment added. Please fill in the details.');
     };
 
-    // const removeEnrollment = async (courseId, index) => {
-    //     const currentData = enrollmentData[courseId] || {};
-    //     const enrollments = currentData.enrollments || [];
-    //     const enrollment = enrollments[index];
-        
-    //     if (!enrollment) {
-    //         showError('Enrollment not found.');
-    //         return;
-    //     }
-        
-    //     const result = await confirmAction({
-    //         title: 'Delete Enrollment?',
-    //         text: `Remove enrollment for ${enrollment.company_name || 'this company'}?`,
-    //         confirmButtonText: 'Yes, delete it!',
-    //         cancelButtonText: 'Cancel'
-    //     });
-        
-    //     if (!result.isConfirmed) return;
-        
-    //     const updated = enrollments.filter((_, i) => i !== index);
-    //     onCourseChange(courseId, 'enrollments', updated);
-    //     showSuccess('Enrollment removed successfully.');
-    // };
-
     const handleDeleteEnrollment = async (courseId, enrollmentId, enrollmentIndex) => {
         const currentData = enrollmentData[courseId] || {};
         const enrollments = currentData.enrollments || [];
@@ -150,8 +130,14 @@ export default function ListCourses({
 
         const isExisting = !!enrollment.id_course_enrollment;
 
+        if (isExisting && !permissions?.can_delete) {
+            return { 
+                success: false, 
+                message: 'You do not have permission to delete enrollments' 
+            };
+        }
+
         if (isExisting) {
-            // ✅ Delete existing via API
             showLoading('Deleting enrollment...');
             
             try {
@@ -159,6 +145,7 @@ export default function ListCourses({
                 closeLoading();
 
                 if (deleteResult.success) {
+                    await onDeleteContentSuccess(); // Notify parent to refresh data
                     const updated = enrollments.filter((_, i) => i !== enrollmentIndex);
                     onCourseChange(courseId, 'enrollments', updated);
                     
@@ -181,7 +168,6 @@ export default function ListCourses({
                 };
             }
         } else {
-            // ✅ Remove pending (local state only)
             const updated = enrollments.filter((_, i) => i !== enrollmentIndex);
             onCourseChange(courseId, 'enrollments', updated);
             
@@ -193,6 +179,12 @@ export default function ListCourses({
     };
 
     const duplicateEnrollment = async (courseId, index) => {
+        // ✅ Check permission
+        if (!permissions?.can_create) {
+            showError('You do not have permission to duplicate enrollments');
+            return;
+        }
+
         const currentData = enrollmentData[courseId] || {};
         const enrollments = currentData.enrollments || [];
         const toCopy = enrollments[index];
@@ -232,16 +224,29 @@ export default function ListCourses({
     };
 
     const updateEnrollmentField = (courseId, enrollmentIndex, field, value) => {
+        // ✅ Check permission for edit
         const currentData = enrollmentData[courseId] || {};
         const enrollments = [...(currentData.enrollments || [])];
+        const enrollment = enrollments[enrollmentIndex];
         
-        if (!enrollments[enrollmentIndex]) {
+        if (!enrollment) {
             showError('Enrollment not found.');
             return;
         }
-        
-        const enrollment = enrollments[enrollmentIndex];
+
         const isExisting = !!enrollment.id_course_enrollment;
+        const isNew = enrollment.is_new;
+
+        // ✅ Permission check based on enrollment state
+        if (isExisting && !permissions?.can_edit) {
+            showError('You do not have permission to edit existing enrollments');
+            return;
+        }
+
+        if (isNew && !permissions?.can_create) {
+            showError('You do not have permission to modify new enrollments');
+            return;
+        }
         
         if (isExisting) {
             if (field === 'enroll_type_name') {
@@ -278,15 +283,12 @@ export default function ListCourses({
         }
         
         return groupings.map(item => {
-           
             if (typeof item === 'number') {
                 return item;
             }
-           
             if (item && typeof item === 'object' && item.id_grouping !== undefined) {
                 return parseInt(item.id_grouping);
             }
-           
             if (typeof item === 'string') {
                 const num = parseInt(item);
                 return isNaN(num) ? null : num;
@@ -302,6 +304,17 @@ export default function ListCourses({
         
         if (!enrollment) {
             showError('Enrollment not found.');
+            return;
+        }
+
+        // ✅ Check permission
+        const isExisting = !!enrollment.id_course_enrollment;
+        if (isExisting && !permissions?.can_edit) {
+            showError('You do not have permission to edit group selections');
+            return;
+        }
+        if (!isExisting && !permissions?.can_create) {
+            showError('You do not have permission to modify group selections');
             return;
         }
         
@@ -328,20 +341,28 @@ export default function ListCourses({
         return companyUnits.filter(company => !usedCompanyIds.includes(company.id));
     };
 
-    // ✅ Make async and return result
     const handleSaveEnrollment = async (courseId, enrollmentIndex) => {
         const currentData = enrollmentData[courseId] || {};
         const enrollments = currentData.enrollments || [];
         const enrollment = enrollments[enrollmentIndex];
         
-        console.log('💾 Saving enrollment:', enrollment);
-        
         if (!enrollment) {
             await showError('Enrollment not found.');
             return { success: false };
         }
+
+        // ✅ Check permission
+        const isExisting = !!enrollment.id_course_enrollment;
+        if (isExisting && !permissions?.can_edit) {
+            await showError('You do not have permission to update enrollments');
+            return { success: false };
+        }
+        if (!isExisting && !permissions?.can_create) {
+            await showError('You do not have permission to create enrollments');
+            return { success: false };
+        }
         
-        // ✅ Client-side validation
+        // Validation
         if (!enrollment.company_id) {
             await showWarning('Please select a company.');
             return { success: false };
@@ -362,7 +383,6 @@ export default function ListCourses({
             return { success: false };
         }
         
-        // ✅ Validate passing_grade
         if (enrollment.passing_grade === undefined || enrollment.passing_grade === null) {
             await showWarning('Please enter minimum score.');
             return { success: false };
@@ -379,7 +399,6 @@ export default function ListCourses({
             return { success: false };
         }
         
-        // ✅ Call parent handler and await result
         if (onCourseChange) {
             const result = await onCourseChange(courseId, 'save_single', {
                 course: currentData,
@@ -387,9 +406,6 @@ export default function ListCourses({
                 index: enrollmentIndex
             });
             
-            console.log('📥 Save result from parent:', result);
-            
-            // ✅ Return the result to modal
             return result || { success: false };
         }
         
@@ -409,7 +425,7 @@ export default function ListCourses({
 
     if (error) {
         return (
-            <div className="bg-red-50 border-2 border-red-200 rounded-xl p-8 text-center">
+            <div className="bg-red-50 border-2 border-red-200 rounded-lg p-8 text-center">
                 <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <AlertCircle className="w-8 h-8 text-red-600" />
                 </div>
@@ -427,7 +443,7 @@ export default function ListCourses({
 
     if (courses.length === 0) {
         return (
-            <div className="bg-gray-50 border-2 border-gray-200 rounded-xl p-12 text-center">
+            <div className="bg-gray-50 border-2 border-gray-200 rounded-lg p-12 text-center">
                 <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Settings className="w-10 h-10 text-gray-400" />
                 </div>
@@ -435,18 +451,35 @@ export default function ListCourses({
                 <p className="text-gray-600 mb-6">
                     There are no courses in the system yet.
                 </p>
-                <button
-                    onClick={() => window.location.href = '/course/add'}
-                    className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all"
-                >
-                    Create First Course
-                </button>
+                {permissions?.can_create && (
+                    <button
+                        onClick={() => window.location.href = '/course/add'}
+                        className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all"
+                    >
+                        Create First Course
+                    </button>
+                )}
             </div>
         );
     }
 
     return (
         <div className="space-y-4">
+            {/* ✅ Read-Only Notice for no permissions */}
+            {!permissions?.can_create && !permissions?.can_edit && !permissions?.can_delete && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex items-center gap-3">
+                        <Shield className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                        <div>
+                            <h4 className="text-sm font-semibold text-blue-900">View-Only Mode</h4>
+                            <p className="text-sm text-blue-700">
+                                You can view course enrollments but cannot make changes.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <FilterSection
                 searchQuery={searchQuery}
                 setSearchQuery={setSearchQuery}
@@ -476,12 +509,13 @@ export default function ListCourses({
                         onDuplicate={duplicateEnrollment}
                         onSave={handleSaveEnrollment}
                         onDeleteEnrollment={handleDeleteEnrollment}
+                        permissions={permissions} // ✅ Pass to child
                     />
                 ))}
             </div>
 
             {filteredCourses.length === 0 && courses.length > 0 && (
-                <div className="text-center py-12 bg-white rounded-xl border-2 border-gray-200">
+                <div className="text-center py-12 bg-white rounded-lg border-2 border-gray-200">
                     <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                         <Settings className="w-8 h-8 text-gray-400" />
                     </div>

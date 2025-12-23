@@ -23,7 +23,7 @@ const Header = () => {
  
   const { getKaryawan, dataKaryawan } = useContext(ProfileContext);
     
-  const dataKaryawans = dataKaryawan?.length ? dataKaryawan[0] : [];
+  
 
   useEffect(() => {
     getSession();
@@ -54,7 +54,7 @@ const Header = () => {
              
               <li className='flex items-center px-1 border-l'>
                 <label className='pl-2 text-blue-900 font-normal mr-2 lg:block'>
-                  {dataKaryawans?.nama}
+                  {dataKaryawan?.nama}
                 </label>
                 <Menu as='div'>
                   <div> 
@@ -77,7 +77,7 @@ const Header = () => {
                       <Menu.Items className='absolute right-0 mt-2 w-56 origin-top-right divide-y divide-gray-100 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none'>
                         <div className='px-1 py-1'>
                           <label className='p-2 text-blue-900 lg:hidden block border-b-2 border-gray-200'>
-                            {dataKaryawans?.nama}
+                            {dataKaryawan?.nama}
                           </label>
                           <Menu.Item>
                             {({ active }) => (

@@ -6,11 +6,14 @@ import {
     Check,
     AlertCircle,
     Edit,
-    Trash2
+    Trash2,
+    Lock,
+    Eye
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import EnrollmentFormModal from "./EnrollmentForm";
 import Swal from 'sweetalert2';
+
 export default function CourseCard({ 
     course, 
     index,
@@ -24,11 +27,11 @@ export default function CourseCard({
     onToggleGroup,
     onDuplicate,
     onSave,
-    onDeleteEnrollment
+    onDeleteEnrollment,
+    permissions
 }) {
     const [modalState, setModalState] = useState({
         isOpen: false,
-        
         enrollmentIndex: null
     });
 
@@ -37,6 +40,7 @@ export default function CourseCard({
     const newEnrollments = enrollments.filter(e => e.is_new);
     const totalCompaniesEnrolled = existingEnrollments.length;
     const [pendingModalOpen, setPendingModalOpen] = useState(null);
+
     const openModal = (enrollment, index) => {
         setModalState({
             isOpen: true,
@@ -53,7 +57,7 @@ export default function CourseCard({
         });
     };
 
-     useEffect(() => {
+    useEffect(() => {
         if (pendingModalOpen !== null && enrollments.length > pendingModalOpen) {
             const newEnrollment = enrollments[pendingModalOpen];
             openModal(newEnrollment, pendingModalOpen);
@@ -62,6 +66,16 @@ export default function CourseCard({
     }, [enrollments.length]);
 
     const handleAddNew = () => {
+        if (!permissions?.can_create) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Permission Denied',
+                text: 'You do not have permission to add enrollments',
+                confirmButtonColor: '#1e3a8a'
+            });
+            return;
+        }
+
         const newEnrollmentIndex = enrollments.length;
         setPendingModalOpen(newEnrollmentIndex);
         onAddEnrollment(course.id_course); 
@@ -74,6 +88,15 @@ export default function CourseCard({
 
     const handleDelete = async (enrollment, idx) => {
         const isExisting = !!enrollment.id_course_enrollment;
+        if (isExisting && !permissions?.can_delete) {
+            await Swal.fire({
+                icon: 'error',
+                title: 'Permission Denied',
+                text: 'You do not have permission to delete enrollments',
+                confirmButtonColor: '#1e3a8a'
+            });
+            return;
+        }
 
         const result = await Swal.fire({
             title: 'Delete Enrollment?',
@@ -97,11 +120,10 @@ export default function CourseCard({
 
         if (!result.isConfirmed) return;
 
-        // ✅ Single handler for both cases
-        console.log('🗑️ Deleting enrollment ID:', course.id_course);
+        
         const deleteResult = await onDeleteEnrollment(
             course.id_course,
-            enrollment.id_course_enrollment, // Will be null for pending
+            enrollment.id_course_enrollment,
             idx
         );
 
@@ -124,6 +146,42 @@ export default function CourseCard({
         }
     };
 
+    // ✅ New: Handle View (always allowed)
+    const handleViewClick = (enrollment, idx) => {
+        openModal(enrollment, idx);
+    };
+
+    // ✅ Handle Edit (with permission check)
+    const handleEditClick = (enrollment, idx, e) => {
+        e?.stopPropagation(); // Prevent event bubbling
+        
+        const isExisting = !!enrollment.id_course_enrollment;
+        
+        if (isExisting && !permissions?.can_edit) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Permission Denied',
+                text: 'You do not have permission to edit enrollments',
+                confirmButtonColor: '#1e3a8a'
+            });
+            return;
+        }
+
+        if (!isExisting && !permissions?.can_create) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Permission Denied',
+                text: 'You do not have permission to modify pending enrollments',
+                confirmButtonColor: '#1e3a8a'
+            });
+            return;
+        }
+
+        openModal(enrollment, idx);
+    };
+
+    const canInteract = permissions?.can_create || permissions?.can_edit || permissions?.can_delete;
+
     return (
         <>
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all">
@@ -133,7 +191,6 @@ export default function CourseCard({
                     onClick={() => onToggleExpand(course.id_course)}
                 >
                     <div className="flex items-center gap-4 flex-1 min-w-0">
-                        {/* Order Number Badge */}
                         <div className="relative flex-shrink-0">
                             <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
                                 <span className="text-lg font-bold text-white">{index + 1}</span>
@@ -145,15 +202,19 @@ export default function CourseCard({
                             )}
                         </div>
 
-                        {/* Course Info */}
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap mb-2">
                                 <h4 className="text-lg font-bold text-gray-900 line-clamp-1">
                                     {course.course_title}
                                 </h4>
+                                {!canInteract && (
+                                    <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-full flex items-center gap-1">
+                                        <Lock className="w-3 h-3" />
+                                        View Only
+                                    </span>
+                                )}
                             </div>
 
-                            {/* Status Badges */}
                             <div className="flex items-center gap-2 flex-wrap">
                                 {existingEnrollments.length > 0 && (
                                     <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full flex items-center gap-1.5 shadow-sm">
@@ -177,7 +238,6 @@ export default function CourseCard({
                                 )}
                             </div>
 
-                            {/* Enrolled Companies Preview */}
                             {existingEnrollments.length > 0 && (
                                 <div className="mt-2 flex items-center gap-2 flex-wrap">
                                     {existingEnrollments.slice(0, 3).map(enrollment => (
@@ -199,7 +259,6 @@ export default function CourseCard({
                         </div>
                     </div>
 
-                    {/* Expand Button */}
                     <button 
                         type="button"
                         className={`flex items-center gap-2 px-5 py-2.5 rounded-xl transition-all border-2 font-bold shadow-sm hover:shadow-md ${
@@ -216,52 +275,57 @@ export default function CourseCard({
                         <span className="text-sm">
                             {enrollments.length > 0 
                                 ? `View (${enrollments.length})`
-                                : 'Add Company'
+                                : canInteract ? 'Add Company' : 'View Details'
                             }
                         </span>
                     </button>
                 </div>
 
-                {/* Expanded Section - Simple List */}
+                {/* Expanded Section */}
                 {isExpanded && (
                     <div 
                         className="border-t border-gray-200 bg-gradient-to-br from-gray-50 to-gray-100 p-6"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        {/* Section Header */}
                         <div className="flex items-center justify-between mb-5">
                             <div>
                                 <h5 className="text-base font-bold text-gray-900">
                                     Company Enrollments
                                 </h5>
                                 <p className="text-xs text-gray-600">
-                                    Click enrollment to view or edit details
+                                    {canInteract 
+                                        ? 'Click enrollment to view or edit details'
+                                        : 'View-only mode - you cannot make changes'
+                                    }
                                 </p>
                             </div>
-                            <button
-                                type="button"
-                                onClick={handleAddNew}
-                                className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
-                            >
-                                <Plus className="w-5 h-5" />
-                                Add Company
-                            </button>
+                            
+                            {permissions?.can_create && (
+                                <button
+                                    type="button"
+                                    onClick={handleAddNew}
+                                    className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+                                >
+                                    <Plus className="w-5 h-5" />
+                                    Add Company
+                                </button>
+                            )}
                         </div>
 
-                        {/* Enrollments List - Compact */}
+                        {/* ✅ Updated Enrollments List */}
                         <div className="space-y-3">
                             {enrollments.map((enrollment, idx) => {
                                 const isExisting = !!enrollment.id_course_enrollment;
+                                const canEdit = isExisting ? permissions?.can_edit : permissions?.can_create;
                                 
                                 return (
                                     <div
                                         key={enrollment.id_course_enrollment || enrollment.temp_id || idx}
-                                        className={`flex items-center justify-between p-4 rounded-xl border-2 transition-all cursor-pointer hover:shadow-md ${
+                                        className={`flex items-center justify-between p-4 rounded-xl border-2 transition-all ${
                                             isExisting
-                                                ? 'bg-white border-green-200 hover:border-green-300'
-                                                : 'bg-yellow-50 border-yellow-300 hover:border-yellow-400'
+                                                ? 'bg-white border-green-200'
+                                                : 'bg-yellow-50 border-yellow-300'
                                         }`}
-                                        onClick={() => openModal(enrollment, idx)}
                                     >
                                         <div className="flex items-center gap-3 flex-1">
                                             <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
@@ -301,42 +365,68 @@ export default function CourseCard({
                                             </div>
                                         </div>
 
+                                        {/* ✅ Updated Action Buttons */}
                                         <div className="flex items-center gap-2">
-                                            <button
-                                                type="button"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    openModal(enrollment, idx);
-                                                }}
-                                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                                title="Edit"
-                                            >
-                                                <Edit className="w-4 h-4" />
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleDelete(enrollment, idx);
-                                                }}
-                                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                                title={isExisting ? 'Delete Enrollment' : 'Remove Pending'}
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                            {/* {!isExisting && (
+                                            {/* View Button - Always Available for Existing */}
+                                            {isExisting && (
                                                 <button
                                                     type="button"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        onRemove(course.id_course, idx);
+                                                        handleViewClick(enrollment, idx);
+                                                    }}
+                                                    className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                                                    title="View Details"
+                                                >
+                                                    <Eye className="w-4 h-4" />
+                                                </button>
+                                            )}
+
+                                            {/* Edit Button - Permission Based */}
+                                            {canEdit ? (
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => handleEditClick(enrollment, idx, e)}
+                                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                    title="Edit"
+                                                >
+                                                    <Edit className="w-4 h-4" />
+                                                </button>
+                                            ) : !isExisting ? (
+                                                // Show lock for pending without permission
+                                                <button
+                                                    type="button"
+                                                    disabled
+                                                    className="p-2 text-gray-400 cursor-not-allowed rounded-lg"
+                                                    title="No edit permission"
+                                                >
+                                                    <Lock className="w-4 h-4" />
+                                                </button>
+                                            ) : null}
+                                            
+                                            {/* Delete Button - Permission Based */}
+                                            {!isExisting || permissions?.can_delete ? (
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleDelete(enrollment, idx);
                                                     }}
                                                     className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                                    title="Remove"
+                                                    title={isExisting ? 'Delete Enrollment' : 'Remove Pending'}
                                                 >
                                                     <Trash2 className="w-4 h-4" />
                                                 </button>
-                                            )} */}
+                                            ) : (
+                                                <button
+                                                    type="button"
+                                                    disabled
+                                                    className="p-2 text-gray-400 cursor-not-allowed rounded-lg"
+                                                    title="No delete permission"
+                                                >
+                                                    <Lock className="w-4 h-4" />
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 );
@@ -352,16 +442,22 @@ export default function CourseCard({
                                         No Enrollments Yet
                                     </h4>
                                     <p className="text-sm text-gray-600 mb-4">
-                                        Add companies to enroll in this course
+                                        {permissions?.can_create 
+                                            ? 'Add companies to enroll in this course'
+                                            : 'No companies enrolled in this course yet'
+                                        }
                                     </p>
-                                    <button
-                                        type="button"
-                                        onClick={handleAddNew}
-                                        className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-bold transition-all shadow-md hover:shadow-lg"
-                                    >
-                                        <Plus className="w-5 h-5" />
-                                        Add First Company
-                                    </button>
+                                    
+                                    {permissions?.can_create && (
+                                        <button
+                                            type="button"
+                                            onClick={handleAddNew}
+                                            className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-bold transition-all shadow-md hover:shadow-lg"
+                                        >
+                                            <Plus className="w-5 h-5" />
+                                            Add First Company
+                                        </button>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -384,6 +480,7 @@ export default function CourseCard({
                     onUpdateField={onUpdateField}
                     onToggleGroup={onToggleGroup}
                     onSave={handleSaveEnrollment}
+                    permissions={permissions}
                 />
             )}
         </>

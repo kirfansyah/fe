@@ -10,39 +10,48 @@ import {
   Target,
   BarChart3,
   BookMarked,
-  Import,
+  ChevronLeft,
+  TrendingUp,
+  Calendar,
+  GraduationCap,
+  Trophy,
+  Zap,
+  BookText,
+  Timer,
+  CheckCheck,
+  XCircle,
+  Play,
+  Building2,
+  Briefcase,
+  IdCard
 } from "lucide-react";
 import Link from "next/link";
 import { useCourses } from "../hooks/useCourses";
+
 export default function ModernProfile() {
   const { getKaryawan, dataKaryawan } = useContext(ProfileContext);
   const { profileInfo } = useCourses();
-  const dataKaryawans = dataKaryawan?.length ? dataKaryawan[0] : [];
-  const [activeTab, setActiveTab] = useState("course-profile");
+  const [activeTab, setActiveTab] = useState("overview");
 
-  const apiData = profileInfo || dataKaryawans || {};
+  const apiData = profileInfo || dataKaryawan || {};
+  
   const profileData = {
-    // Profile info
     no_ktp: apiData.no_ktp || "",
     nama: apiData.nama || "",
     position_name: apiData.position_name || "",
     dept_abbr: apiData.dept_abbr || "",
     company_name: apiData.company_name || "",
-    profile_photo_url: dataKaryawans.profile_photo_url || "",
+    profile_photo_url: dataKaryawan.profile_photo_url || "/img/user.png",
 
-    // Stats
     stats: {
       enrolled: apiData.course_enrolled || 0,
       outstanding: apiData.course_outstanding || 0,
       completed: apiData.course_completed || 0,
       passed: apiData.course_status?.[0]?.passed || 0,
-      totalHours: Math.floor(
-        parseInt(apiData.course_total_time?.split(":")[0] || 0)
-      ),
+      totalHours: Math.floor(parseInt(apiData.course_total_time?.split(":")[0] || 0)),
       totalMinutes: parseInt(apiData.course_total_time?.split(":")[1] || 0),
     },
 
-    // Course Status (untuk donut chart)
     course_status: apiData.course_status?.[0] || {
       passed: 0,
       in_progress: 0,
@@ -56,22 +65,17 @@ export default function ModernProfile() {
       failed: apiData.course_status?.[0]?.failed || 0,
     },
 
-    // Course Results
     courseResults: (apiData.course_results || []).map((course) => ({
       name: course.course_name,
       score: course.score,
     })),
 
-    // Mandatory Courses
-    mandatoryCourses: (apiData.course_mandatory_list || []).map(
-      (course, index) => ({
-        id: index + 1,
-        title: course.course_name,
-        completed: course.is_completed,
-      })
-    ),
+    mandatoryCourses: (apiData.course_mandatory_list || []).map((course, index) => ({
+      id: index + 1,
+      title: course.course_name,
+      completed: course.is_completed,
+    })),
 
-    // eBooks
     ebooks: {
       read: apiData.ebook_read || 0,
       completed: apiData.ebook_completed || 0,
@@ -81,461 +85,553 @@ export default function ModernProfile() {
     },
   };
 
+  const completionRate = profileData.stats.enrolled > 0 
+    ? Math.round((profileData.stats.completed / profileData.stats.enrolled) * 100) 
+    : 0;
+
+  const passRate = profileData.course_status.course_total > 0
+    ? Math.round((profileData.course_status.passed / profileData.course_status.course_total) * 100)
+    : 0;
+
   return (
     <WebLayout>
-      <div className="h-full overflow-y-auto bg-gradient-to-br from-blue-200 via-white to-blue-100">
-        {/* Header with Gradient */}
-        <div className="bg-gradient-to-r from-blue-900 to-blue-100 text-white py-8 px-6 shadow-lg">
-          <div className="max-w-7xl mx-auto">
+      <div className="min-h-screen bg-gray-50">
+        {/* ✅ NON-STICKY Header - tidak akan menimpa menu */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+          {/* Breadcrumb / Back Button */}
+          <div className="flex items-center justify-between mb-6">
             <Link
               href="/dashboard"
-              className="text-2xl text-blue-100 mb-4 inline-block"
+              className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors group"
             >
-              Home/Profile
+              <div className="w-8 h-8 rounded-lg bg-white border border-gray-200 flex items-center justify-center group-hover:bg-gray-50 group-hover:border-gray-300 transition-colors">
+                <ChevronLeft className="w-4 h-4" />
+              </div>
+              <span className="font-medium">Back to Dashboard</span>
             </Link>
-            <p className="text-blue-100">
-              Welcome back! Here's your learning journey
-            </p>
+            
+            <div className="hidden sm:flex items-center gap-2 text-sm text-gray-500">
+              <Calendar className="w-4 h-4" />
+              <span>Last updated: Today</span>
+            </div>
           </div>
-        </div>
-        {/* Tabs */}
-        <div className="max-w-7xl mx-auto px-6 -mt-6">
-          <div className="bg-white rounded-t-xl shadow-lg p-2 flex gap-2">
-            <button
-              onClick={() => setActiveTab("course-profile")}
-              className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
-                activeTab === "course-profile"
-                  ? "bg-gradient-to-r from-blue-900 to-blue-600 text-white shadow-md"
-                  : "text-gray-600 hover:bg-gray-100"
-              }`}
-            >
-              Course Profile
-            </button>
-            <button
-              onClick={() => setActiveTab("competencies")}
-              className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
-                activeTab === "competencies"
-                  ? "bg-gradient-to-r from-blue-900 to-blue-600 text-white shadow-md"
-                  : "text-gray-600 hover:bg-gray-100"
-              }`}
-            >
-              Competencies
-            </button>
-          </div>
-        </div>
-        {/* Main Content */}
-        <div className="max-w-7xl mx-auto px-6 pb-8">
-          <div className="bg-white rounded-b-xl shadow-lg p-8">
-            {activeTab === "course-profile" && (
-              <div className="space-y-8">
-                {/* Profile Card with Modern Design */}
-                <div className="bg-gradient-to-r from-blue-900 to-blue-100 rounded-2xl p-8 text-white shadow-xl">
-                  <div className="flex items-start gap-6">
-                    {/* Avatar with Glow Effect */}
-                    <div className="relative">
-                      <div className="absolute inset-0 bg-white rounded-full blur-xl opacity-20"></div>
-                      <img
-                        src={`${process.env.BASE_URL}${profileData.profile_photo_url}`}
-                        alt={profileData.name}
-                        className="relative w-32 h-32 rounded-full border-4 border-white shadow-2xl object-cover"
-                      />
-                    </div>
 
-                    {/* Profile Info */}
-                    <div className="flex-1">
-                      <h2 className="text-3xl font-bold mb-4">
-                        {profileData.nama}
-                      </h2>
-                      <div className="grid grid-cols-2 gap-x-8 gap-y-3">
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 bg-white rounded-full"></div>
-                          <span className="text-sm text-blue-100">
-                            Employee ID:
-                          </span>
-                          <span className="font-semibold">
-                            {profileData.no_ktp}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 bg-white rounded-full"></div>
-                          <span className="text-sm text-blue-100">
-                            Position:
-                          </span>
-                          <span className="font-semibold">
-                            {profileData.position_name}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 bg-white rounded-full"></div>
-                          <span className="text-sm text-blue-100">
-                            Department:
-                          </span>
-                          <span className="font-semibold">
-                            {profileData.dept_abbr}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 bg-white rounded-full"></div>
-                          <span className="text-sm text-blue-100">
-                            Company Unit:
-                          </span>
-                          <span className="font-semibold">
-                            {profileData.company_name}
-                          </span>
-                        </div>
-                      </div>
+          {/* Profile Header Card */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-6">
+            <div className="bg-gradient-to-r from-blue-800 via-blue-700 to-blue-800 px-6 py-8 sm:px-8">
+              <div className="flex flex-col sm:flex-row items-center gap-6">
+                {/* Avatar */}
+                <div className="relative flex-shrink-0">
+                  <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 p-1">
+                    <img
+                      src={
+                        profileData.profile_photo_url.startsWith('http') 
+                          ? profileData.profile_photo_url 
+                          : `${process.env.BASE_URL || ''}${profileData.profile_photo_url}`
+                      }
+                      alt={profileData.nama || "Profile"}
+                      className="w-full h-full rounded-full object-cover bg-white"
+                      onError={(e) => {
+                        e.target.src = '/img/user.png';
+                      }}
+                    />
+                  </div>
+                  <div className="absolute bottom-1 right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-white"></div>
+                </div>
+
+                {/* Profile Info */}
+                <div className="flex-1 text-center sm:text-left">
+                  <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+                    {profileData.nama || "User"}
+                  </h1>
+                  
+                  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-4 gap-y-1 text-slate-300">
+                    <div className="flex items-center gap-1.5">
+                      <IdCard className="w-4 h-4" />
+                      <span className="text-sm">{profileData.no_ktp || "-"}</span>
                     </div>
+                    <div className="flex items-center gap-1.5">
+                      <Briefcase className="w-4 h-4" />
+                      <span className="text-sm">{profileData.position_name || "-"}</span>
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-4 gap-y-1 mt-1 text-slate-400">
+                    <div className="flex items-center gap-1.5">
+                      <Building2 className="w-4 h-4" />
+                      <span className="text-sm">{profileData.dept_abbr || "-"}</span>
+                    </div>
+                    <span className="text-sm">{profileData.company_name || "-"}</span>
                   </div>
                 </div>
 
-                {/* Stats Cards Grid */}
-                <div className="grid lg:grid-cols-4 gap-6">
-                  {/* Enrolled Card */}
-                  <div className="group bg-white rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 hover:border-blue-300 hover:-translate-y-1">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="bg-blue-100 p-3 rounded-xl group-hover:bg-blue-600 transition-colors">
-                        <BookOpen className="w-6 h-6 text-blue-600 group-hover:text-white transition-colors" />
+                {/* Quick Stats */}
+                <div className="flex flex-wrap justify-center gap-3">
+                  <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 text-center min-w-[80px]">
+                    <div className="text-xl sm:text-2xl font-bold text-white">{completionRate}%</div>
+                    <div className="text-xs text-slate-300">Completion</div>
+                  </div>
+                  <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 text-center min-w-[80px]">
+                    <div className="text-xl sm:text-2xl font-bold text-white">{profileData.stats.completed}</div>
+                    <div className="text-xs text-slate-300">Completed</div>
+                  </div>
+                  <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 text-center min-w-[80px]">
+                    <div className="text-lg sm:text-xl font-bold text-white">
+                      {profileData.stats.totalHours}h {profileData.stats.totalMinutes}m
+                    </div>
+                    <div className="text-xs text-slate-300">Learning</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Tab Navigation */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-1.5 mb-6">
+            <div className="flex gap-1 overflow-x-auto">
+              {[
+                { id: 'overview', label: 'Overview', icon: BarChart3 },
+                { id: 'courses', label: 'Courses', icon: BookOpen },
+                { id: 'ebooks', label: 'E-Books', icon: BookText },
+                { id: 'competencies', label: 'Competencies', icon: Award },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm transition-all whitespace-nowrap ${
+                    activeTab === tab.id
+                      ? "bg-slate-800 text-white shadow-sm"
+                      : "text-gray-600 hover:bg-gray-100"
+                  }`}
+                >
+                  <tab.icon className="w-4 h-4" />
+                  <span className="hidden sm:inline">{tab.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Tab Content */}
+          <div className="pb-8">
+            {activeTab === "overview" && (
+              <div className="space-y-6">
+                {/* Stats Grid */}
+                <div className="grid lg:grid-cols-4 gap-4">
+                  <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
+                        <BookOpen className="w-5 h-5 text-blue-600" />
                       </div>
-                      <span className="text-3xl font-bold text-gray-900">
-                        {profileData.stats.enrolled}
+                      <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
+                        Total
                       </span>
                     </div>
-                    <h3 className="text-gray-600 font-medium mb-1">
-                      Courses Enrolled
-                    </h3>
-                    <p className="text-sm text-gray-400">Total course</p>
+                    <div className="text-2xl font-bold text-gray-900 mb-1">
+                      {profileData.stats.enrolled}
+                    </div>
+                    <div className="text-sm text-gray-500">Courses Enrolled</div>
                   </div>
 
-                  {/* Outstanding Card */}
-                  <div className="group bg-white rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 hover:border-orange-300 hover:-translate-y-1">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="bg-orange-100 p-3 rounded-xl group-hover:bg-orange-500 transition-colors">
-                        <AlertCircle className="w-6 h-6 text-orange-500 group-hover:text-white transition-colors" />
+                  <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="w-10 h-10 bg-amber-50 rounded-lg flex items-center justify-center">
+                        <AlertCircle className="w-5 h-5 text-amber-600" />
                       </div>
-                      <span className="text-3xl font-bold text-gray-900">
-                        {profileData.stats.outstanding}
+                      <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-1 rounded-full">
+                        Pending
                       </span>
                     </div>
-                    <h3 className="text-gray-600 font-medium mb-1">
-                      Courses Outstanding
-                    </h3>
-                    <p className="text-sm text-gray-400">Total course</p>
+                    <div className="text-2xl font-bold text-gray-900 mb-1">
+                      {profileData.stats.outstanding}
+                    </div>
+                    <div className="text-sm text-gray-500">Outstanding</div>
                   </div>
 
-                  {/* Completed Card */}
-                  <div className="group bg-white rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 hover:border-green-300 hover:-translate-y-1">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="bg-green-100 p-3 rounded-xl group-hover:bg-green-500 transition-colors">
-                        <Award className="w-6 h-6 text-green-500 group-hover:text-white transition-colors" />
+                  <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
+                        <CheckCheck className="w-5 h-5 text-green-600" />
                       </div>
-                      <span className="text-3xl font-bold text-gray-900">
-                        {profileData.stats.completed}
+                      <span className="text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                        Done
                       </span>
                     </div>
-                    <h3 className="text-gray-600 font-medium mb-1">
-                      Courses Completed
-                    </h3>
-                    <p className="text-sm text-gray-400">Total course</p>
+                    <div className="text-2xl font-bold text-gray-900 mb-1">
+                      {profileData.stats.completed}
+                    </div>
+                    <div className="text-sm text-gray-500">Completed</div>
                   </div>
 
-                  {/* Time Total Card */}
-                  <div className="group bg-white rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 hover:border-purple-300 hover:-translate-y-1">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="bg-purple-100 p-3 rounded-xl group-hover:bg-purple-500 transition-colors">
-                        <Clock className="w-6 h-6 text-purple-500 group-hover:text-white transition-colors" />
+                  <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center">
+                        <Timer className="w-5 h-5 text-purple-600" />
                       </div>
-                      <div className="text-right">
-                        <span className="text-3xl font-bold text-gray-900">
-                          {profileData.stats.totalHours}
-                        </span>
-                        <span className="text-lg text-gray-500">h</span>
-                        <span className="text-2xl font-bold text-gray-900 ml-1">
-                          {profileData.stats.totalMinutes}
-                        </span>
-                        <span className="text-lg text-gray-500">m</span>
-                      </div>
+                      <span className="text-xs font-medium text-purple-600 bg-purple-50 px-2 py-1 rounded-full">
+                        Time
+                      </span>
                     </div>
-                    <h3 className="text-gray-600 font-medium mb-1">
-                      Time Total
-                    </h3>
-                    <p className="text-sm text-gray-400">Learning hours</p>
+                    <div className="text-2xl font-bold text-gray-900 mb-1">
+                      {profileData.stats.totalHours}h {profileData.stats.totalMinutes}m
+                    </div>
+                    <div className="text-sm text-gray-500">Learning Hours</div>
                   </div>
                 </div>
 
                 {/* Main Content Grid */}
                 <div className="grid lg:grid-cols-3 gap-6">
-                  {/* Course Status - Modern Circular Progress */}
-                  <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
-                    <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
-                      <Target className="w-5 h-5 text-blue-600" />
-                      Courses Status
-                    </h3>
+                  {/* Course Status */}
+                  <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                    <div className="flex items-center justify-between mb-6">
+                      <h3 className="font-semibold text-gray-900">Course Status</h3>
+                      <Target className="w-5 h-5 text-gray-400" />
+                    </div>
 
                     <div className="flex items-center justify-center mb-6">
-                      <div className="relative w-48 h-48">
-                        {/* Circular Progress */}
-                        <svg className="w-full h-full transform -rotate-90">
+                      <div className="relative w-36 h-36 sm:w-40 sm:h-40">
+                        <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                          <circle cx="50" cy="50" r="40" stroke="#f3f4f6" strokeWidth="8" fill="none" />
+                          
                           <circle
-                            cx="96"
-                            cy="96"
-                            r="80"
-                            stroke="#e5e7eb"
-                            strokeWidth="16"
+                            cx="50" cy="50" r="40"
+                            stroke="#ef4444"
+                            strokeWidth="8"
                             fill="none"
-                          />
-                          <circle
-                            cx="96"
-                            cy="96"
-                            r="80"
-                            stroke="url(#gradient)"
-                            strokeWidth="16"
-                            fill="none"
-                            strokeDasharray={2 * Math.PI * 80}
-                            strokeDashoffset={
-                              2 *
-                              Math.PI *
-                              80 *
-                              (1 -
-                                (profileData.course_status.course_total > 0
-                                  ? profileData.course_status.passed /
-                                    profileData.course_status.course_total
-                                  : 0))
-                            }
-                            strokeLinecap="round"
+                            strokeDasharray={`${(profileData.courseStatus.failed / 100) * 251.2} 251.2`}
+                            strokeDashoffset="0"
                             className="transition-all duration-1000"
                           />
-                          <defs>
-                            <linearGradient
-                              id="gradient"
-                              x1="0%"
-                              y1="0%"
-                              x2="100%"
-                              y2="100%"
-                            >
-                              <stop offset="0%" stopColor="#10b981" />
-                              <stop offset="100%" stopColor="#059669" />
-                            </linearGradient>
-                          </defs>
+                          
+                          <circle
+                            cx="50" cy="50" r="40"
+                            stroke="#3b82f6"
+                            strokeWidth="8"
+                            fill="none"
+                            strokeDasharray={`${(profileData.courseStatus.inProgress / 100) * 251.2} 251.2`}
+                            strokeDashoffset={`${-(profileData.courseStatus.failed / 100) * 251.2}`}
+                            className="transition-all duration-1000"
+                          />
+                          
+                          <circle
+                            cx="50" cy="50" r="40"
+                            stroke="#22c55e"
+                            strokeWidth="8"
+                            fill="none"
+                            strokeDasharray={`${(profileData.courseStatus.passed / 100) * 251.2} 251.2`}
+                            strokeDashoffset={`${-((profileData.courseStatus.failed + profileData.courseStatus.inProgress) / 100) * 251.2}`}
+                            className="transition-all duration-1000"
+                          />
                         </svg>
                         <div className="absolute inset-0 flex items-center justify-center flex-col">
-                          <span className="text-4xl font-bold text-gray-900">
-                            {profileData.courseStatus.passed}
-                          </span>
-                          <span className="text-sm text-gray-500">Courses</span>
+                          <span className="text-3xl font-bold text-gray-900">{passRate}%</span>
+                          <span className="text-xs text-gray-500">Pass Rate</span>
                         </div>
                       </div>
                     </div>
 
                     <div className="space-y-3">
-                      <div className="flex items-center justify-between p-3 bg-green-50 rounded-xl">
+                      <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                          <span className="text-sm font-medium text-gray-700">
-                            Passed
-                          </span>
+                          <span className="text-sm text-gray-600">Passed</span>
                         </div>
-                        <span className="text-sm font-bold text-green-600">
+                        <span className="text-sm font-semibold text-gray-900">
                           {profileData.courseStatus.passed}%
                         </span>
                       </div>
-                      <div className="flex items-center justify-between p-3 bg-blue-50 rounded-xl">
+                      <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                          <span className="text-sm font-medium text-gray-700">
-                            In Progress
-                          </span>
+                          <span className="text-sm text-gray-600">In Progress</span>
                         </div>
-                        <span className="text-sm font-bold text-blue-600">
-                          0%
+                        <span className="text-sm font-semibold text-gray-900">
+                          {profileData.courseStatus.inProgress}%
                         </span>
                       </div>
-                      <div className="flex items-center justify-between p-3 bg-red-50 rounded-xl">
+                      <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                          <span className="text-sm font-medium text-gray-700">
-                            Failed
-                          </span>
+                          <span className="text-sm text-gray-600">Failed</span>
                         </div>
-                        <span className="text-sm font-bold text-red-600">
-                          0%
+                        <span className="text-sm font-semibold text-gray-900">
+                          {profileData.courseStatus.failed}%
                         </span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Course Results - Modern Chart */}
-                  <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
-                    <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
-                      <BarChart3 className="w-5 h-5 text-purple-600" />
-                      Courses Result
-                    </h3>
+                  {/* Course Results */}
+                  <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                    <div className="flex items-center justify-between mb-6">
+                      <h3 className="font-semibold text-gray-900">Recent Scores</h3>
+                      <TrendingUp className="w-5 h-5 text-gray-400" />
+                    </div>
 
-                    <div className="space-y-4">
-                      {profileData.courseResults.map((course, index) => (
-                        <div key={index} className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-medium text-gray-600 truncate">
-                              {course.name}
-                            </span>
-                            <span className="text-sm font-bold text-gray-900">
-                              {course.score}
-                            </span>
+                    <div className="space-y-4 max-h-64 overflow-y-auto pr-1">
+                      {profileData.courseResults.length > 0 ? (
+                        profileData.courseResults.slice(0, 5).map((course, index) => (
+                          <div key={index}>
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm text-gray-700 truncate pr-3 max-w-[160px]">
+                                {course.name}
+                              </span>
+                              <span className={`text-sm font-bold px-2 py-0.5 rounded ${
+                                course.score >= 80 
+                                  ? 'text-green-700 bg-green-50' 
+                                  : course.score >= 60 
+                                  ? 'text-amber-700 bg-amber-50' 
+                                  : 'text-red-700 bg-red-50'
+                              }`}>
+                                {course.score}
+                              </span>
+                            </div>
+                            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full transition-all duration-700 ${
+                                  course.score >= 80 
+                                    ? 'bg-green-500' 
+                                    : course.score >= 60 
+                                    ? 'bg-amber-500' 
+                                    : 'bg-red-500'
+                                }`}
+                                style={{ width: `${course.score}%` }}
+                              />
+                            </div>
                           </div>
-                          <div className="relative h-2 bg-gray-100 rounded-full overflow-hidden">
-                            <div
-                              className="absolute inset-y-0 left-0 rounded-full transition-all duration-1000"
-                              style={{
-                                width: `${course.score}%`,
-                                background:
-                                  course.score >= 90
-                                    ? "linear-gradient(90deg, #10b981, #059669)"
-                                    : course.score >= 75
-                                    ? "linear-gradient(90deg, #3b82f6, #2563eb)"
-                                    : "linear-gradient(90deg, #f59e0b, #d97706)",
-                              }}
-                            ></div>
-                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center py-8">
+                          <BookOpen className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                          <p className="text-sm text-gray-500">No course results yet</p>
                         </div>
-                      ))}
+                      )}
                     </div>
 
-                    {/* Score Legend */}
-                    <div className="mt-6 pt-4 border-t border-gray-100 flex gap-4 text-xs">
-                      <div className="flex items-center gap-1">
-                        <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                        <span className="text-gray-600">90-100</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                        <span className="text-gray-600">75-89</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <div className="w-2 h-2 rounded-full bg-orange-500"></div>
-                        <span className="text-gray-600">&lt;75</span>
-                      </div>
-                    </div>
+                    {profileData.courseResults.length > 5 && (
+                      <button 
+                        onClick={() => setActiveTab('courses')}
+                        className="w-full mt-4 text-sm text-blue-600 hover:text-blue-700 font-medium"
+                      >
+                        View all {profileData.courseResults.length} courses →
+                      </button>
+                    )}
                   </div>
 
-                  {/* Mandatory Course List - Modern Checklist */}
-                  <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
-                    <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
-                      <CheckCircle2 className="w-5 h-5 text-green-600" />
-                      Mandatory Course List
-                    </h3>
+                  {/* Mandatory Courses */}
+                  <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                    <div className="flex items-center justify-between mb-6">
+                      <h3 className="font-semibold text-gray-900">Mandatory Courses</h3>
+                      <div className="flex items-center gap-1 text-xs text-gray-500">
+                        <span className="font-semibold text-green-600">
+                          {profileData.mandatoryCourses.filter(c => c.completed).length}
+                        </span>
+                        <span>/</span>
+                        <span>{profileData.mandatoryCourses.length}</span>
+                      </div>
+                    </div>
 
-                    <div className="space-y-3">
-                      {profileData.mandatoryCourses.map((course) => (
-                        <div
-                          key={course.id}
-                          className={`flex items-start gap-3 p-4 rounded-xl transition-all duration-200 ${
-                            course.completed
-                              ? "bg-green-50 border-2 border-green-200"
-                              : "bg-gray-50 border-2 border-gray-200 hover:border-blue-300"
-                          }`}
-                        >
+                    <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                      {profileData.mandatoryCourses.length > 0 ? (
+                        profileData.mandatoryCourses.map((course) => (
                           <div
-                            className={`mt-0.5 flex-shrink-0 w-5 h-5 rounded-md flex items-center justify-center transition-colors ${
+                            key={course.id}
+                            className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${
                               course.completed
-                                ? "bg-green-500"
-                                : "bg-white border-2 border-gray-300"
+                                ? "bg-green-50"
+                                : "bg-gray-50 hover:bg-gray-100"
                             }`}
                           >
-                            {course.completed && (
-                              <CheckCircle2 className="w-4 h-4 text-white" />
-                            )}
-                          </div>
-                          <span
-                            className={`text-sm font-medium flex-1 ${
+                            <div className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center ${
+                              course.completed
+                                ? "bg-green-500"
+                                : "border-2 border-gray-300 bg-white"
+                            }`}>
+                              {course.completed && (
+                                <CheckCircle2 className="w-3 h-3 text-white" />
+                              )}
+                            </div>
+                            <span className={`text-sm flex-1 line-clamp-2 ${
                               course.completed
                                 ? "text-green-800"
                                 : "text-gray-700"
-                            }`}
-                          >
-                            {course.title}
-                          </span>
+                            }`}>
+                              {course.title}
+                            </span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center py-8">
+                          <CheckCheck className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                          <p className="text-sm text-gray-500">No mandatory courses</p>
                         </div>
-                      ))}
+                      )}
                     </div>
                   </div>
                 </div>
 
-                {/* eBook Stats Grid */}
-                <div className="grid lg:grid-cols-4 gap-6">
-                  {/* eBook Read */}
-                  <div className="group bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 text-white">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="bg-white/20 p-3 rounded-xl backdrop-blur-sm">
-                        <BookMarked className="w-6 h-6 text-white" />
-                      </div>
-                      <span className="text-4xl font-bold">
+                {/* E-Book Stats */}
+                <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="font-semibold text-gray-900">E-Book Progress</h3>
+                    <BookMarked className="w-5 h-5 text-gray-400" />
+                  </div>
+
+                  <div className="grid lg:grid-cols-4 gap-4">
+                    <div className="text-center p-4 bg-blue-50 rounded-xl">
+                      <div className="text-2xl sm:text-3xl font-bold text-blue-600 mb-1">
                         {profileData.ebooks.read}
-                      </span>
-                    </div>
-                    <h3 className="font-semibold mb-1">eBook Read</h3>
-                    <p className="text-sm text-blue-100">Total eBook</p>
-                  </div>
-
-                  {/* eBook Completed */}
-                  <div className="group bg-gradient-to-br from-green-500 to-green-600 rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 text-white">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="bg-white/20 p-3 rounded-xl backdrop-blur-sm">
-                        <CheckCircle2 className="w-6 h-6 text-white" />
                       </div>
-                      <span className="text-4xl font-bold">
+                      <div className="text-sm text-blue-700">Books Read</div>
+                    </div>
+                    <div className="text-center p-4 bg-green-50 rounded-xl">
+                      <div className="text-2xl sm:text-3xl font-bold text-green-600 mb-1">
                         {profileData.ebooks.completed}
-                      </span>
-                    </div>
-                    <h3 className="font-semibold mb-1">eBook Completed</h3>
-                    <p className="text-sm text-green-100">Total eBook</p>
-                  </div>
-
-                  {/* eBook Incomplete */}
-                  <div className="group bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 text-white">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="bg-white/20 p-3 rounded-xl backdrop-blur-sm">
-                        <AlertCircle className="w-6 h-6 text-white" />
                       </div>
-                      <span className="text-4xl font-bold">
+                      <div className="text-sm text-green-700">Completed</div>
+                    </div>
+                    <div className="text-center p-4 bg-amber-50 rounded-xl">
+                      <div className="text-2xl sm:text-3xl font-bold text-amber-600 mb-1">
                         {profileData.ebooks.incomplete}
-                      </span>
-                    </div>
-                    <h3 className="font-semibold mb-1">eBook Incomplete</h3>
-                    <p className="text-sm text-orange-100">Total eBook</p>
-                  </div>
-
-                  {/* Reading Hours */}
-                  <div className="group bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 text-white">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="bg-white/20 p-3 rounded-xl backdrop-blur-sm">
-                        <Clock className="w-6 h-6 text-white" />
                       </div>
-                      <div className="text-right">
-                        <span className="text-4xl font-bold">
-                          {profileData.ebooks.readingHours}
-                        </span>
-                        <span className="text-lg">h</span>
-                        <span className="text-3xl font-bold ml-1">
-                          {profileData.ebooks.readingMinutes}
-                        </span>
-                        <span className="text-lg">m</span>
-                      </div>
+                      <div className="text-sm text-amber-700">In Progress</div>
                     </div>
-                    <h3 className="font-semibold mb-1">Reading Hours</h3>
-                    <p className="text-sm text-purple-100">Total time</p>
+                    <div className="text-center p-4 bg-purple-50 rounded-xl">
+                      <div className="text-2xl sm:text-3xl font-bold text-purple-600 mb-1">
+                        {profileData.ebooks.readingHours}h {profileData.ebooks.readingMinutes}m
+                      </div>
+                      <div className="text-sm text-purple-700">Reading Time</div>
+                    </div>
                   </div>
                 </div>
               </div>
             )}
 
+            {activeTab === "courses" && (
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900">All Course Results</h3>
+                  <div className="text-sm text-gray-500">
+                    {profileData.courseResults.length} courses
+                  </div>
+                </div>
+
+                {profileData.courseResults.length > 0 ? (
+                  <div className="space-y-3">
+                    {profileData.courseResults.map((course, index) => (
+                      <div 
+                        key={index} 
+                        className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                            course.score >= 80 
+                              ? 'bg-green-100' 
+                              : course.score >= 60 
+                              ? 'bg-amber-100' 
+                              : 'bg-red-100'
+                          }`}>
+                            {course.score >= 80 ? (
+                              <Trophy className="w-5 h-5 text-green-600" />
+                            ) : course.score >= 60 ? (
+                              <Target className="w-5 h-5 text-amber-600" />
+                            ) : (
+                              <XCircle className="w-5 h-5 text-red-600" />
+                            )}
+                          </div>
+                          <div>
+                            <h4 className="font-medium text-gray-900">{course.name}</h4>
+                            <p className="text-sm text-gray-500">
+                              {course.score >= 80 ? 'Excellent' : course.score >= 60 ? 'Good' : 'Needs Improvement'}
+                            </p>
+                          </div>
+                        </div>
+                        <div className={`text-xl font-bold ${
+                          course.score >= 80 
+                            ? 'text-green-600' 
+                            : course.score >= 60 
+                            ? 'text-amber-600' 
+                            : 'text-red-600'
+                        }`}>
+                          {course.score}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-16">
+                    <GraduationCap className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <h4 className="text-lg font-medium text-gray-900 mb-2">No Courses Yet</h4>
+                    <p className="text-gray-500 mb-4">Start learning to see your progress here</p>
+                    <Link 
+                      href="/courses" 
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition-colors"
+                    >
+                      <Play className="w-4 h-4" />
+                      Browse Courses
+                    </Link>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === "ebooks" && (
+              <div className="space-y-6">
+                <div className="grid lg:grid-cols-4 gap-4">
+                  <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-5 text-white">
+                    <BookMarked className="w-8 h-8 mb-3 opacity-80" />
+                    <div className="text-3xl font-bold mb-1">{profileData.ebooks.read}</div>
+                    <div className="text-sm text-blue-100">Books Read</div>
+                  </div>
+                  <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-5 text-white">
+                    <CheckCircle2 className="w-8 h-8 mb-3 opacity-80" />
+                    <div className="text-3xl font-bold mb-1">{profileData.ebooks.completed}</div>
+                    <div className="text-sm text-green-100">Completed</div>
+                  </div>
+                  <div className="bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl p-5 text-white">
+                    <AlertCircle className="w-8 h-8 mb-3 opacity-80" />
+                    <div className="text-3xl font-bold mb-1">{profileData.ebooks.incomplete}</div>
+                    <div className="text-sm text-amber-100">In Progress</div>
+                  </div>
+                  <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-5 text-white">
+                    <Clock className="w-8 h-8 mb-3 opacity-80" />
+                    <div className="text-2xl font-bold mb-1">
+                      {profileData.ebooks.readingHours}h {profileData.ebooks.readingMinutes}m
+                    </div>
+                    <div className="text-sm text-purple-100">Reading Time</div>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-xl p-8 shadow-sm border border-gray-100 text-center">
+                  <BookText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <h4 className="text-lg font-medium text-gray-900 mb-2">Your E-Book Library</h4>
+                  <p className="text-gray-500 mb-4">Access your reading materials and track progress</p>
+                  <Link 
+                    href="/library" 
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition-colors"
+                  >
+                    <BookOpen className="w-4 h-4" />
+                    Go to Library
+                  </Link>
+                </div>
+              </div>
+            )}
+
             {activeTab === "competencies" && (
-              <div className="text-center py-20">
-                <Award className="w-20 h-20 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                  Competencies
-                </h3>
-                <p className="text-gray-500">
-                  This section is under development
-                </p>
+              <div className="bg-white rounded-xl p-8 shadow-sm border border-gray-100 text-center">
+                <div className="max-w-md mx-auto">
+                  <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <Zap className="w-10 h-10 text-amber-600" />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-3">Competencies Coming Soon</h3>
+                  <p className="text-gray-500 mb-6">
+                    We're working on bringing you a comprehensive view of your skills and competencies. 
+                    Stay tuned for updates!
+                  </p>
+                  <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-50 text-amber-700 rounded-lg text-sm font-medium">
+                    <Clock className="w-4 h-4" />
+                    Under Development
+                  </div>
+                </div>
               </div>
             )}
           </div>

@@ -55,12 +55,9 @@ const ForgotPassword = () => {
   };
   
   const isKaryawan = getIsKaryawan(nik);
-  
-  // ✅ Get OTP method based on site
-  const otpMethod = selectedSite?.otpMethod || 'telegram'; // 'email' or 'telegram'
+  const otpMethod = selectedSite?.otpMethod || 'telegram';
   const isEmailOTP = otpMethod === 'email';
 
-  // ✅ STEP 1: Request OTP (Dynamic: Email or Telegram)
   const handleRequestOTP = async (e) => {
     e.preventDefault();
     setIsLoading(true);
@@ -120,7 +117,6 @@ const ForgotPassword = () => {
     }
   };
 
-  // ✅ STEP 2: Verify OTP
   const handleVerifyOTP = async (e) => {
     e.preventDefault();
     setIsLoading(true);
@@ -161,7 +157,6 @@ const ForgotPassword = () => {
     }
   };
 
-  // ✅ STEP 3: Reset Password
   const handleResetPassword = async (e) => {
     e.preventDefault();
 
@@ -227,7 +222,6 @@ const ForgotPassword = () => {
     }
   };
 
-  // ✅ Resend OTP
   const handleResendOTP = async () => {
     if (countdown > 0) return;
 
@@ -289,326 +283,331 @@ const ForgotPassword = () => {
 
   return (
     <Auth>
-      <div className="container mx-auto px-4 h-full w-full">
-        <div className="flex content-center items-center justify-center h-full">
-          <div className="w-full xl:w-4/12 lg:w-5/12 md:w-6/12 px-4">
-            <div className="relative border-1 flex flex-col min-w-0 break-words w-full mb-6 shadow-lg rounded-lg bg-slate-200 glass">
-              {/* HEADER */}
-              <div className="px-6 pt-6 pb-4">
-                <Link
-                  href="/login"
-                  className="flex items-center gap-2 text-blue-800 hover:text-blue-900 font-medium text-sm mb-4 transition-colors"
-                >
-                  <FaArrowLeft className="w-4 h-4" />
-                  Kembali ke Login
-                </Link>
+      {/* ✅ Fixed wrapper - sama seperti Login */}
+      <div className="fixed inset-0 pointer-events-none flex items-center justify-center">
+        <div className="pointer-events-auto w-full max-h-screen overflow-y-auto px-4 py-6">
+          <div className="container mx-auto">
+            <div className="flex justify-center">
+              <div className="w-full xl:w-4/12 lg:w-5/12 md:w-6/12">
+                <div className="relative border-1 flex flex-col min-w-0 break-words w-full mb-6 shadow-lg rounded-lg bg-slate-200 glass">
+                  {/* HEADER */}
+                  <div className="px-6 pt-6 pb-4">
+                    <Link
+                      href="/login"
+                      className="flex items-center gap-2 text-blue-800 hover:text-blue-900 font-medium text-sm mb-4 transition-colors"
+                    >
+                      <FaArrowLeft className="w-4 h-4" />
+                      Kembali ke Login
+                    </Link>
 
-                <h3 className="text-2xl font-bold text-gray-800 mb-2">
-                  Lupa Password?
-                </h3>
+                    <h3 className="text-2xl font-bold text-gray-800 mb-2">
+                      Lupa Password?
+                    </h3>
 
-                {/* Step Indicator */}
-                <div className="flex items-center justify-center gap-2 mb-4">
-                  {[1, 2, 3].map((s) => (
-                    <div
-                      key={s}
-                      className={`flex-1 h-2 rounded-full transition-all ${
-                        s <= step ? "bg-blue-600" : "bg-gray-300"
-                      }`}
-                    />
-                  ))}
-                </div>
-
-                <p className="text-gray-600 text-sm">
-                  {step === 1 && "Pilih unit usaha dan masukkan NIK"}
-                  {step === 2 && `Masukkan kode OTP dari ${isEmailOTP ? 'Email' : 'Telegram'}`}
-                  {step === 3 && "Buat password baru Anda"}
-                </p>
-              </div>
-
-              {/* ✅ STEP 1: SITE + NIK INPUT */}
-              {step === 1 && (
-                <form onSubmit={handleRequestOTP} className="flex-auto px-6 pb-6">
-                  {/* Site Selection */}
-                  <div className="flex flex-col mb-3 py-2" ref={dropdownRef}>
-                    <label className="text-gray-600 text-left text-base font-normal mb-2 flex items-center gap-2">
-                      <FaBuilding className="w-4 h-4" />
-                      Unit Usaha*
-                    </label>
-                    
-                    <div className="relative">
-                      <button
-                        type="button"
-                        onClick={() => setShowSiteDropdown(!showSiteDropdown)}
-                        className="w-full px-3 py-2 text-left text-black border border-gray-300 bg-white rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ease-linear transition-all duration-150 flex items-start justify-between hover:border-gray-400"
-                      >
-                        <div className="flex-1 pr-2">
-                          <div className="font-semibold text-gray-900 flex items-center gap-2">
-                            {selectedSite.code}
-                          </div>
-                          <div className="text-xs text-gray-600 mt-0.5 line-clamp-1">
-                            {selectedSite.name}
-                          </div>
-                        </div>
-                        <FaChevronDown className={`w-4 h-4 mt-1 text-gray-500 flex-shrink-0 transition-transform duration-200 ${
-                          showSiteDropdown ? 'rotate-180' : ''
-                        }`} />
-                      </button>
-
-                      {showSiteDropdown && (
-                        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-xl max-h-72 overflow-y-auto">
-                          {siteOptions.map((site) => (
-                            <button
-                              key={site.id}
-                              type="button"
-                              onClick={() => handleSiteSelect(site.id)}
-                              className={`w-full px-4 py-3 text-left transition-all duration-150 border-b border-gray-100 last:border-b-0 hover:bg-blue-50 ${
-                                siteId === site.id 
-                                  ? 'bg-blue-50 border-l-4 border-l-blue-600' 
-                                  : 'border-l-4 border-l-transparent'
-                              }`}
-                            >
-                              <div className={`font-semibold text-sm flex items-center gap-2 ${
-                                siteId === site.id ? 'text-blue-700' : 'text-gray-900'
-                              }`}>
-                                {site.code}
-                              </div>
-                              <div className="text-xs text-gray-600 mt-1 leading-relaxed">
-                                {site.name}
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      )}
+                    {/* Step Indicator */}
+                    <div className="flex items-center justify-center gap-2 mb-4">
+                      {[1, 2, 3].map((s) => (
+                        <div
+                          key={s}
+                          className={`flex-1 h-2 rounded-full transition-all ${
+                            s <= step ? "bg-blue-600" : "bg-gray-300"
+                          }`}
+                        />
+                      ))}
                     </div>
-                  </div>
 
-                  {/* NIK Input */}
-                  <div className="flex flex-col mb-6">
-                    <label className="text-gray-600 text-left text-base font-normal mb-2">
-                      NIK / ID Karyawan*
-                    </label>
-                    <input
-                      className="px-3 py-2 placeholder-slate-400 text-black border border-gray-300 bg-white rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full ease-linear transition-all duration-150"
-                      type="text"
-                      placeholder="Masukkan NIK Anda"
-                      value={nik}
-                      onChange={(e) => setNik(e.target.value)}
-                      required
-                      disabled={isLoading}
-                    />
-                  </div>
-
-                  {/* ✅ Dynamic button based on OTP method */}
-                  <button
-                    type="submit"
-                    disabled={!nik || isLoading}
-                    className={`${
-                      isEmailOTP ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-900 hover:bg-blue-800'
-                    } text-white text-sm font-bold uppercase px-6 py-3 rounded-full shadow w-full ease-linear transition-all disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${
-                      isLoading ? "animate-pulse" : ""
-                    }`}
-                  >
-                    {isEmailOTP ? <FaEnvelope className="w-5 h-5" /> : <FaTelegram className="w-5 h-5" />}
-                    {isLoading ? "Mengirim..." : `Kirim OTP ke ${isEmailOTP ? 'Email' : 'Telegram'}`}
-                  </button>
-
-                  {/* ✅ Dynamic info box */}
-                  <div className={`mt-4 p-3 ${
-                    isEmailOTP ? 'bg-red-50 border-red-200' : 'bg-blue-50 border-blue-200'
-                  } border rounded text-xs ${
-                    isEmailOTP ? 'text-red-800' : 'text-blue-800'
-                  }`}>
-                    <p className="font-semibold mb-1">
-                      {isEmailOTP ? '📧 Info Email:' : '📱 Info Telegram:'}
-                    </p>
-                    <ul className={`list-disc list-inside space-y-1 ${
-                      isEmailOTP ? 'text-red-700' : 'text-blue-700'
-                    }`}>
-                      <li>Pastikan NIK dan Unit Usaha sudah benar</li>
-                      <li>Kode OTP akan dikirim ke {isEmailOTP ? 'Email' : 'Telegram'} terdaftar</li>
-                      <li>Kode berlaku selama 5 menit</li>
-                      {isEmailOTP && <li>Cek folder spam jika tidak menerima email</li>}
-                    </ul>
-                  </div>
-                </form>
-              )}
-
-              {/* ✅ STEP 2: OTP INPUT - Same as before */}
-              {step === 2 && (
-                <form onSubmit={handleVerifyOTP} className="flex-auto px-6 pb-6">
-                  <div className="flex flex-col mb-4">
-                    <label className="text-gray-600 text-left text-base font-normal mb-2 flex items-center justify-between">
-                      <span>Kode OTP*</span>
-                      {countdown > 0 && (
-                        <span className="text-sm text-blue-600 font-mono">
-                          {formatTime(countdown)}
-                        </span>
-                      )}
-                    </label>
-                    <input
-                      className="px-3 py-2 placeholder-slate-400 text-black border border-gray-300 bg-white rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full ease-linear transition-all duration-150 text-center text-2xl font-mono tracking-widest"
-                      type="text"
-                      placeholder="000000"
-                      value={otp}
-                      onChange={(e) =>
-                        setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))
-                      }
-                      maxLength={6}
-                      required
-                      disabled={isLoading}
-                      autoFocus
-                    />
-                    <p className="text-xs text-gray-500 mt-2 text-center">
-                      Masukkan 6 digit kode dari {isEmailOTP ? 'Email' : 'Telegram'}
+                    <p className="text-gray-600 text-sm">
+                      {step === 1 && "Pilih unit usaha dan masukkan NIK"}
+                      {step === 2 && `Masukkan kode OTP dari ${isEmailOTP ? 'Email' : 'Telegram'}`}
+                      {step === 3 && "Buat password baru Anda"}
                     </p>
                   </div>
 
-                  <button
-                    type="submit"
-                    disabled={otp.length !== 6 || isLoading}
-                    className={`bg-blue-900 text-white text-sm font-bold uppercase px-6 py-3 rounded-full shadow w-full ease-linear transition-all disabled:bg-gray-400 disabled:cursor-not-allowed mb-3 ${
-                      isLoading ? "animate-pulse" : ""
-                    }`}
-                  >
-                    {isLoading ? "Memverifikasi..." : "Verifikasi OTP"}
-                  </button>
+                  {/* STEP 1: SITE + NIK INPUT */}
+                  {step === 1 && (
+                    <form onSubmit={handleRequestOTP} className="flex-auto px-6 pb-6">
+                      {/* Site Selection */}
+                      <div className="flex flex-col mb-3 py-2" ref={dropdownRef}>
+                        <label className="text-gray-600 text-left text-base font-normal mb-2 flex items-center gap-2">
+                          <FaBuilding className="w-4 h-4" />
+                          Unit Usaha*
+                        </label>
+                        
+                        <div className="relative">
+                          <button
+                            type="button"
+                            onClick={() => setShowSiteDropdown(!showSiteDropdown)}
+                            className="w-full px-3 py-2 text-left text-black border border-gray-300 bg-white rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ease-linear transition-all duration-150 flex items-start justify-between hover:border-gray-400"
+                          >
+                            <div className="flex-1 pr-2">
+                              <div className="font-semibold text-gray-900 flex items-center gap-2">
+                                {selectedSite.code}
+                              </div>
+                              <div className="text-xs text-gray-600 mt-0.5 line-clamp-1">
+                                {selectedSite.name}
+                              </div>
+                            </div>
+                            <FaChevronDown className={`w-4 h-4 mt-1 text-gray-500 flex-shrink-0 transition-transform duration-200 ${
+                              showSiteDropdown ? 'rotate-180' : ''
+                            }`} />
+                          </button>
 
-                  <button
-                    type="button"
-                    onClick={handleResendOTP}
-                    disabled={countdown > 0 || isLoading}
-                    className="text-blue-800 hover:text-blue-900 text-sm font-medium w-full disabled:text-gray-400 disabled:cursor-not-allowed"
-                  >
-                    {countdown > 0
-                      ? `Kirim ulang dalam ${formatTime(countdown)}`
-                      : "Kirim Ulang OTP"}
-                  </button>
+                          {showSiteDropdown && (
+                            <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-xl max-h-72 overflow-y-auto">
+                              {siteOptions.map((site) => (
+                                <button
+                                  key={site.id}
+                                  type="button"
+                                  onClick={() => handleSiteSelect(site.id)}
+                                  className={`w-full px-4 py-3 text-left transition-all duration-150 border-b border-gray-100 last:border-b-0 hover:bg-blue-50 ${
+                                    siteId === site.id 
+                                      ? 'bg-blue-50 border-l-4 border-l-blue-600' 
+                                      : 'border-l-4 border-l-transparent'
+                                  }`}
+                                >
+                                  <div className={`font-semibold text-sm flex items-center gap-2 ${
+                                    siteId === site.id ? 'text-blue-700' : 'text-gray-900'
+                                  }`}>
+                                    {site.code}
+                                  </div>
+                                  <div className="text-xs text-gray-600 mt-1 leading-relaxed">
+                                    {site.name}
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
 
-                  {/* ✅ Dynamic warning box */}
-                  <div className={`mt-4 p-3 ${
-                    isEmailOTP ? 'bg-red-50 border-red-200' : 'bg-yellow-50 border-yellow-200'
-                  } border rounded text-xs ${
-                    isEmailOTP ? 'text-red-800' : 'text-yellow-800'
-                  }`}>
-                    <p className="font-semibold mb-1">⚠️ Tidak menerima OTP?</p>
-                    <ul className={`list-disc list-inside space-y-1 ${
-                      isEmailOTP ? 'text-red-700' : 'text-yellow-700'
-                    }`}>
-                      {isEmailOTP ? (
-                        <>
-                          <li>Cek folder spam/junk email Anda</li>
-                          <li>Pastikan email terdaftar sudah benar</li>
-                          <li>Tunggu beberapa saat sebelum kirim ulang</li>
-                        </>
-                      ) : (
-                        <>
-                          <li>Pastikan Telegram Anda terhubung</li>
-                          <li>Cek pesan dari bot official</li>
-                          <li>Tunggu beberapa saat sebelum kirim ulang</li>
-                        </>
-                      )}
-                    </ul>
-                  </div>
-                </form>
-              )}
+                      {/* NIK Input */}
+                      <div className="flex flex-col mb-6">
+                        <label className="text-gray-600 text-left text-base font-normal mb-2">
+                          NIK / ID Karyawan*
+                        </label>
+                        <input
+                          className="px-3 py-2 placeholder-slate-400 text-black border border-gray-300 bg-white rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full ease-linear transition-all duration-150"
+                          type="text"
+                          placeholder="Masukkan NIK Anda"
+                          value={nik}
+                          onChange={(e) => setNik(e.target.value)}
+                          required
+                          disabled={isLoading}
+                        />
+                      </div>
 
-              {/* ✅ STEP 3: NEW PASSWORD - Same as before */}
-              {step === 3 && (
-                <form onSubmit={handleResetPassword} className="flex-auto px-6 pb-6">
-                  {/* New Password */}
-                  <div className="flex flex-col mb-4">
-                    <label className="text-gray-600 text-left text-base font-normal mb-2">
-                      Password Baru*
-                    </label>
-                    <div className="relative flex items-center">
-                      <input
-                        className="px-3 py-2 placeholder-slate-400 text-black border border-gray-300 bg-white rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full ease-linear transition-all duration-150 pr-10"
-                        type={showPassword ? "text" : "password"}
-                        placeholder="Minimal 8 karakter"
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        required
-                        disabled={isLoading}
-                        autoFocus
-                      />
+                      {/* Dynamic button */}
                       <button
-                        type="button"
-                        className="absolute right-3 text-gray-600"
-                        onClick={() => setShowPassword(!showPassword)}
-                      >
-                        {showPassword ? (
-                          <FaEyeSlash className="w-5 h-5" />
-                        ) : (
-                          <FaEye className="w-5 h-5" />
-                        )}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Confirm Password */}
-                  <div className="flex flex-col mb-6">
-                    <label className="text-gray-600 text-left text-base font-normal mb-2">
-                      Konfirmasi Password*
-                    </label>
-                    <div className="relative flex items-center">
-                      <input
-                        className="px-3 py-2 placeholder-slate-400 text-black border border-gray-300 bg-white rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full ease-linear transition-all duration-150 pr-10"
-                        type={showConfirmPassword ? "text" : "password"}
-                        placeholder="Ulangi password baru"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        required
-                        disabled={isLoading}
-                      />
-                      <button
-                        type="button"
-                        className="absolute right-3 text-gray-600"
-                        onClick={() =>
-                          setShowConfirmPassword(!showConfirmPassword)
-                        }
-                      >
-                        {showConfirmPassword ? (
-                          <FaEyeSlash className="w-5 h-5" />
-                        ) : (
-                          <FaEye className="w-5 h-5" />
-                        )}
-                      </button>
-                    </div>
-
-                    {newPassword && confirmPassword && (
-                      <p
-                        className={`text-xs mt-2 ${
-                          newPassword === confirmPassword
-                            ? "text-green-600"
-                            : "text-red-600"
+                        type="submit"
+                        disabled={!nik || isLoading}
+                        className={`${
+                          isEmailOTP ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-900 hover:bg-blue-800'
+                        } text-white text-sm font-bold uppercase px-6 py-3 rounded-full shadow w-full ease-linear transition-all disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${
+                          isLoading ? "animate-pulse" : ""
                         }`}
                       >
-                        {newPassword === confirmPassword
-                          ? "✓ Password cocok"
-                          : "✗ Password tidak cocok"}
-                      </p>
-                    )}
-                  </div>
+                        {isEmailOTP ? <FaEnvelope className="w-5 h-5" /> : <FaTelegram className="w-5 h-5" />}
+                        {isLoading ? "Mengirim..." : `Kirim OTP ke ${isEmailOTP ? 'Email' : 'Telegram'}`}
+                      </button>
 
-                  <button
-                    type="submit"
-                    disabled={
-                      !newPassword ||
-                      !confirmPassword ||
-                      newPassword !== confirmPassword ||
-                      newPassword.length < 8 ||
-                      isLoading
-                    }
-                    className={`bg-blue-900 text-white text-sm font-bold uppercase px-6 py-3 rounded-full shadow w-full ease-linear transition-all disabled:bg-gray-400 disabled:cursor-not-allowed ${
-                      isLoading ? "animate-pulse" : ""
-                    }`}
-                  >
-                    {isLoading ? "Memproses..." : "Reset Password"}
-                  </button>
-                </form>
-              )}
+                      {/* Dynamic info box */}
+                      <div className={`mt-4 p-3 ${
+                        isEmailOTP ? 'bg-red-50 border-red-200' : 'bg-blue-50 border-blue-200'
+                      } border rounded text-xs ${
+                        isEmailOTP ? 'text-red-800' : 'text-blue-800'
+                      }`}>
+                        <p className="font-semibold mb-1">
+                          {isEmailOTP ? '📧 Info Email:' : '📱 Info Telegram:'}
+                        </p>
+                        <ul className={`list-disc list-inside space-y-1 ${
+                          isEmailOTP ? 'text-red-700' : 'text-blue-700'
+                        }`}>
+                          <li>Pastikan NIK dan Unit Usaha sudah benar</li>
+                          <li>Kode OTP akan dikirim ke {isEmailOTP ? 'Email' : 'Telegram'} terdaftar</li>
+                          <li>Kode berlaku selama 5 menit</li>
+                          {isEmailOTP && <li>Cek folder spam jika tidak menerima email</li>}
+                        </ul>
+                      </div>
+                    </form>
+                  )}
 
+                  {/* STEP 2: OTP INPUT */}
+                  {step === 2 && (
+                    <form onSubmit={handleVerifyOTP} className="flex-auto px-6 pb-6">
+                      <div className="flex flex-col mb-4">
+                        <label className="text-gray-600 text-left text-base font-normal mb-2 flex items-center justify-between">
+                          <span>Kode OTP*</span>
+                          {countdown > 0 && (
+                            <span className="text-sm text-blue-600 font-mono">
+                              {formatTime(countdown)}
+                            </span>
+                          )}
+                        </label>
+                        <input
+                          className="px-3 py-2 placeholder-slate-400 text-black border border-gray-300 bg-white rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full ease-linear transition-all duration-150 text-center text-2xl font-mono tracking-widest"
+                          type="text"
+                          placeholder="000000"
+                          value={otp}
+                          onChange={(e) =>
+                            setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))
+                          }
+                          maxLength={6}
+                          required
+                          disabled={isLoading}
+                          autoFocus
+                        />
+                        <p className="text-xs text-gray-500 mt-2 text-center">
+                          Masukkan 6 digit kode dari {isEmailOTP ? 'Email' : 'Telegram'}
+                        </p>
+                      </div>
+
+                      <button
+                        type="submit"
+                        disabled={otp.length !== 6 || isLoading}
+                        className={`bg-blue-900 text-white text-sm font-bold uppercase px-6 py-3 rounded-full shadow w-full ease-linear transition-all disabled:bg-gray-400 disabled:cursor-not-allowed mb-3 ${
+                          isLoading ? "animate-pulse" : ""
+                        }`}
+                      >
+                        {isLoading ? "Memverifikasi..." : "Verifikasi OTP"}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleResendOTP}
+                        disabled={countdown > 0 || isLoading}
+                        className="text-blue-800 hover:text-blue-900 text-sm font-medium w-full disabled:text-gray-400 disabled:cursor-not-allowed"
+                      >
+                        {countdown > 0
+                          ? `Kirim ulang dalam ${formatTime(countdown)}`
+                          : "Kirim Ulang OTP"}
+                      </button>
+
+                      {/* Dynamic warning box */}
+                      <div className={`mt-4 p-3 ${
+                        isEmailOTP ? 'bg-red-50 border-red-200' : 'bg-yellow-50 border-yellow-200'
+                      } border rounded text-xs ${
+                        isEmailOTP ? 'text-red-800' : 'text-yellow-800'
+                      }`}>
+                        <p className="font-semibold mb-1">⚠️ Tidak menerima OTP?</p>
+                        <ul className={`list-disc list-inside space-y-1 ${
+                          isEmailOTP ? 'text-red-700' : 'text-yellow-700'
+                        }`}>
+                          {isEmailOTP ? (
+                            <>
+                              <li>Cek folder spam/junk email Anda</li>
+                              <li>Pastikan email terdaftar sudah benar</li>
+                              <li>Tunggu beberapa saat sebelum kirim ulang</li>
+                            </>
+                          ) : (
+                            <>
+                              <li>Pastikan Telegram Anda terhubung</li>
+                              <li>Cek pesan dari bot official</li>
+                              <li>Tunggu beberapa saat sebelum kirim ulang</li>
+                            </>
+                          )}
+                        </ul>
+                      </div>
+                    </form>
+                  )}
+
+                  {/* STEP 3: NEW PASSWORD */}
+                  {step === 3 && (
+                    <form onSubmit={handleResetPassword} className="flex-auto px-6 pb-6">
+                      {/* New Password */}
+                      <div className="flex flex-col mb-4">
+                        <label className="text-gray-600 text-left text-base font-normal mb-2">
+                          Password Baru*
+                        </label>
+                        <div className="relative flex items-center">
+                          <input
+                            className="px-3 py-2 placeholder-slate-400 text-black border border-gray-300 bg-white rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full ease-linear transition-all duration-150 pr-10"
+                            type={showPassword ? "text" : "password"}
+                            placeholder="Minimal 8 karakter"
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                            required
+                            disabled={isLoading}
+                            autoFocus
+                          />
+                          <button
+                            type="button"
+                            className="absolute right-3 text-gray-600"
+                            onClick={() => setShowPassword(!showPassword)}
+                          >
+                            {showPassword ? (
+                              <FaEyeSlash className="w-5 h-5" />
+                            ) : (
+                              <FaEye className="w-5 h-5" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Confirm Password */}
+                      <div className="flex flex-col mb-6">
+                        <label className="text-gray-600 text-left text-base font-normal mb-2">
+                          Konfirmasi Password*
+                        </label>
+                        <div className="relative flex items-center">
+                          <input
+                            className="px-3 py-2 placeholder-slate-400 text-black border border-gray-300 bg-white rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full ease-linear transition-all duration-150 pr-10"
+                            type={showConfirmPassword ? "text" : "password"}
+                            placeholder="Ulangi password baru"
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            required
+                            disabled={isLoading}
+                          />
+                          <button
+                            type="button"
+                            className="absolute right-3 text-gray-600"
+                            onClick={() =>
+                              setShowConfirmPassword(!showConfirmPassword)
+                            }
+                          >
+                            {showConfirmPassword ? (
+                              <FaEyeSlash className="w-5 h-5" />
+                            ) : (
+                              <FaEye className="w-5 h-5" />
+                            )}
+                          </button>
+                        </div>
+
+                        {newPassword && confirmPassword && (
+                          <p
+                            className={`text-xs mt-2 ${
+                              newPassword === confirmPassword
+                                ? "text-green-600"
+                                : "text-red-600"
+                            }`}
+                          >
+                            {newPassword === confirmPassword
+                              ? "✓ Password cocok"
+                              : "✗ Password tidak cocok"}
+                          </p>
+                        )}
+                      </div>
+
+                      <button
+                        type="submit"
+                        disabled={
+                          !newPassword ||
+                          !confirmPassword ||
+                          newPassword !== confirmPassword ||
+                          newPassword.length < 8 ||
+                          isLoading
+                        }
+                        className={`bg-blue-900 text-white text-sm font-bold uppercase px-6 py-3 rounded-full shadow w-full ease-linear transition-all disabled:bg-gray-400 disabled:cursor-not-allowed ${
+                          isLoading ? "animate-pulse" : ""
+                        }`}
+                      >
+                        {isLoading ? "Memproses..." : "Reset Password"}
+                      </button>
+                    </form>
+                  )}
+
+                </div>
+              </div>
             </div>
           </div>
         </div>

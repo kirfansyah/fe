@@ -8,6 +8,8 @@ import {
     Building,
     Users,
     RefreshCw,
+    Lock,
+    Shield
 } from 'lucide-react';
 import Admin from "layouts/Admin.js";
 import { useCourses } from "@/hooks/useCourses";
@@ -15,12 +17,16 @@ import { useSweetAlert } from '@/hooks/useSweetAlert';
 import { useRoles } from "../../hooks/useRoles";
 import { ProfileContext } from '@/contexts/profile/ProfileContext';
 import { getDeviceInfo } from '@/lib/deviceHelper';
+import { useMenuPermissions } from '@/hooks/useMenuPermissions';
+
 export default function UserManagement() {
+    // ✅ ALL HOOKS FIRST (before any conditional returns)
     const { employeeData, fetchEmployeeData, loading: apiLoading } = useCourses();
     const { roles: masterRoles, handleUpdateUser } = useRoles();
     const { showLoading, showSuccess, showError, confirmAction } = useSweetAlert();
-    const { getKaryawan, dataKaryawan } = useContext(ProfileContext);
-    const dataKaryawans = dataKaryawan?.length ? dataKaryawan[0] : [];
+    const { dataKaryawan } = useContext(ProfileContext);
+    const permissions = useMenuPermissions();
+    
     const [loading, setLoading] = useState(true);
     const [entriesPerPage, setEntriesPerPage] = useState(10);
     const [currentPage, setCurrentPage] = useState(1);
@@ -29,7 +35,7 @@ export default function UserManagement() {
     const [filterStatus, setFilterStatus] = useState('all');
     const [filterCompany, setFilterCompany] = useState('all');
     const [showModal, setShowModal] = useState(false);
-    const [modalMode, setModalMode] = useState('view'); // Only 'view' or 'edit'
+    const [modalMode, setModalMode] = useState('view');
     const [selectedUser, setSelectedUser] = useState(null);
     const [formData, setFormData] = useState({ 
         employee_id: '',
@@ -41,7 +47,14 @@ export default function UserManagement() {
 
     const availableRoles = masterRoles || [];
 
-    // Get unique values for filters
+    // ✅ ALL useEffect hooks
+    useEffect(() => {
+        if (employeeData) {
+            setLoading(false);
+        }
+    }, [employeeData]);
+
+    // ✅ ALL FUNCTIONS
     const getUniqueRoles = () => {
         if (!employeeData?.data) return [];
         const roles = new Set();
@@ -62,13 +75,6 @@ export default function UserManagement() {
         return Array.from(companies, ([id, name]) => ({ id, name }));
     };
 
-    useEffect(() => {
-        if (employeeData) {
-            setLoading(false);
-        }
-    }, [employeeData]);
-
-    // Filter data based on search and filters
     const filteredData = (employeeData?.data || []).filter(user => {
         const matchesSearch = 
             user.nama?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -89,14 +95,12 @@ export default function UserManagement() {
         return matchesSearch && matchesRole && matchesStatus && matchesCompany;
     });
 
-    // Pagination
     const totalEntries = filteredData.length;
     const totalPages = Math.ceil(totalEntries / entriesPerPage);
     const startIndex = (currentPage - 1) * entriesPerPage;
     const endIndex = Math.min(startIndex + entriesPerPage, totalEntries);
     const currentData = filteredData.slice(startIndex, endIndex);
 
-    // Format datetime
     const formatDateTime = (dateTimeString) => {
         if (!dateTimeString) return '-';
         const date = new Date(dateTimeString);
@@ -109,13 +113,11 @@ export default function UserManagement() {
         });
     };
 
-    // Get initials from name
     const getInitials = (name) => {
         if (!name) return '?';
         return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
     };
 
-    // Handle functions
     const handleView = (user) => {
         setSelectedUser(user);
         setModalMode('view');
@@ -123,6 +125,11 @@ export default function UserManagement() {
     };
 
     const handleEdit = (user) => {
+        if (!permissions.can_edit) {
+            showError('You do not have permission to edit users');
+            return;
+        }
+
         setSelectedUser(user);
         setFormData({ 
             employee_id: user.employee_id,
@@ -148,12 +155,17 @@ export default function UserManagement() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         
+        if (!permissions.can_edit) {
+            showError('You do not have permission to edit users');
+            return;
+        }
+
         try {
-            // Validate role selected
             if (!formData.id_role) {
                 showError('Please select a role');
                 return;
             }
+            
             const deviceInfo = getDeviceInfo();
             const result = await confirmAction({
                 title: 'Update User',
@@ -169,7 +181,7 @@ export default function UserManagement() {
                 id_role: [formData.id_role],
                 no_ktp: formData.no_ktp,
                 is_active: formData.user_is_active,
-                updated_by: dataKaryawans.nama || 'System',
+                updated_by: dataKaryawan.nama || 'System',
                 updated_device: deviceInfo.device,
             };
            
@@ -186,7 +198,6 @@ export default function UserManagement() {
         }
     };
 
-    // Get role badge color
     const getRoleBadgeColor = (roleName) => {
         switch (roleName) {
             case 'Administrator':
@@ -204,21 +215,17 @@ export default function UserManagement() {
         }
     };
 
-    // Render role badges
     const renderRoles = (roles) => {
         if (!roles || roles.length === 0) return <span className="text-gray-400">-</span>;
         
         const role = roles[0];
         return (
-            <span 
-                className={`inline-flex px-2 py-1 text-xs rounded-full ${getRoleBadgeColor(role.role_name)}`}
-            >
+            <span className={`inline-flex px-2 py-1 text-xs rounded-full ${getRoleBadgeColor(role.role_name)}`}>
                 {role.role_name}
             </span>
         );
     };
 
-    // Render groupings
     const renderGroupings = (groupings) => {
         if (!groupings || groupings.length === 0) return <span className="text-gray-400">-</span>;
         
@@ -241,14 +248,51 @@ export default function UserManagement() {
         );
     };
 
+    // ✅ NOW do conditional return AFTER all hooks
+    if (!permissions.can_view) {
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-gray-50">
+                <div className="max-w-md text-center p-6">
+                    <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Lock className="w-8 h-8 text-red-600" />
+                    </div>
+                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
+                    <p className="text-gray-600 mb-6">
+                        You do not have permission to view user management.
+                    </p>
+                    <button
+                        onClick={() => window.history.back()}
+                        className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                        Go Back
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="p-6 bg-gray-50 min-h-screen">
             {/* Header */}
             <div className="mb-6 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 <div className="flex justify-between items-center">
                     <div>
-                        <h1 className="text-2xl font-bold text-gray-900 mb-1">User Management</h1>
-                        <p className="text-gray-600 text-sm">Manage system users and their access</p>
+                        <div className="flex items-center gap-3">
+                            <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
+                            {/* ✅ Read-Only Badge */}
+                            {!permissions.can_edit && (
+                                <span className="px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded-full flex items-center gap-1">
+                                    <Lock className="w-3 h-3" />
+                                    View Only
+                                </span>
+                            )}
+                        </div>
+                        <p className="text-gray-600 text-sm mt-1">
+                            {permissions.can_edit 
+                                ? 'Manage system users and their access'
+                                : 'View system users (read-only mode)'
+                            }
+                        </p>
                     </div>
                     
                     <div className="flex items-center gap-2 text-sm">
@@ -261,6 +305,21 @@ export default function UserManagement() {
                     </div>
                 </div>
             </div>
+
+            {/* ✅ Permission Warning Banner */}
+            {!permissions.can_edit && (
+                <div className="mb-6 bg-blue-50 border-2 border-blue-200 rounded-xl p-5">
+                    <div className="flex items-center gap-3">
+                        <Shield className="w-6 h-6 text-blue-600 flex-shrink-0" />
+                        <div>
+                            <h4 className="text-sm font-bold text-blue-900 mb-1">View-Only Mode</h4>
+                            <p className="text-sm text-blue-700">
+                                You can view user information but cannot make changes. Contact your administrator for edit access.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Main Container */}
             <div className="bg-white rounded-lg shadow-sm">
@@ -449,6 +508,7 @@ export default function UserManagement() {
                                                 </td>
                                                 <td className="px-4 py-3 text-center">
                                                     <div className="flex items-center justify-center gap-1">
+                                                        {/* ✅ View Button - Always visible */}
                                                         <button
                                                             onClick={() => handleView(user)}
                                                             className="p-1.5 text-gray-600 hover:text-green-600 transition-colors"
@@ -456,13 +516,25 @@ export default function UserManagement() {
                                                         >
                                                             <Eye className="w-4 h-4" />
                                                         </button>
-                                                        <button
-                                                            onClick={() => handleEdit(user)}
-                                                            className="p-1.5 text-gray-600 hover:text-blue-600 transition-colors"
-                                                            title="Edit"
-                                                        >
-                                                            <Edit className="w-4 h-4" />
-                                                        </button>
+                                                        
+                                                        {/* ✅ Edit Button - Conditional */}
+                                                        {permissions.can_edit ? (
+                                                            <button
+                                                                onClick={() => handleEdit(user)}
+                                                                className="p-1.5 text-gray-600 hover:text-blue-600 transition-colors"
+                                                                title="Edit"
+                                                            >
+                                                                <Edit className="w-4 h-4" />
+                                                            </button>
+                                                        ) : (
+                                                            <button
+                                                                disabled
+                                                                className="p-1.5 text-gray-400 cursor-not-allowed"
+                                                                title="No edit permission"
+                                                            >
+                                                                <Lock className="w-4 h-4" />
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 </td>
                                             </tr>
@@ -478,8 +550,8 @@ export default function UserManagement() {
                                 </table>
                             </div>
 
-                            {/* Pagination */}
-                            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-6">
+                            {/* Pagination Controls */}
+                             <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-6">
                                 <div className="text-sm text-gray-600">
                                     Showing {totalEntries > 0 ? startIndex + 1 : 0} to {endIndex} of {totalEntries} entries
                                 </div>
@@ -534,17 +606,26 @@ export default function UserManagement() {
                 </div>
             </div>
 
-            {/* Modal - View & Edit Only */}
+            {/* ✅ Modal - View & Edit with Permission Check */}
             {showModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
                     <div className={`bg-white rounded-lg shadow-xl w-full ${modalMode === 'view' ? 'max-w-3xl' : 'max-w-lg'}`}>
                         <div className="px-6 py-4 border-b border-gray-200">
-                            <h3 className="text-lg font-semibold text-gray-900">
-                                {modalMode === 'edit' ? 'Edit User' : 'User Details'}
-                            </h3>
+                            <div className="flex items-center gap-3">
+                                <h3 className="text-lg font-semibold text-gray-900">
+                                    {modalMode === 'edit' ? 'Edit User' : 'User Details'}
+                                </h3>
+                                {/* ✅ Modal Permission Badge */}
+                                {modalMode === 'view' && !permissions.can_edit && (
+                                    <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
+                                        View Only
+                                    </span>
+                                )}
+                            </div>
                         </div>
                         
                         <form onSubmit={handleSubmit}>
+                            {/* Modal body */}
                             <div className="p-6 max-h-[60vh] overflow-y-auto">
                                 {modalMode === 'view' ? (
                                     <div className="space-y-6">
@@ -736,7 +817,9 @@ export default function UserManagement() {
                                 >
                                     {modalMode === 'view' ? 'Close' : 'Cancel'}
                                 </button>
-                                {modalMode === 'edit' && (
+                                
+                                {/* ✅ Save Button - Only show if can edit */}
+                                {modalMode === 'edit' && permissions.can_edit && (
                                     <button
                                         type="submit"
                                         className="px-4 py-2 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
