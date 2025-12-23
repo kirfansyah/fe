@@ -75,7 +75,9 @@ export default function OnlineLearningView({ onlineLearning }) {
 
   const handleSelectAll = (checked) => {
     if (checked) {
-      setSelectedOnlineLearning(paginatedOnlineLearning.map((emp) => emp.id));
+      setSelectedOnlineLearning(
+        paginatedOnlineLearning.map((emp) => emp.id_user_enrollment)
+      );
     } else {
       setSelectedOnlineLearning([]);
     }
@@ -482,11 +484,12 @@ export default function OnlineLearningView({ onlineLearning }) {
                   <td className="px-4 py-3 text-gray-600">
                     {onlineLearning.posttest}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-5 py-3">
                     <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                        onlineLearning.status
-                      )}`}
+                      className={`inline-flex items-center justify-center 
+                                  px-3 py-1 min-w-[80px]
+                                  rounded-full text-xs font-medium
+                                  ${getStatusColor(onlineLearning.status)}`}
                     >
                       {onlineLearning.status}
                     </span>
