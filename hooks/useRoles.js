@@ -121,27 +121,17 @@ export function useRoles() {
         return result;
     }, [fetchRoles]);
 
-    // ✅ Get analytics
-    const fetchAnalytics = useCallback(async (filters = {}) => {
-        setLoading(true);
-        setError(null);
-
-        const result = await RoleService.getAnalytics(filters);
-
-        if (!result.success) {
-            setError(result.message);
-        }
-
-        setLoading(false);
-        return result;
-    }, []);
-
     // ✅ Create category
     const handleCreateCategory = useCallback(async (categoryData) => {
         setLoading(true);
         setError(null);
 
-        const result = await RoleService.createCategory(categoryData);
+        let result;
+        if (categoryData.id_category) {
+            result = await RoleService.updateCategory(categoryData);
+        } else {
+            result = await RoleService.createCategory(categoryData);
+        }
 
         if (result.success) {
         } else {
@@ -157,7 +147,12 @@ export function useRoles() {
         setLoading(true);
         setError(null);
 
-        const result = await RoleService.createSubCategory(subCategoryData);
+        let result;
+        if (subCategoryData.id_subcategory) {
+            result = await RoleService.updateSubCategory(subCategoryData);
+        } else {
+            result = await RoleService.createSubCategory(subCategoryData);
+        }
 
         if (result.success) {
         } else {
@@ -183,6 +178,35 @@ export function useRoles() {
         setLoading(false);
         return result;
     }, [fetchRoles]);
+    
+    // Dashboard Analytics ********************************** Home  \\
+    const fetchAnalytics = useCallback(async (filters = {}) => {
+        setLoading(true);
+        setError(null);
+
+        const result = await RoleService.getAnalytics(filters);
+
+        if (!result.success) {
+            setError(result.message);
+        }
+
+        setLoading(false);
+        return result;
+    }, []);
+
+    const fetchSchedule = useCallback(async () => {
+        setLoading(true);
+        setError(null);
+
+        const result = await RoleService.getSchedule();
+
+        if (!result.success) {
+            setError(result.message);
+        }
+
+        setLoading(false);
+        return result;
+    }, []);
 
     // ✅ Initial load
     useEffect(() => {
@@ -201,6 +225,7 @@ export function useRoles() {
         handleCreateMenus,
         handleUpdateRolePermissions,
         fetchAnalytics,
+        fetchSchedule,
         handleCreateCategory,
         handleCreateSubCategory,
         handleUpdateUser

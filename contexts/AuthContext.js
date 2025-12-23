@@ -164,15 +164,13 @@ const AuthContextProvider = (props) => {
             type: "loginFailed",  // ✅ Ganti type yang lebih sesuai
             data: { message: errorMessage, status: false },
         });
-        
-        console.log('Login error:', err.response?.data || err.message);
     }
   };
 
   function getSession() {
     let cookie = `; ${document.cookie}`.match(`;\\s*token=([^;]+)`);
     let token = cookie ? cookie[1] : "";
-    //console.log(token)
+    
 
     dispatch({
       type: "checkAuth",
@@ -187,7 +185,7 @@ const AuthContextProvider = (props) => {
   function getId(n) {
     let profile = `; ${document.cookie}`.match(`;\\s*username=([^;]+)`);
     let profil = profile ? profile[1] : "kosong username";
-    console.log(profil);
+    
 
     dispatch({
       type: "checkId",

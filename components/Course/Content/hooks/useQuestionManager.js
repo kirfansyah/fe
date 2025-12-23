@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, useRef  } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import Swal from 'sweetalert2';
 
 export const useQuestionManager = (isEditMode, contentData, testConfig) => {
     const [savedQuestions, setSavedQuestions] = useState([]);
@@ -16,11 +17,9 @@ export const useQuestionManager = (isEditMode, contentData, testConfig) => {
 
     const savedQuestionsRef = useRef([]);
     
-    // ✅ Sync ref dengan state
     useEffect(() => {
         savedQuestionsRef.current = savedQuestions;
     }, [savedQuestions]);
-
 
     // Load questions saat edit mode
     useEffect(() => {
@@ -56,25 +55,16 @@ export const useQuestionManager = (isEditMode, contentData, testConfig) => {
         setEditorKey(prev => prev + 1);
     }, []);
 
-    // ✅ Guard clause untuk prevent infinite loop
     const handleQuestionChange = useCallback((content) => {
         setFormData(prev => {
-            if (prev.question === content) {
-                return prev; // ✅ Ini cukup untuk prevent infinite loop
-            }
-            
-            return {
-                ...prev,
-                question: content
-            };
+            if (prev.question === content) return prev;
+            return { ...prev, question: content };
         });
     }, []);
 
-    // ✅ Guard clause untuk prevent infinite loop
     const handleOptionChange = useCallback((index, value) => {
         setFormData(prev => {
             if (prev.options[index] === value) return prev;
-            
             const newOptions = [...prev.options];
             newOptions[index] = value;
             return { ...prev, options: newOptions };
@@ -104,20 +94,37 @@ export const useQuestionManager = (isEditMode, contentData, testConfig) => {
         }
     }, [currentQuestionIndex, savedQuestions, loadQuestionToForm]);
 
-    const handleUpdateCurrentQuestion = useCallback(() => {
+    // ✅ Update dengan SweetAlert2
+    const handleUpdateCurrentQuestion = useCallback(async () => {
+        // Validation checks
         if (!formData.question.trim()) {
-            alert('Please enter a question');
+            await Swal.fire({
+                icon: 'warning',
+                title: 'Validation Error',
+                text: 'Please enter a question',
+                confirmButtonColor: '#1e3a8a'
+            });
             return;
         }
 
         const filledOptions = formData.options.filter(opt => opt.trim() !== '');
         if (filledOptions.length < 2) {
-            alert('Please fill at least 2 options');
+            await Swal.fire({
+                icon: 'warning',
+                title: 'Validation Error',
+                text: 'Please fill at least 2 options',
+                confirmButtonColor: '#1e3a8a'
+            });
             return;
         }
 
         if (!formData.answerKey || !formData.correctAnswerPoints) {
-            alert('Please select answer key and points');
+            await Swal.fire({
+                icon: 'warning',
+                title: 'Validation Error',
+                text: 'Please select answer key and points',
+                confirmButtonColor: '#1e3a8a'
+            });
             return;
         }
 
@@ -136,29 +143,59 @@ export const useQuestionManager = (isEditMode, contentData, testConfig) => {
         const pointsUsed = updatedQuestions.reduce((sum, q) => sum + parseInt(q.points || 0), 0);
         setTotalPointsUsed(pointsUsed);
 
-        alert(`Question ${currentQuestionNumber} updated!`);
+        // ✅ Success notification
+        await Swal.fire({
+            icon: 'success',
+            title: 'Updated!',
+            text: `Question ${currentQuestionNumber} updated successfully`,
+            confirmButtonColor: '#1e3a8a',
+            timer: 1500,
+            showConfirmButton: false
+        });
     }, [formData, savedQuestions, currentQuestionIndex, currentQuestionNumber]);
 
-    const handleSaveAndNext = useCallback((onComplete) => {
-    
+    // ✅ Save dengan SweetAlert2
+    const handleSaveAndNext = useCallback(async (onComplete) => {
+        // Config validation
         if (!testConfig.randomType || !testConfig.totalNumber || !testConfig.totalPoints) {
-            alert('Please complete test configuration');
+            await Swal.fire({
+                icon: 'warning',
+                title: 'Configuration Required',
+                text: 'Please complete test configuration',
+                confirmButtonColor: '#1e3a8a'
+            });
             return;
         }
 
+        // Question validation
         if (!formData.question.trim()) {
-            alert('Please enter a question');
+            await Swal.fire({
+                icon: 'warning',
+                title: 'Validation Error',
+                text: 'Please enter a question',
+                confirmButtonColor: '#1e3a8a'
+            });
             return;
         }
 
         const filledOptions = formData.options.filter(opt => opt.trim() !== '');
         if (filledOptions.length < 2) {
-            alert('Please fill at least 2 options');
+            await Swal.fire({
+                icon: 'warning',
+                title: 'Validation Error',
+                text: 'Please fill at least 2 options',
+                confirmButtonColor: '#1e3a8a'
+            });
             return;
         }
 
         if (!formData.answerKey || !formData.correctAnswerPoints) {
-            alert('Please select answer key and points');
+            await Swal.fire({
+                icon: 'warning',
+                title: 'Validation Error',
+                text: 'Please select answer key and points',
+                confirmButtonColor: '#1e3a8a'
+            });
             return;
         }
 
@@ -170,13 +207,28 @@ export const useQuestionManager = (isEditMode, contentData, testConfig) => {
         const currentTotalUsed = currentSavedQuestions.reduce((sum, q) => sum + parseInt(q.points || 0), 0);
         const newTotalUsed = currentTotalUsed + currentPoints;
 
+        // Points validation
         if (newTotalUsed > totalPoints) {
-            alert(`Points exceed total! Remaining: ${totalPoints - currentTotalUsed}`);
+            await Swal.fire({
+                icon: 'error',
+                title: 'Points Exceeded!',
+                html: `
+                    <p class="text-gray-700">Total points would exceed the limit.</p>
+                    <p class="text-blue-600 font-semibold mt-2">Remaining: ${totalPoints - currentTotalUsed} points</p>
+                `,
+                confirmButtonColor: '#1e3a8a'
+            });
             return;
         }
 
+        // Max questions validation
         if (currentSavedQuestions.length >= parseInt(testConfig.totalNumber)) {
-            alert(`Maximum number of questions reached!`);
+            await Swal.fire({
+                icon: 'info',
+                title: 'Maximum Reached',
+                text: 'Maximum number of questions reached!',
+                confirmButtonColor: '#1e3a8a'
+            });
             return;
         }
 
@@ -189,20 +241,12 @@ export const useQuestionManager = (isEditMode, contentData, testConfig) => {
             timestamp: new Date().toISOString()
         };
 
-        // ✅ UPDATE dengan ref
         const updatedQuestions = [...currentSavedQuestions, newQuestion];
         
-        console.log('🔍 SAVE DEBUG:');
-        console.log('Previous (from ref):', currentSavedQuestions.length);
-        console.log('Saving Q#:', currentQuestionNumber);
-        console.log('✅ Updated:', updatedQuestions.length);
-        console.log('Questions:', updatedQuestions.map(q => `Q${q.questionNumber}`).join(', '));
-
-        // ✅ UPDATE STATE
         setSavedQuestions(updatedQuestions);
         setTotalPointsUsed(newTotalUsed);
 
-        // RESET FORM
+        // Reset form
         setFormData({
             question: '',
             options: ['', '', '', ''],
@@ -213,43 +257,41 @@ export const useQuestionManager = (isEditMode, contentData, testConfig) => {
         setCurrentQuestionNumber(prev => prev + 1);
         setEditorKey(prev => prev + 1);
 
-        alert(`Question ${currentQuestionNumber} saved!`);
+        // ✅ Success notification
+        await Swal.fire({
+            icon: 'success',
+            title: 'Saved!',
+            text: `Question ${currentQuestionNumber} saved successfully`,
+            confirmButtonColor: '#1e3a8a',
+            timer: 1500,
+            showConfirmButton: false
+        });
 
-        // CHECK SUBMIT
+        // ✅ Check if all questions completed
         const totalRequired = parseInt(testConfig.totalNumber);
         if (updatedQuestions.length === totalRequired && onComplete) {
-            setTimeout(() => {
-                const confirmSubmit = window.confirm(
-                    `All ${totalRequired} questions completed! Submit test now?`
-                );
+            setTimeout(async () => {
+                const result = await Swal.fire({
+                    icon: 'success',
+                    title: 'All Questions Completed!',
+                    html: `
+                        <p class="text-gray-700 mb-2">You've created all ${totalRequired} questions.</p>
+                        <p class="text-blue-600 font-semibold">Submit test now?</p>
+                    `,
+                    showCancelButton: true,
+                    confirmButtonColor: '#1e3a8a',
+                    cancelButtonColor: '#6b7280',
+                    confirmButtonText: 'Yes, Submit',
+                    cancelButtonText: 'Not Yet'
+                });
                 
-                if (confirmSubmit) {
+                if (result.isConfirmed) {
                     onComplete(updatedQuestions);
                 }
             }, 100);
         }
 
     }, [formData, testConfig, currentQuestionNumber]);
-    // ✅ Tetap pakai dependency ini, tapi logic pakai ref
-    // const resetAll = () => {
-    // setSavedQuestions([]);
-    // setCurrentQuestionNumber(1);
-    // setTotalPointsUsed(0);
-    // setTestConfig({
-    //     randomType: '',
-    //     totalNumber: '',
-    //     totalPoints: '',
-    //     pointDistribution: '',
-    //     timeDuration: ''
-    // });
-    // setFormData({
-    //     question: '',
-    //     options: ['', '', '', ''],
-    //     answerKey: '',
-    //     correctAnswerPoints: ''
-    // });
-    // };
-    
     
     return {
         savedQuestions,

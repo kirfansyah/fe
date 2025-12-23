@@ -1,20 +1,30 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { 
-    Trash2, 
     Edit,
     Search,
     Home, 
     ChevronRight,
     Settings,
     Check,
-    X
+    X,
+    Lock,
+    Shield,
+    PowerOff
 } from 'lucide-react';
 import Admin from "layouts/Admin.js";
 import { useRoles } from "../../hooks/useRoles";
 import { ProfileContext } from '@/contexts/profile/ProfileContext';
 import { useSweetAlert } from '@/hooks/useSweetAlert';
+import { getDeviceInfo } from '@/lib/deviceHelper';
+import { useMenuPermissions } from '@/hooks/useMenuPermissions'; // ✅ Import
 
 export default function RoleManagement() {
+    // ✅ ALL HOOKS FIRST
+    const permissions = useMenuPermissions();
+    const { roles, fetchRoleByID, handleCreateRoles, handleUpdateRolePermissions } = useRoles();
+    const {dataKaryawan} = useContext(ProfileContext);
+    const { showLoading, showSuccess, showError, closeLoading, confirmAction } = useSweetAlert();
+    
     const [loading, setLoading] = useState(true);
     const [loadingPermissions, setLoadingPermissions] = useState(false);
     const [entriesPerPage, setEntriesPerPage] = useState(10);
@@ -27,17 +37,14 @@ export default function RoleManagement() {
     const [formData, setFormData] = useState({ role_name: '' });
     const [permissionsData, setPermissionsData] = useState(null);
     
-    const { roles, fetchRoleByID, handleCreateRoles, handleUpdateRolePermissions } = useRoles();
+    const deviceInfo = getDeviceInfo();
     const groups = roles || [];
-    const { getKaryawan, dataKaryawan } = useContext(ProfileContext);
-    const dataKaryawans = dataKaryawan?.length ? dataKaryawan[0] : [];
-    const { showLoading, showSuccess, showError, closeLoading, confirmAction } = useSweetAlert();
 
     useEffect(() => {
         setLoading(false);
     }, []);
 
-    // Filter data based on search
+    // Filter data
     const filteredData = groups.filter(group =>
         group.role_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (group.role_description && group.role_description.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -51,7 +58,6 @@ export default function RoleManagement() {
     const endIndex = Math.min(startIndex + entriesPerPage, totalEntries);
     const currentData = filteredData.slice(startIndex, endIndex);
 
-    // Generate page numbers
     const getPageNumbers = () => {
         const pages = [];
         const maxPagesToShow = 5;
@@ -68,7 +74,6 @@ export default function RoleManagement() {
         return pages;
     };
 
-    // Format date
     const formatDate = (dateString) => {
         if (!dateString) return '-';
         const date = new Date(dateString);
@@ -76,8 +81,13 @@ export default function RoleManagement() {
         return `${date.getDate()} ${months[date.getMonth()]}, ${date.getFullYear()}`;
     };
 
-    // Handle Configure Permissions
+    // ✅ Configure Permissions - Check permission
     const handleConfigurePermissions = async (group) => {
+        if (!permissions.can_edit) {
+            showError('You do not have permission to configure permissions');
+            return;
+        }
+
         setSelectedGroup(group);
         setLoadingPermissions(true);
         setShowPermissionsModal(true);
@@ -98,7 +108,6 @@ export default function RoleManagement() {
         }
     };
 
-    // Toggle Permission
     const togglePermission = (menuIndex, permissionType) => {
         setPermissionsData(prev => {
             const updated = { ...prev };
@@ -115,8 +124,13 @@ export default function RoleManagement() {
         });
     };
 
-    // Save Permissions
+    // ✅ Save Permissions - Check permission
     const handleSavePermissions = async () => {
+        if (!permissions.can_edit) {
+            showError('You do not have permission to save permissions');
+            return;
+        }
+
         const result = await confirmAction(
             'Save Permissions',
             'Are you sure you want to save these permission changes?'
@@ -127,7 +141,6 @@ export default function RoleManagement() {
         showLoading('Saving permissions...');
         
         try {
-            // ✅ Transform data sesuai format API yang benar
             const payload = {
                 id_role: permissionsData.id_role,
                 accessConfiguration: permissionsData.accessConfiguration.map(config => ({
@@ -140,24 +153,26 @@ export default function RoleManagement() {
                         delete: config.permissions.delete,
                         approve: config.permissions.approve
                     },
-                    updated_by: dataKaryawans.nama || 'System',
-                    updated_device: 'web'
+                    updated_by: dataKaryawan.nama || 'System',
+                    updated_device: deviceInfo.device
                 }))
             };
             
-            console.log('📤 Sending permissions payload:', payload);
-            
             await handleUpdateRolePermissions(payload);
-            
             showSuccess('Permissions updated successfully!');
             setShowPermissionsModal(false);
         } catch (error) {
-            console.error('❌ Error saving permissions:', error);
             showError('Failed to update permissions: ' + error.message);
         }
     };
 
+    // ✅ Handle Edit - Check permission
     const handleEdit = (group) => {
+        if (!permissions.can_edit) {
+            showError('You do not have permission to edit roles');
+            return;
+        }
+
         setSelectedGroup(group);
         setFormData({ 
             role_name: group.role_name, 
@@ -168,22 +183,46 @@ export default function RoleManagement() {
         setShowModal(true);
     };
 
+    // ✅ Handle Delete - Check permission
     const handleDelete = (group) => {
+        if (!permissions.can_delete) {
+            showError('You do not have permission to delete roles');
+            return;
+        }
+
         setSelectedGroup(group);
         setModalMode('delete');
         setShowModal(true);
     };
 
+    // ✅ Handle Add - Check permission
+    const handleAdd = () => {
+        if (!permissions.can_create) {
+            showError('You do not have permission to create roles');
+            return;
+        }
+
+        setModalMode('add');
+        setFormData({ role_name: '' });
+        setShowModal(true);
+    };
+
+    // ✅ Handle Submit - Check permission based on mode
     const handleSubmit = async (e) => {
         e.preventDefault();
         
         if (modalMode === 'add') {
+            if (!permissions.can_create) {
+                showError('You do not have permission to create roles');
+                return;
+            }
+
             const rolesData = {
                 role_name: formData.role_name,
                 role_description: formData.role_description,
                 is_active: true,
-                created_by: dataKaryawans.nama || 'System',
-                created_device: 'system'
+                created_by: dataKaryawan.nama || 'System',
+                created_device: deviceInfo.device
             };
             
             const result = await confirmAction('Are you sure you want to add this role?');
@@ -197,13 +236,18 @@ export default function RoleManagement() {
                 showError(`Failed to add role: ${error.message}`);
             }
         } else if (modalMode === 'edit') {
+            if (!permissions.can_edit) {
+                showError('You do not have permission to edit roles');
+                return;
+            }
+
             const rolesData = {
                 id_role: selectedGroup.id_role,
                 role_name: formData.role_name,
                 role_description: formData.role_description,
                 is_active: true,
-                updated_by: dataKaryawans.nama || 'System',
-                updated_device: 'system'
+                updated_by: dataKaryawan.nama || 'System',
+                updated_device: deviceInfo.device
             };
             
             const result = await confirmAction('Are you sure you want to save changes to this role?');
@@ -217,12 +261,17 @@ export default function RoleManagement() {
                 showError(`Failed to update role: ${error.message}`);
             }
         } else if (modalMode === 'delete') {
+            if (!permissions.can_delete) {
+                showError('You do not have permission to delete roles');
+                return;
+            }
+
             const rolesData = {
                 id_role: selectedGroup.id_role,
                 role_name: selectedGroup.role_name,
                 is_active: false,
-                updated_by: dataKaryawans.nama || 'System',
-                updated_device: 'system'
+                updated_by: dataKaryawan.nama || 'System',
+                updated_device: deviceInfo.device
             };
             
             const result = await confirmAction('Are you sure you want to inactive this role?');
@@ -241,29 +290,79 @@ export default function RoleManagement() {
         setFormData({ role_name: '' });
     };
 
+    // ✅ AFTER all hooks, check view permission
+    if (!permissions.can_view) {
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-gray-50">
+                <div className="max-w-md text-center p-6">
+                    <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Lock className="w-8 h-8 text-red-600" />
+                    </div>
+                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
+                    <p className="text-gray-600 mb-6">
+                        You do not have permission to view role management.
+                    </p>
+                    <button
+                        onClick={() => window.history.back()}
+                        className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                        Go Back
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="p-6 bg-gray-50 min-h-screen">
+            {/* Header */}
             <div className="mb-6 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 <div className="flex justify-between items-center">
                     <div>
-                        <h1 className="text-2xl font-bold text-gray-900 mb-1">Course Management</h1>
-                        <p className="text-gray-600 text-sm">Manage your courses and enrollments</p>
+                        <div className="flex items-center gap-3">
+                            <h1 className="text-2xl font-bold text-gray-900">Role Management</h1>
+                            {/* ✅ Permission Badge */}
+                            {!permissions.can_edit && !permissions.can_create && !permissions.can_delete && (
+                                <span className="px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded-full flex items-center gap-1">
+                                    <Lock className="w-3 h-3" />
+                                    View Only
+                                </span>
+                            )}
+                        </div>
+                        <p className="text-gray-600 text-sm mt-1">
+                            {permissions.can_edit 
+                                ? 'Manage roles and permissions'
+                                : 'View roles and permissions (read-only mode)'
+                            }
+                        </p>
                     </div>
                     
-                    {/* ✅ FIXED: Minimalis Breadcrumb */}
                     <div className="flex items-center gap-2 text-sm">
                         <Home className="w-4 h-4 text-gray-400" />
                         <span className="text-gray-500">Home</span>
                         <ChevronRight className="w-4 h-4 text-gray-400" />
-                        <span className="text-gray-900 font-medium">Course Management</span>
+                        <span className="text-gray-900 font-medium">Role Management</span>
                     </div>
                 </div>
             </div>
 
+            {/* ✅ Permission Warning Banner */}
+            {!permissions.can_edit && !permissions.can_create && !permissions.can_delete && (
+                <div className="mb-6 bg-blue-50 border-2 border-blue-200 rounded-xl p-5">
+                    <div className="flex items-center gap-3">
+                        <Shield className="w-6 h-6 text-blue-600 flex-shrink-0" />
+                        <div>
+                            <h4 className="text-sm font-bold text-blue-900 mb-1">View-Only Mode</h4>
+                            <p className="text-sm text-blue-700">
+                                You can view roles and permissions but cannot make changes. Contact your administrator for edit access.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Main Container */}
             <div className="bg-white rounded-lg shadow-sm">
-                {/* Controls */}
                 <div className="p-6">
                     <div className="flex sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                         {/* Entries Selector */}
@@ -287,17 +386,24 @@ export default function RoleManagement() {
                         </div>
 
                         <div className="flex items-center gap-4">
-                            {/* Add Button */}
-                            <button
-                                onClick={() => {
-                                    setModalMode('add');
-                                    setFormData({ role_name: '' });
-                                    setShowModal(true);
-                                }}
-                                className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors"
-                            >
-                                Add New Role
-                            </button>
+                            {/* ✅ Add Button - Conditional */}
+                            {permissions.can_create ? (
+                                <button
+                                    onClick={handleAdd}
+                                    className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors"
+                                >
+                                    Add New Role
+                                </button>
+                            ) : (
+                                <button
+                                    disabled
+                                    className="px-4 py-2 bg-gray-300 text-gray-500 text-sm rounded-md cursor-not-allowed flex items-center gap-2"
+                                    title="No create permission"
+                                >
+                                    <Lock className="w-4 h-4" />
+                                    Add New Role
+                                </button>
+                            )}
 
                             {/* Search */}
                             <div className="relative">
@@ -350,48 +456,75 @@ export default function RoleManagement() {
                                     <tbody className="divide-y divide-gray-200">
                                         {currentData.map((group) => (
                                             <tr key={group.id_role} className="hover:bg-gray-50">
+                                                <td className="px-4 py-3 text-sm">{group.role_name}</td>
+                                                <td className="px-4 py-3 text-sm">{group.role_description || '-'}</td>
                                                 <td className="px-4 py-3 text-sm">
-                                                    {group.role_name}
-                                                </td>
-                                                <td className="px-4 py-3 text-sm">
-                                                    {group.role_description || '-'}
-                                                </td>
-                                                <td className="px-4 py-3 text-sm">
-                                                   <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                                                         group.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                                                     }`}>
                                                         {group.is_active ? 'Active' : 'Inactive'}
                                                     </span>
                                                 </td>
-                                                <td className="px-4 py-3 text-sm">
-                                                    {formatDate(group.created_at)}
-                                                </td>
-                                                <td className="px-4 py-3 text-sm">
-                                                    {formatDate(group.updated_at)}
-                                                </td>
+                                                <td className="px-4 py-3 text-sm">{formatDate(group.created_at)}</td>
+                                                <td className="px-4 py-3 text-sm">{formatDate(group.updated_at)}</td>
                                                 <td className="px-4 py-3 text-center">
                                                     <div className="flex items-center justify-center gap-2">
-                                                        <button
-                                                            onClick={() => handleConfigurePermissions(group)}
-                                                            className="p-1.5 hover:text-purple-600 transition-colors"
-                                                            title="Configure Permissions"
-                                                        >
-                                                            <Settings className="w-4 h-4" />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleEdit(group)}
-                                                            className="p-1.5 hover:text-blue-600 transition-colors"
-                                                            title="Edit"
-                                                        >
-                                                            <Edit className="w-4 h-4" />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleDelete(group)}
-                                                            className="p-1.5 hover:text-red-600 transition-colors"
-                                                            title="Delete"
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </button>
+                                                        {/* ✅ Configure - Conditional */}
+                                                        {permissions.can_edit ? (
+                                                            <button
+                                                                onClick={() => handleConfigurePermissions(group)}
+                                                                className="p-1.5 hover:text-purple-600 transition-colors"
+                                                                title="Configure Permissions"
+                                                            >
+                                                                <Settings className="w-4 h-4" />
+                                                            </button>
+                                                        ) : (
+                                                            <button
+                                                                disabled
+                                                                className="p-1.5 text-gray-400 cursor-not-allowed"
+                                                                title="No edit permission"
+                                                            >
+                                                                <Lock className="w-4 h-4" />
+                                                            </button>
+                                                        )}
+                                                        
+                                                        {/* ✅ Edit - Conditional */}
+                                                        {permissions.can_edit ? (
+                                                            <button
+                                                                onClick={() => handleEdit(group)}
+                                                                className="p-1.5 hover:text-blue-600 transition-colors"
+                                                                title="Edit"
+                                                            >
+                                                                <Edit className="w-4 h-4" />
+                                                            </button>
+                                                        ) : (
+                                                            <button
+                                                                disabled
+                                                                className="p-1.5 text-gray-400 cursor-not-allowed"
+                                                                title="No edit permission"
+                                                            >
+                                                                <Lock className="w-4 h-4" />
+                                                            </button>
+                                                        )}
+                                                        
+                                                        {/* ✅ Delete - Conditional */}
+                                                        {permissions.can_delete ? (
+                                                            <button
+                                                                onClick={() => handleDelete(group)}
+                                                                className="p-1.5 hover:text-red-600 transition-colors"
+                                                                title="Inactive"
+                                                            >
+                                                                <PowerOff className="w-4 h-4" />
+                                                            </button>
+                                                        ) : (
+                                                            <button
+                                                                disabled
+                                                                className="p-1.5 text-gray-400 cursor-not-allowed"
+                                                                title="No delete permission"
+                                                            >
+                                                                <Lock className="w-4 h-4" />
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 </td>
                                             </tr>

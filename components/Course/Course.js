@@ -1,14 +1,29 @@
 import { 
     Plus, Trash2, Globe, GlobeLock, FileText, ChevronDown, ChevronRight,
     Video, FileCheck, ClipboardList, Edit, X, Search, Upload,
-    Grid, List
+    Grid, List, Shield,
+    Eye
 } from "lucide-react";
 import { useState, useContext } from "react";
 import { useRouter } from "next/router";
+
 import { useSweetAlert } from '../../hooks/useSweetAlert';
 import { ProfileContext } from '@/contexts/profile/ProfileContext';
 import { LoadingSpinner, CourseCardSkeleton, StatsCardSkeleton } from '@/components/Loading/Skeleton';
-export default function Course({ courses, onAddContent, onEditContent, onSave, onDelete,isLoading,isSaving, onDeleteContent }) {
+import { getDeviceInfo } from '@/lib/deviceHelper';
+export default function Course({ 
+    courses, 
+    onAddContent, 
+    onEditContent, 
+    onSave, 
+    onDelete,
+    isLoading,
+    isSaving, 
+    onDeleteContent,
+    onViewContent,
+    onDeleteContentSuccess,
+    permissions // ✅ Receive permissions from parent
+}) {
     const [expandedCourse, setExpandedCourse] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [courseName, setCourseName] = useState('');
@@ -19,18 +34,15 @@ export default function Course({ courses, onAddContent, onEditContent, onSave, o
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState('all');
     const [viewMode, setViewMode] = useState('list');
-    
-    
+   
     const router = useRouter();
     const { showLoading, showSuccess, showError, showWarning, confirmAction } = useSweetAlert();
     const { dataKaryawan } = useContext(ProfileContext);
-    const dataKaryawans = dataKaryawan?.length ? dataKaryawan[0] : [];
 
     const toggleCourse = (courseId) => {
         setExpandedCourse(expandedCourse === courseId ? null : courseId);
     };
 
-    // Handle thumbnail upload
     const handleThumbnailChange = (e) => {
         const file = e.target.files[0];
         if (file) {
@@ -65,6 +77,12 @@ export default function Course({ courses, onAddContent, onEditContent, onSave, o
     };
 
     const handleSave = async () => {
+        // ✅ Check permission
+        if (!permissions?.can_create) {
+            showError('You do not have permission to create courses');
+            return;
+        }
+
         if (!courseName.trim()) {
             showWarning('Course name cannot be empty.');
             return;
@@ -77,18 +95,16 @@ export default function Course({ courses, onAddContent, onEditContent, onSave, o
         });
         
         if (!result.isConfirmed) return;
-
-       
         
         try {
             showLoading('Saving course...');
-            
+            const deviceInfo = getDeviceInfo();
             const formData = new FormData();
             formData.append('course_title', courseName);
             formData.append('course_description', courseDescription);
             formData.append('is_active', isActive.toString());
-            formData.append('created_by', dataKaryawans?.nama || 'System');
-            formData.append('created_device', 'system');
+            formData.append('created_by', dataKaryawan?.nama || 'System');
+            formData.append('created_device', deviceInfo.device || 'Unknown');
             
             if (thumbnail) {
                 formData.append('thumbnail', thumbnail);
@@ -104,6 +120,12 @@ export default function Course({ courses, onAddContent, onEditContent, onSave, o
     };
 
     const handleDelete = async (courseId) => {
+        // ✅ Check permission
+        if (!permissions?.can_delete) {
+            showError('You do not have permission to delete courses');
+            return;
+        }
+
         const result = await confirmAction({
             title: 'Are you sure you want to delete this course?',  
             text: "This action cannot be undone.",
@@ -115,6 +137,9 @@ export default function Course({ courses, onAddContent, onEditContent, onSave, o
         try {
             showLoading('Deleting course...');
             await onDelete(courseId);
+            if (onDeleteContentSuccess) {
+                await onDeleteContentSuccess();
+            }
             await showSuccess('Course deleted successfully!');
         } catch (error) {
             showError('Failed to delete course: ' + error.message);
@@ -122,6 +147,12 @@ export default function Course({ courses, onAddContent, onEditContent, onSave, o
     };
 
     const handleDeleteContent = async (contentId) => {
+        // ✅ Check permission
+        if (!permissions?.can_delete) {
+            showError('You do not have permission to delete content');
+            return;
+        }
+
         const result = await confirmAction({
             title: 'Are you sure you want to delete this content?',  
             text: "This action cannot be undone.",
@@ -133,10 +164,40 @@ export default function Course({ courses, onAddContent, onEditContent, onSave, o
         try {
             showLoading('Deleting content...');
             await onDeleteContent(contentId);
+            if (onDeleteContentSuccess) {
+                await onDeleteContentSuccess();
+            }
             await showSuccess('Content deleted successfully!');
         } catch (error) {
             showError('Failed to delete content: ' + error.message);
         }
+    };
+
+    const handleAddContent = (courseId) => {
+        // ✅ Check permission
+        if (!permissions?.can_create) {
+            showError('You do not have permission to add content');
+            return;
+        }
+        onAddContent(courseId);
+    };
+
+    const handleEditContent = (courseId, contentId, contentTypeId) => {
+        // ✅ Check permission
+        if (!permissions?.can_edit) {
+            showError('You do not have permission to edit content');
+            return;
+        }
+        onEditContent(courseId, contentId, contentTypeId);
+    };
+
+    const handleViewContent = (courseId, contentId, contentTypeId) => {
+        // ✅ Check permission
+        if (!permissions?.can_view) {
+            showError('You do not have permission to view content');
+            return;
+        }
+        onViewContent(courseId, contentId, contentTypeId);
     };
 
     const handleCancel = () => {
@@ -152,7 +213,6 @@ export default function Course({ courses, onAddContent, onEditContent, onSave, o
         setIsModalOpen(false);
     };
 
-    // Helper function to check if course is published
     const isCoursePublished = (course) => {
         const now = new Date();
         const publishDate = course.publish_date ? new Date(course.publish_date) : null;
@@ -160,7 +220,6 @@ export default function Course({ courses, onAddContent, onEditContent, onSave, o
         return publishDate && endDate && now >= publishDate && now <= endDate;
     };
 
-    // Calculate statistics
     const stats = {
         total: courses.length,
         published: courses.filter(c => isCoursePublished(c)).length,
@@ -168,7 +227,6 @@ export default function Course({ courses, onAddContent, onEditContent, onSave, o
         totalContent: courses.reduce((sum, c) => sum + (c.contents?.length || 0), 0)
     };
 
-    // Filter courses
     const filteredCourses = courses.filter(course => {
         const matchesSearch = course.course_title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             (course.course_description && course.course_description.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -192,12 +250,12 @@ export default function Course({ courses, onAddContent, onEditContent, onSave, o
         return 'bg-gray-100 text-gray-600';
     };
 
+    // ✅ No permission check - Just show read-only view
     return (
         <div className="space-y-6">
-            {/* Statistics Cards - SIMPLIFIED */}
+            {/* Statistics Cards */}
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {isLoading ? (
-                    // ✅ SHOW SKELETON saat loading
                     <>
                         <StatsCardSkeleton />
                         <StatsCardSkeleton />
@@ -205,9 +263,8 @@ export default function Course({ courses, onAddContent, onEditContent, onSave, o
                         <StatsCardSkeleton />
                     </>
                 ) : (
-                    // Original stats cards
                     <>
-                        <div className="bg-white rounded-xl p-5 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
                             <div className="flex items-center justify-between">
                                 <div>
                                     <p className="text-gray-500 text-sm font-medium mb-1">Total Courses</p>
@@ -219,7 +276,7 @@ export default function Course({ courses, onAddContent, onEditContent, onSave, o
                             </div>
                         </div>
                         
-                        <div className="bg-white rounded-xl p-5 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
                             <div className="flex items-center justify-between">
                                 <div>
                                     <p className="text-gray-500 text-sm font-medium mb-1">Published</p>
@@ -231,7 +288,7 @@ export default function Course({ courses, onAddContent, onEditContent, onSave, o
                             </div>
                         </div>
                         
-                        <div className="bg-white rounded-xl p-5 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
                             <div className="flex items-center justify-between">
                                 <div>
                                     <p className="text-gray-500 text-sm font-medium mb-1">Unpublished</p>
@@ -243,7 +300,7 @@ export default function Course({ courses, onAddContent, onEditContent, onSave, o
                             </div>
                         </div>
                         
-                        <div className="bg-white rounded-xl p-5 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
                             <div className="flex items-center justify-between">
                                 <div>
                                     <p className="text-gray-500 text-sm font-medium mb-1">Total Content</p>
@@ -256,13 +313,11 @@ export default function Course({ courses, onAddContent, onEditContent, onSave, o
                         </div>
                     </>
                 )}
-                
             </div>
 
-            {/* Search & Filter Bar - SIMPLIFIED */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+            {/* Search & Filter Bar */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
                 <div className="flex flex-col lg:flex-row gap-4">
-                    {/* Search */}
                     <div className="flex-1 relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <input
@@ -275,7 +330,6 @@ export default function Course({ courses, onAddContent, onEditContent, onSave, o
                         />
                     </div>
 
-                    {/* Filters & Actions */}
                     <div className="flex items-center gap-3 flex-wrap">
                         {/* Status Filter */}
                         <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
@@ -337,19 +391,20 @@ export default function Course({ courses, onAddContent, onEditContent, onSave, o
                             </button>
                         </div>
 
-                        {/* Add Course Button - SIMPLIFIED */}
-                        <button 
-                            onClick={() => setIsModalOpen(true)}
-                            className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg 
-                                     hover:bg-blue-700 transition-colors shadow-sm font-medium text-sm"
-                        >
-                            <Plus className="w-5 h-5" />
-                            <span>Create Course</span>
-                        </button>
+                        {/* ✅ Create Course Button - Conditional Render */}
+                        {permissions?.can_create && (
+                            <button 
+                                onClick={() => setIsModalOpen(true)}
+                                className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg 
+                                         hover:bg-blue-700 transition-colors shadow-sm font-medium text-sm"
+                            >
+                                <Plus className="w-5 h-5" />
+                                <span>Create Course</span>
+                            </button>
+                        )}
                     </div>
                 </div>
 
-                {/* Results Count */}
                 <div className="mt-3 flex items-center justify-between text-sm text-gray-600">
                     <span>
                         Showing <span className="font-semibold text-gray-900">{filteredCourses.length}</span> of{' '}
@@ -367,9 +422,8 @@ export default function Course({ courses, onAddContent, onEditContent, onSave, o
                 </div>
             </div>
 
-            {/* Course List - SIMPLIFIED */}
+            {/* Course List */}
             {isLoading ? (
-                // ✅ SHOW SKELETON saat loading
                 <div className="space-y-3">
                     <CourseCardSkeleton />
                     <CourseCardSkeleton />
@@ -380,12 +434,11 @@ export default function Course({ courses, onAddContent, onEditContent, onSave, o
                     {filteredCourses.map((course) => (
                         <div
                             key={course.id_course}
-                            className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
+                            className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
                         >
                             {/* Course Header */}
                             <div className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors">
                                 <div className="flex items-center gap-3 flex-1 min-w-0">
-                                    {/* Expand Button */}
                                     <button
                                         onClick={() => toggleCourse(course.id_course)}
                                         className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
@@ -397,7 +450,6 @@ export default function Course({ courses, onAddContent, onEditContent, onSave, o
                                         )}
                                     </button>
 
-                                    {/* Thumbnail Preview */}
                                     <div className="w-20 h-14 rounded-lg overflow-hidden bg-blue-50 flex-shrink-0">
                                         {course.thumbnail ? (
                                             <img 
@@ -412,14 +464,12 @@ export default function Course({ courses, onAddContent, onEditContent, onSave, o
                                         )}
                                     </div>
 
-                                    {/* Course Info */}
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2 mb-1">
                                             <h3 className="text-sm font-semibold text-gray-900 truncate">
                                                 {course.course_title}
                                             </h3>
                                             
-                                            {/* Content Count Badge */}
                                             {course.contents && course.contents.length > 0 && (
                                                 <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full flex items-center gap-1">
                                                     <FileText className="w-3 h-3" />
@@ -442,8 +492,6 @@ export default function Course({ courses, onAddContent, onEditContent, onSave, o
                                         const now = new Date();
                                         const publishDate = course.publish_date ? new Date(course.publish_date) : null;
                                         const endDate = course.end_date ? new Date(course.end_date) : null;
-                                        
-                                        // Published jika tanggal sekarang ada di antara publish_date dan end_date
                                         const isPublished = publishDate && endDate && now >= publishDate && now <= endDate;
                                         
                                         return (
@@ -467,23 +515,28 @@ export default function Course({ courses, onAddContent, onEditContent, onSave, o
                                         );
                                     })()}
 
-                                    {/* Manage Content Button */}
-                                    <button 
-                                        onClick={() => onAddContent && onAddContent(course.id_course)}
-                                        className="flex items-center gap-2 px-3 py-1.5 text-blue-600 hover:bg-blue-50 
-                                                 rounded-lg transition-colors border border-blue-200 font-medium text-sm"
-                                    >
-                                        <FileText className="w-4 h-4" />
-                                        <span>Manage</span>
-                                    </button>
+                                    {/* ✅ Manage Button - Conditional based on create or edit permission */}
+                                    {(permissions?.can_create || permissions?.can_edit) && (
+                                        <button 
+                                            onClick={() => handleAddContent(course.id_course)}
+                                            className="flex items-center gap-2 px-3 py-1.5 text-blue-600 hover:bg-blue-50 
+                                                     rounded-lg transition-colors border border-blue-200 font-medium text-sm"
+                                        >
+                                            <FileText className="w-4 h-4" />
+                                            <span>Manage</span>
+                                        </button>
+                                    )}
 
-                                    {/* Delete Button */}
-                                    <button 
-                                        onClick={() => handleDelete(course.id_course)}
-                                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
+                                    {/* ✅ Delete Button - Conditional */}
+                                    {permissions?.can_delete && (
+                                        <button 
+                                            onClick={() => handleDelete(course.id_course)}
+                                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                            title="Delete course"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    )}
                                 </div>
                             </div>
 
@@ -504,7 +557,6 @@ export default function Course({ courses, onAddContent, onEditContent, onSave, o
                                             }`}
                                         >
                                             <div className="flex items-center gap-3 flex-1">
-                                                {/* Drag Handle */}
                                                 <div className="flex items-center justify-center w-8 h-8 text-gray-400 cursor-move hover:text-gray-600 hover:bg-gray-100 rounded">
                                                     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                                                         <circle cx="8" cy="6" r="1.5"/>
@@ -516,19 +568,16 @@ export default function Course({ courses, onAddContent, onEditContent, onSave, o
                                                     </svg>
                                                 </div>
 
-                                                {/* Order Number */}
                                                 <div className="w-8 h-8 bg-gray-200 rounded-lg flex items-center justify-center flex-shrink-0">
                                                     <span className="text-sm font-semibold text-gray-700">
                                                         {index + 1}
                                                     </span>
                                                 </div>
 
-                                                {/* Content Icon */}
                                                 <div className={`flex items-center justify-center w-10 h-10 rounded-lg ${getContentColor(content.content_type_name)}`}>
                                                     {getContentIcon(content.content_type_name)}
                                                 </div>
 
-                                                {/* Content Details */}
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex items-center gap-2 mb-1">
                                                         <span className="text-sm font-medium text-gray-900">
@@ -558,30 +607,47 @@ export default function Course({ courses, onAddContent, onEditContent, onSave, o
 
                                             {/* Content Actions */}
                                             <div className="flex items-center gap-2">
-                                                <button
-                                                    onClick={() => onEditContent(course.id_course, content.id_course_content, content.id_content_type)}
-                                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                                    title="Edit content"
-                                                >
-                                                    <Edit className="w-4 h-4" />
-                                                </button>
-                                                <button 
-                                                    onClick={() => handleDeleteContent(content.id_course_content)}
-                                                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                                    title="Delete content"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
+                                                {/* ✅ Edit Button - Conditional */}
+                                                {permissions?.can_view && (
+                                                    <button
+                                                        onClick={() => handleViewContent(course.id_course, content.id_course_content, content.id_content_type)}
+                                                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                        title="View content"
+                                                    >
+                                                        <Eye className="w-4 h-4" />
+                                                    </button>
+                                                )}
+
+                                                {permissions?.can_edit && (
+                                                    <button
+                                                        onClick={() => handleEditContent(course.id_course, content.id_course_content, content.id_content_type)}
+                                                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                        title="Edit content"
+                                                    >
+                                                        <Edit className="w-4 h-4" />
+                                                    </button>
+                                                )}
+                                                
+                                                {/* ✅ Delete Button - Conditional */}
+                                                {permissions?.can_delete && (
+                                                    <button 
+                                                        onClick={() => handleDeleteContent(content.id_course_content)}
+                                                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                        title="Delete content"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
                                     ))}
                                 </div>
                             )}
 
-                            {/* Empty State - SIMPLIFIED */}
+                            {/* Empty State */}
                             {expandedCourse === course.id_course && (!course.contents || course.contents.length === 0) && (
                                 <div className="border-t border-gray-100 bg-gray-50 px-6 py-12 text-center">
-                                    <div className="w-16 h-16 bg-blue-50 rounded-xl flex items-center justify-center mx-auto mb-4">
+                                    <div className="w-16 h-16 bg-blue-50 rounded-lg flex items-center justify-center mx-auto mb-4">
                                         <FileText className="w-8 h-8 text-blue-500" />
                                     </div>
                                     <h4 className="text-base font-semibold text-gray-900 mb-2">
@@ -590,28 +656,31 @@ export default function Course({ courses, onAddContent, onEditContent, onSave, o
                                     <p className="text-sm text-gray-600 mb-6 max-w-sm mx-auto">
                                         Start building your course by adding videos, documents, or quizzes
                                     </p>
-                                    <button 
-                                        onClick={() => onAddContent && onAddContent(course.id_course)}
-                                        className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white text-sm 
-                                                 font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
-                                    >
-                                        <Plus className="w-5 h-5" />
-                                        Add Content
-                                    </button>
+                                    
+                                    {/* ✅ Add Content Button - Conditional */}
+                                    {permissions?.can_create && (
+                                        <button 
+                                            onClick={() => handleAddContent(course.id_course)}
+                                            className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white text-sm 
+                                                     font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                                        >
+                                            <Plus className="w-5 h-5" />
+                                            Add Content
+                                        </button>
+                                    )}
                                 </div>
                             )}
                         </div>
                     ))}
                 </div>
             ) : (
-                // Grid View - SIMPLIFIED
+                // Grid View - Similar permission checks
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {filteredCourses.map((course) => (
                         <div
                             key={course.id_course}
-                            className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
+                            className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
                         >
-                            {/* Thumbnail */}
                             <div className="relative h-40 bg-blue-50">
                                 {course.thumbnail ? (
                                     <img 
@@ -625,14 +694,11 @@ export default function Course({ courses, onAddContent, onEditContent, onSave, o
                                     </div>
                                 )}
                                 
-                                {/* Status Badge */}
                                 <div className="absolute top-3 right-3">
                                     {(() => {
                                         const now = new Date();
                                         const publishDate = course.publish_date ? new Date(course.publish_date) : null;
                                         const endDate = course.end_date ? new Date(course.end_date) : null;
-                                        
-                                        // Published jika tanggal sekarang ada di antara publish_date dan end_date
                                         const isPublished = publishDate && endDate && now >= publishDate && now <= endDate;
                                         
                                         return (
@@ -655,10 +721,8 @@ export default function Course({ courses, onAddContent, onEditContent, onSave, o
                                             </div>
                                         );
                                     })()}
-                                    
                                 </div>
 
-                                {/* Content Count */}
                                 {course.contents && course.contents.length > 0 && (
                                     <div className="absolute top-3 left-3">
                                         <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white rounded-full text-xs font-semibold text-gray-700 shadow-sm">
@@ -669,7 +733,6 @@ export default function Course({ courses, onAddContent, onEditContent, onSave, o
                                 )}
                             </div>
 
-                            {/* Course Info */}
                             <div className="p-4">
                                 <h3 className="text-base font-semibold text-gray-900 mb-2 line-clamp-2">
                                     {course.course_title}
@@ -681,23 +744,29 @@ export default function Course({ courses, onAddContent, onEditContent, onSave, o
                                     </p>
                                 )}
 
-                                {/* Actions */}
                                 <div className="flex items-center gap-2 mt-4">
-                                    <button 
-                                        onClick={() => onAddContent && onAddContent(course.id_course)}
-                                        className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-blue-600 
-                                                 hover:bg-blue-50 rounded-lg transition-colors border border-blue-200 font-medium text-sm"
-                                    >
-                                        <FileText className="w-4 h-4" />
-                                        <span>Manage</span>
-                                    </button>
-                                    <button 
-                                        onClick={() => handleDelete(course.id_course)}
-                                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-red-200"
-                                        title="Delete course"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
+                                    {/* ✅ Manage Button - Conditional */}
+                                    {(permissions?.can_create || permissions?.can_edit) && (
+                                        <button 
+                                            onClick={() => handleAddContent(course.id_course)}
+                                            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-blue-600 
+                                                     hover:bg-blue-50 rounded-lg transition-colors border border-blue-200 font-medium text-sm"
+                                        >
+                                            <FileText className="w-4 h-4" />
+                                            <span>Manage</span>
+                                        </button>
+                                    )}
+                                    
+                                    {/* ✅ Delete Button - Conditional */}
+                                    {permissions?.can_delete && (
+                                        <button 
+                                            onClick={() => handleDelete(course.id_course)}
+                                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-red-200"
+                                            title="Delete course"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -705,10 +774,10 @@ export default function Course({ courses, onAddContent, onEditContent, onSave, o
                 </div>
             )}
 
-            {/* Empty State - No Results - SIMPLIFIED */}
+            {/* Empty State */}
             {filteredCourses.length === 0 && (
-                <div className="text-center py-16 bg-white rounded-xl border-2 border-dashed border-gray-300">
-                    <div className="w-16 h-16 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                <div className="text-center py-16 bg-white rounded-lg border-2 border-dashed border-gray-300">
+                    <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center mx-auto mb-4">
                         <FileText className="w-8 h-8 text-gray-400" />
                     </div>
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">No courses found</h3>
@@ -728,24 +797,25 @@ export default function Course({ courses, onAddContent, onEditContent, onSave, o
                             Clear search
                         </button>
                     ) : (
-                        <button
-                            onClick={() => setIsModalOpen(true)}
-                            className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg 
-                                     hover:bg-blue-700 font-medium transition-colors shadow-sm"
-                        >
-                            <Plus className="w-5 h-5" />
-                            Create Course
-                        </button>
+                        permissions?.can_create && (
+                            <button
+                                onClick={() => setIsModalOpen(true)}
+                                className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg 
+                                         hover:bg-blue-700 font-medium transition-colors shadow-sm"
+                            >
+                                <Plus className="w-5 h-5" />
+                                Create Course
+                            </button>
+                        )
                     )}
                 </div>
             )}
 
-            {/* Modal - SIMPLIFIED */}
+            {/* Create Course Modal - Same as before, no changes needed */}
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-xl shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                        {/* Header */}
-                        <div className="flex items-center justify-between p-5 border-b border-gray-200 sticky top-0 bg-white rounded-t-xl">
+                    <div className="bg-white rounded-lg shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                        <div className="flex items-center justify-between p-5 border-b border-gray-200 sticky top-0 bg-white rounded-t-lg">
                             <div>
                                 <h3 className="text-xl font-bold text-gray-900">Create New Course</h3>
                                 <p className="text-sm text-gray-500 mt-1">Fill in the details to create your course</p>
@@ -758,9 +828,7 @@ export default function Course({ courses, onAddContent, onEditContent, onSave, o
                             </button>
                         </div>
 
-                        {/* Body */}
                         <div className="p-5 space-y-5">
-                            {/* Course Name */}
                             <div>
                                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                                     Course Title <span className="text-red-500">*</span>
@@ -776,7 +844,6 @@ export default function Course({ courses, onAddContent, onEditContent, onSave, o
                                 />
                             </div>
 
-                            {/* Course Description */}
                             <div>
                                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                                     Course Description
@@ -791,7 +858,6 @@ export default function Course({ courses, onAddContent, onEditContent, onSave, o
                                 />
                             </div>
 
-                            {/* Is Active Toggle */}
                             <div className="bg-gray-50 rounded-lg p-4">
                                 <label className="flex items-center gap-3 cursor-pointer">
                                     <input
@@ -818,7 +884,6 @@ export default function Course({ courses, onAddContent, onEditContent, onSave, o
                                 </label>
                             </div>
 
-                            {/* Thumbnail Upload */}
                             <div>
                                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                                     Course Thumbnail
@@ -866,8 +931,7 @@ export default function Course({ courses, onAddContent, onEditContent, onSave, o
                             </div>
                         </div>
 
-                        {/* Footer */}
-                        <div className="flex items-center justify-end gap-3 p-5 border-t border-gray-200 bg-gray-50 rounded-b-xl sticky bottom-0">
+                        <div className="flex items-center justify-end gap-3 p-5 border-t border-gray-200 bg-gray-50 rounded-b-lg sticky bottom-0">
                             <button
                                 onClick={handleCancel}
                                 className="px-5 py-2.5 text-gray-700 bg-white border border-gray-300 rounded-lg

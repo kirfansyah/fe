@@ -20,8 +20,6 @@ export default function Sidebar() {
     getMenu();
   }, []);
 
-  console.log("Sidebar - dataMenu:", dataMenu);
-
   // Language mapping berdasarkan menu_code dari API
   const getMenuLabel = (menuCode, defaultLabel) => {
     const languageMap = {

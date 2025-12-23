@@ -5,8 +5,7 @@ import Link from "next/link";
 import { LanguageContext } from "@/contexts/LanguageContext";
 
 const Dashboard = () => {
-  const { dataMenu, getMenu, getKaryawan, dataKaryawan } = useContext(ProfileContext);  
-  const dataKaryawans = dataKaryawan?.length ? dataKaryawan[0] : [];
+  const { dataMenu, getMenu, getKaryawan, dataKaryawan } = useContext(ProfileContext); 
   const { stateLanguage } = useContext(LanguageContext);
   const { listLanguage, lang } = stateLanguage;
   
@@ -14,8 +13,8 @@ const Dashboard = () => {
     getKaryawan();
     getMenu();
   }, []);
-  console.log("dataMenu:", dataMenu);
-  const profileData = dataKaryawans || {};
+  
+  const profileData = dataKaryawan || {};
   const getMenuLabel = (menuCode, defaultLabel) => {
     const languageMap = {
       // Main Menus
