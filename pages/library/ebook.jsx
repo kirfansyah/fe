@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import Admin from "layouts/Admin.js";
-import EbookListView from "../../components/Library/Ebook";
+import EbookListView from "../../components/Library/EbookList";
 import MonitoringView from "../../components/Library/Monitoring";
 import ContentAdditionView from "../../components/Course/AddContent";
 import ContentViewEbook from "../../components/Library/ViewEbook";
