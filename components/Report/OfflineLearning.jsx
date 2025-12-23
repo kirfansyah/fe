@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { CirclePlus, AlertCircle, CheckCircle, Edit } from "lucide-react";
 import { useReport } from "../../hooks/useReport";
+import ExcelJS from "exceljs";
 
 export default function OfflineLearningView({
   offlineLearning,
@@ -614,6 +615,118 @@ export default function OfflineLearningView({
     setCurrentCertificateId(null);
   };
 
+  const handleExportExcel = async () => {
+    if (!filteredOfflineLearning.length) {
+      alert("Data kosong");
+      return;
+    }
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Offline Training", {
+      views: [{ state: "frozen", ySplit: 1 }], // freeze header
+    });
+
+    // ===== HEADER =====
+    worksheet.columns = [
+      { header: "No", key: "no", width: 6 },
+      { header: "Company Unit", key: "company", width: 28 },
+      { header: "Department", key: "dept", width: 12 },
+      { header: "Employee ID", key: "empId", width: 14 },
+      { header: "Employee Name", key: "name", width: 28 },
+      { header: "Position", key: "position", width: 18 },
+      { header: "Training Title", key: "training", width: 30 },
+      { header: "Provider", key: "provider", width: 20 },
+      { header: "Credential ID", key: "credentialId", width: 22 },
+      { header: "Credential URL", key: "credentialUrl", width: 30 },
+      { header: "Issue Date", key: "issueDate", width: 14 },
+      { header: "Expired Date", key: "expDate", width: 14 },
+      { header: "Certificate URL", key: "certificateUrl", width: 40 },
+    ];
+
+    // Style header
+    worksheet.getRow(1).eachCell((cell) => {
+      cell.font = { bold: true };
+      cell.alignment = { vertical: "middle", horizontal: "center" };
+      cell.border = {
+        top: { style: "thin" },
+        bottom: { style: "thin" },
+        left: { style: "thin" },
+        right: { style: "thin" },
+      };
+    });
+
+    // ===== DATA =====
+    filteredOfflineLearning.forEach((item, index) => {
+      worksheet.addRow({
+        no: index + 1,
+        company: item.company_name,
+        dept: item.dept_abbr,
+        empId: item.employee_id,
+        name: item.full_name,
+        position: item.position_name || "-",
+        training: item.training_title,
+        provider: item.issuing_organization,
+        credentialId: item.credential_id,
+        credentialUrl: item.credential_url,
+        issueDate: new Date(item.issue_date),
+        expDate: new Date(item.expiration_date),
+        certificateUrl: item.certificate_url,
+      });
+    });
+
+    // ===== BODY STYLE =====
+    worksheet.eachRow((row, rowNumber) => {
+      if (rowNumber === 1) return;
+
+      row.eachCell((cell, colNumber) => {
+        cell.border = {
+          top: { style: "thin" },
+          bottom: { style: "thin" },
+          left: { style: "thin" },
+          right: { style: "thin" },
+        };
+
+        // center kolom tertentu
+        if ([1, 3, 4, 11, 12].includes(colNumber)) {
+          cell.alignment = { horizontal: "center", vertical: "middle" };
+        }
+      });
+    });
+
+    // ===== FORMAT TANGGAL =====
+    worksheet.getColumn("issueDate").numFmt = "dd-mm-yyyy";
+    worksheet.getColumn("expDate").numFmt = "dd-mm-yyyy";
+
+    // ===== HYPERLINK =====
+    worksheet.eachRow((row, rowNumber) => {
+      if (rowNumber === 1) return;
+
+      const certCell = row.getCell("certificateUrl");
+      if (certCell.value) {
+        certCell.value = {
+          text: "Open Certificate",
+          hyperlink: certCell.value,
+        };
+        certCell.font = { color: { argb: "FF0000FF" }, underline: true };
+      }
+    });
+
+    // ===== DOWNLOAD =====
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Offline Learning_${new Date()
+      .toISOString()
+      .slice(0, 10)}.xlsx`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
   useEffect(() => {
     if (!employeeComp || employeeId.length < 5) return;
 
@@ -753,6 +866,14 @@ export default function OfflineLearningView({
               </option>
             ))}
           </select>
+
+          <button
+            onClick={handleExportExcel}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white 
+               rounded-lg hover:bg-green-700 transition-colors"
+          >
+            Export Excel
+          </button>
         </div>
       </div>
 
@@ -1427,7 +1548,7 @@ export default function OfflineLearningView({
                   </div>
                 </div>
 
-                {/* Upload Cover */}
+                {/* Upload Certficate */}
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
                   <label className="col-span-3 text-sm font-medium text-gray-700 pt-2">
                     Upload Certificate <span className="text-red-500">*</span>
@@ -1435,7 +1556,7 @@ export default function OfflineLearningView({
                   <div className="col-span-7">
                     <input
                       type="file"
-                      accept="image/*"
+                      accept="application/pdf"
                       onChange={handleUploadCertificateChange}
                       onBlur={() => handleBlur("uploadCertificate")}
                       className={getInputClass(

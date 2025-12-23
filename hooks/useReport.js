@@ -49,6 +49,7 @@ export function useReport() {
       const res = await API.getAllOfflineLearning();
       const data = res?.data || [];
       setOfflineLearning(data);
+      console.log(data);
     } catch (err) {
       console.error("Error fetch OfflineLearning:", err);
       const msg = err?.message || "Failed to fetch OfflineLearning";
