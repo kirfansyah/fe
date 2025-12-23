@@ -115,16 +115,15 @@ export default function OnlineLearningView({ onlineLearning }) {
 
   const handleExportExcel = async () => {
     if (!filteredOnlineLearning.length) {
-      alert("Data kosong");
+      alert("Data tidak ada!");
       return;
     }
 
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Online Training", {
-      views: [{ state: "frozen", ySplit: 1 }], // freeze header
+      views: [{ state: "frozen", ySplit: 1 }],
     });
 
-    // ===== HEADER =====
     worksheet.columns = [
       { header: "No", key: "no", width: 6 },
       { header: "Company Unit", key: "company", width: 28 },
@@ -141,7 +140,6 @@ export default function OnlineLearningView({ onlineLearning }) {
       { header: "Refreshment Date", key: "refDate", width: 40 },
     ];
 
-    // Style header
     worksheet.getRow(1).eachCell((cell) => {
       cell.font = { bold: true };
       cell.alignment = { vertical: "middle", horizontal: "center" };
@@ -153,7 +151,6 @@ export default function OnlineLearningView({ onlineLearning }) {
       };
     });
 
-    // ===== DATA =====
     filteredOnlineLearning.forEach((item, index) => {
       worksheet.addRow({
         no: index + 1,
@@ -172,7 +169,6 @@ export default function OnlineLearningView({ onlineLearning }) {
       });
     });
 
-    // ===== BODY STYLE =====
     worksheet.eachRow((row, rowNumber) => {
       if (rowNumber === 1) return;
 
@@ -184,18 +180,15 @@ export default function OnlineLearningView({ onlineLearning }) {
           right: { style: "thin" },
         };
 
-        // center kolom tertentu
         if ([1, 3, 4, 11, 12].includes(colNumber)) {
           cell.alignment = { horizontal: "center", vertical: "middle" };
         }
       });
     });
 
-    // ===== FORMAT TANGGAL =====
     worksheet.getColumn("date").numFmt = "dd-mm-yyyy";
     worksheet.getColumn("refDate").numFmt = "dd-mm-yyyy";
 
-    // ===== DOWNLOAD =====
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

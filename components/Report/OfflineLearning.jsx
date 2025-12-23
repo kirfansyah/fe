@@ -617,16 +617,15 @@ export default function OfflineLearningView({
 
   const handleExportExcel = async () => {
     if (!filteredOfflineLearning.length) {
-      alert("Data kosong");
+      alert("Data tidak ada!");
       return;
     }
 
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Offline Training", {
-      views: [{ state: "frozen", ySplit: 1 }], // freeze header
+      views: [{ state: "frozen", ySplit: 1 }],
     });
 
-    // ===== HEADER =====
     worksheet.columns = [
       { header: "No", key: "no", width: 6 },
       { header: "Company Unit", key: "company", width: 28 },
@@ -643,7 +642,6 @@ export default function OfflineLearningView({
       { header: "Certificate URL", key: "certificateUrl", width: 40 },
     ];
 
-    // Style header
     worksheet.getRow(1).eachCell((cell) => {
       cell.font = { bold: true };
       cell.alignment = { vertical: "middle", horizontal: "center" };
@@ -655,7 +653,6 @@ export default function OfflineLearningView({
       };
     });
 
-    // ===== DATA =====
     filteredOfflineLearning.forEach((item, index) => {
       worksheet.addRow({
         no: index + 1,
@@ -674,7 +671,6 @@ export default function OfflineLearningView({
       });
     });
 
-    // ===== BODY STYLE =====
     worksheet.eachRow((row, rowNumber) => {
       if (rowNumber === 1) return;
 
@@ -686,18 +682,15 @@ export default function OfflineLearningView({
           right: { style: "thin" },
         };
 
-        // center kolom tertentu
         if ([1, 3, 4, 11, 12].includes(colNumber)) {
           cell.alignment = { horizontal: "center", vertical: "middle" };
         }
       });
     });
 
-    // ===== FORMAT TANGGAL =====
     worksheet.getColumn("issueDate").numFmt = "dd-mm-yyyy";
     worksheet.getColumn("expDate").numFmt = "dd-mm-yyyy";
 
-    // ===== HYPERLINK =====
     worksheet.eachRow((row, rowNumber) => {
       if (rowNumber === 1) return;
 
@@ -711,7 +704,6 @@ export default function OfflineLearningView({
       }
     });
 
-    // ===== DOWNLOAD =====
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -1113,7 +1105,6 @@ export default function OfflineLearningView({
         </div>
       </div>
 
-      {/* Modal for Add & Edit Training Certificate */}
       {isModalOpen && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
