@@ -14,14 +14,24 @@ export default function Report() {
     dept,
     company,
     addOfflineLearning,
+    updateOfflineLearning,
   } = useReport();
 
   const handleSaveOfflineLearning = async (offlineLearningData) => {
     try {
       await addOfflineLearning(offlineLearningData);
-      alert("eBook created successfully!");
+      alert("certificate created successfully!");
     } catch (error) {
-      console.error("Error creating ebook:", error);
+      console.error("Error creating certificate:", error);
+    }
+  };
+
+  const handleUpdateOfflineLearning = async (id, offlineLearningData) => {
+    try {
+      await updateOfflineLearning(id, offlineLearningData);
+      alert("certificate updated successfully!");
+    } catch (error) {
+      console.error("Error updating certificate:", error);
     }
   };
 
@@ -59,6 +69,7 @@ export default function Report() {
           <OfflineLearningView
             offlineLearning={offlineLearning}
             onSave={handleSaveOfflineLearning}
+            onUpdate={handleUpdateOfflineLearning}
             position={position}
             dept={dept}
             company={company}
