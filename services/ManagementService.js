@@ -98,6 +98,29 @@ class ManagementService {
     }
 
     /**
+     * Create group enrollment
+     * @param {Object} GroupEnrollData - Group enrollment data
+     * @returns {Promise} API response
+     */
+    static async updateGroupEnroll(GroupEnrollData) {
+        try {
+            const response = await API.put("/master/course/grouping/update", GroupEnrollData);
+            return {
+                success: true,
+                data: response.data.data,
+                message: response.data.message || 'Group updated successfully'
+            };
+        } catch (error) {
+            console.error('ManagementService.updateGroupEnroll Error:', error);
+            return {
+                success: false,
+                data: null,
+                message: error.response?.data?.message || 'Failed to update group'
+            };
+        }
+    }
+
+    /**
      * Create new course
      * @param {FormData} formData - Course form data
      * @returns {Promise} API response
@@ -150,6 +173,36 @@ class ManagementService {
             return {
                 success: false,
                 message: error.response?.data?.message || `Failed to delete course ${courseId}`
+            };
+        }
+    }
+
+    /**
+     * Delete content
+     * @param {number} contentId - Content ID
+     * @param {string} deletedBy - User who deleted
+     * @returns {Promise} API response
+     */
+    static async deleteContent(contentId, deletedBy) {
+        try {
+            const payload = {
+                id_course_content: contentId,
+                deleted_by: deletedBy,
+                deleted_device: "web"
+            };
+            const response = await API.delete("/trainer/course/content/delete", { 
+                data: payload,
+                headers: { 'Content-Type': 'application/json' }
+            });
+            return {
+                success: true,
+                message: response.data.message || 'Content deleted successfully'
+            };
+        } catch (error) {
+            console.error('ManagementService.deleteContent Error:', error);
+            return {
+                success: false,
+                message: error.response?.data?.message || `Failed to delete content ${contentId}`
             };
         }
     }
@@ -268,7 +321,7 @@ class ManagementService {
             formData.append('FolderType', ManagementService.getFolderTypeByContentType(fileData.contentTypeId));
             formData.append('idCourse', fileData.courseId);
             formData.append('Section', fileData.section);
-            console.log('ManagementService.uploadContentFile formData:', formData);
+            
             const response = await API.post("/course/content/upload-file", formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data'

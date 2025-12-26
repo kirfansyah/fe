@@ -70,7 +70,7 @@ export default function PreTestForm({ courseId, onBack, onSave ,createdBy = "Sys
        // Load data saat edit mode
           useEffect(() => {
               if (isEditMode && contentData) {
-                  console.log('📦 Loading content data for edit:', contentData);
+                  
                   
                   // Load test configuration
                   setTestConfig({
@@ -270,9 +270,7 @@ export default function PreTestForm({ courseId, onBack, onSave ,createdBy = "Sys
         setSavedQuestions(prev => [...prev, newQuestion]);
         setTotalPointsUsed(newTotalUsed);
     
-        console.log('Question saved:', newQuestion);
-        console.log('All saved questions:', [...savedQuestions, newQuestion]);
-        console.log('Points used:', newTotalUsed, '/', testConfig.totalPoints);
+        
     
         // Reset form untuk pertanyaan berikutnya
         setFormData({
@@ -327,8 +325,7 @@ export default function PreTestForm({ courseId, onBack, onSave ,createdBy = "Sys
             }))
         };
     
-        console.log('=== FINAL TEST SUBMISSION ===');
-        console.log(JSON.stringify(finalTest, null, 2));
+        
         
         // Panggil onSave dari parent jika ada
         if (onSave) {

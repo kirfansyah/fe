@@ -21,7 +21,7 @@ export function useCourses(contentId = null) {
     
     const router = useRouter();
     const { dataKaryawan } = useContext(ProfileContext);
-    const dataKaryawans = dataKaryawan?.length ? dataKaryawan[0] : {};
+    
 
     // ✅ GET all courses
     const fetchCourses = useCallback(async () => {
@@ -88,7 +88,13 @@ export function useCourses(contentId = null) {
         setIsSaving(true);
         setError(null);
         
-        const result = await ManagementService.createGroupEnroll(GroupEnrollData);
+
+        let result;
+        if (GroupEnrollData.id) {
+            result = await ManagementService.updateGroupEnroll(GroupEnrollData);
+        } else {
+            result = await ManagementService.createGroupEnroll(GroupEnrollData);
+        }
         
         if (result.success) {
             await fetchGroupEnroll();
@@ -118,7 +124,7 @@ export function useCourses(contentId = null) {
         setIsDeleting(courseId);
         setError(null);
         
-        const deletedBy = dataKaryawans?.nama || "System";
+        const deletedBy = dataKaryawan?.nama || "System";
         const result = await ManagementService.deleteCourse(courseId, deletedBy);
         
         if (result.success) {
@@ -129,7 +135,26 @@ export function useCourses(contentId = null) {
         
         setIsDeleting(null);
         return result;
-    }, [dataKaryawans]);
+    }, [dataKaryawan]);
+
+    // ✅ DELETE content
+    const deleteContent= useCallback(async (courseId) => {
+        setIsDeleting(courseId);
+        setError(null);
+        
+        const deletedBy = dataKaryawan?.nama || "System";
+        const result = await ManagementService.deleteContent(courseId, deletedBy);
+        
+        if (result.success) {
+            setCourses((prev) => prev.filter((c) => c.id_course !== courseId));
+        } else {
+            setError(result.message);
+        }
+        
+        setIsDeleting(null);
+        return result;
+    }, [dataKaryawan]);
+
 
     // ✅ SAVE/UPDATE pre-test
     const handleSavePreTest = useCallback(async (pretestData) => {
@@ -254,7 +279,7 @@ export function useCourses(contentId = null) {
         setIsDeleting(enrollmentId);
         setError(null);
         
-        const deletedBy = dataKaryawans?.nama || "System";
+        const deletedBy = dataKaryawan?.nama || "System";
         const result = await ManagementService.deleteEnrolls(enrollmentId, deletedBy);
         
         if (result.success) {
@@ -265,7 +290,7 @@ export function useCourses(contentId = null) {
         
         setIsDeleting(null);
         return result;
-    }, [dataKaryawans]);
+    }, [dataKaryawan]);
 
     // ✅ Initial load
     useEffect(() => {
@@ -313,6 +338,7 @@ export function useCourses(contentId = null) {
         fetchProfileInfo,
         fetchCompanyUnits,
         fetchEnrollData,
-        addGroupEnroll
+        addGroupEnroll,
+        deleteContent
     };
 }

@@ -241,17 +241,11 @@ export default function ChangePasswordModal({ isOpen, onClose, currentUser }) {
                 }),
             };
 
-            console.group('📤 CHANGE PASSWORD SUBMISSION');
-            console.log('Is changing password:', isChangingPassword);
-            console.log('Is changing photo:', isChangingPhoto);
-            console.log('Photo file:', photoFile);
-            console.log('Update data:', updateData);
-            console.groupEnd();
+            
 
             // ✅ Call AuthContext changePassword
             const result = await changePassword(updateData);
 
-            console.log('✅ Change password result:', result);
             
             setSuccess(true);
             

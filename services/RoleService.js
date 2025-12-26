@@ -188,6 +188,121 @@ class RoleService {
     }
 
     /**
+     * Create new category
+     * @param {Object} categoryData - Category data
+     * @returns {Promise} API response
+     */
+    static async createCategory(categoryData) {
+        try {
+            const response = await API.post("/master/ebook/category", categoryData);
+            return {
+                success: true,
+                data: response.data.data,
+                message: response.data.message || 'Category created successfully'
+            };
+        } catch (error) {
+            console.error('RoleService.createCategory Error:', error);
+            return {
+                success: false,
+                data: null,
+                message: error.response?.data?.message || 'Failed to create category'
+            };
+        }
+    }
+
+    /**
+     * Create new category
+     * @param {Object} categoryData - Category data
+     * @returns {Promise} API response
+     */
+    static async updateCategory(categoryData) {
+        try {
+            const response = await API.put("/master/ebook/category/update", categoryData);
+            return {
+                success: true,
+                data: response.data.data,
+                message: response.data.message || 'Category updated successfully'
+            };
+        } catch (error) {
+            console.error('RoleService.updateCategory Error:', error);
+            return {
+                success: false,
+                data: null,
+                message: error.response?.data?.message || 'Failed to update category'
+            };
+        }
+    }
+
+    /**
+     * Create new subcategory
+     * @param {Object} subCategoryData - Subcategory data
+     * @returns {Promise} API response
+     */
+    static async createSubCategory(subCategoryData) {
+        try {
+            const response = await API.post("/master/ebook/subcategory", subCategoryData);
+            return {
+                success: true,
+                data: response.data.data,
+                message: response.data.message || 'Subcategory created successfully'
+            };
+        } catch (error) {
+            console.error('RoleService.createSubCategory Error:', error);
+            return {
+                success: false,
+                data: null,
+                message: error.response?.data?.message || 'Failed to create subcategory'
+            };
+        }
+    }
+
+    /**
+     * Create new subcategory
+     * @param {Object} subCategoryData - Subcategory data
+     * @returns {Promise} API response
+     */
+    static async updateSubCategory(subCategoryData) {
+        try {
+            const response = await API.put("/master/ebook/subcategory/update", subCategoryData);
+            return {
+                success: true,
+                data: response.data.data,
+                message: response.data.message || 'Subcategory updated successfully'
+            };
+        } catch (error) {
+            console.error('RoleService.updateSubCategory Error:', error);
+            return {
+                success: false,
+                data: null,
+                message: error.response?.data?.message || 'Failed to update subcategory'
+            };
+        }
+    }
+
+    /**
+     * Update existing role
+     * @param {Object} userData - User data
+     * @returns {Promise} API response
+     */
+    static async updateUsers(userData) {
+        try {
+            const response = await API.put("/user/roles/update", userData);
+            return {
+                success: true,
+                data: response.data.data,
+                message: response.data.message || 'Role User updated successfully'
+            };
+        } catch (error) {
+            console.error('RoleService.updateUsers Error:', error);
+            return {
+                success: false,
+                data: null,
+                message: error.response?.data?.message || 'Failed to update role user'
+            };
+        }
+    }
+
+    /**
      * Dashboard Analytics
      * @param {Object} filters - Filter parameters
      * @returns {Promise} API response
@@ -223,50 +338,27 @@ class RoleService {
         }
     }
 
-    /**
-     * Create new category
-     * @param {Object} categoryData - Category data
+    /** 
+     * Dashboard Schedule
      * @returns {Promise} API response
      */
-    static async createCategory(categoryData) {
+    static async getSchedule()
+    {   
         try {
-            const response = await API.post("/master/ebook/category", categoryData);
+            const response = await API.get("/scheduled/training"); 
             return {
                 success: true,
-                data: response.data.data,
-                message: response.data.message || 'Category created successfully'
+                data: response.data.data || [],
+                message: response.data.message || 'Success'
             };
         } catch (error) {
-            console.error('RoleService.createCategory Error:', error);
+            console.error('RoleService.getSchedule Error:', error);
             return {
                 success: false,
-                data: null,
-                message: error.response?.data?.message || 'Failed to create category'
+                data: [],
+                message: error.response?.data?.message || 'Failed to fetch schedule'
             };
-        }
-    }
-
-    /**
-     * Create new subcategory
-     * @param {Object} subCategoryData - Subcategory data
-     * @returns {Promise} API response
-     */
-    static async createSubCategory(subCategoryData) {
-        try {
-            const response = await API.post("/master/ebook/subcategory", subCategoryData);
-            return {
-                success: true,
-                data: response.data.data,
-                message: response.data.message || 'Subcategory created successfully'
-            };
-        } catch (error) {
-            console.error('RoleService.createSubCategory Error:', error);
-            return {
-                success: false,
-                data: null,
-                message: error.response?.data?.message || 'Failed to create subcategory'
-            };
-        }
+        }   
     }
 }
 

@@ -13,10 +13,12 @@ import {
     Link as LinkIcon,
     Info,
     ExternalLink,
-    Copy
+    Copy,
+    Lock,
+    Shield
 } from 'lucide-react';
-import { useFileUpload } from '../../../hooks/useFileUpload';
-import { useSweetAlert } from '../../../hooks/useSweetAlert';
+import { useFileUpload } from '@/hooks/useFileUpload';
+import { useSweetAlert } from '@/hooks/useSweetAlert';
 
 const FileUploadForm = ({ 
     contentTypeId, 
@@ -26,7 +28,8 @@ const FileUploadForm = ({
     addToast, 
     createdBy = "System",
     contentData = null,
-    isEditMode = false 
+    isEditMode = false,
+    permissions // ✅ Receive permissions
 }) => {
     // ==================== CONSTANTS ====================
     const FILE_CONFIG = {
@@ -56,6 +59,37 @@ const FileUploadForm = ({
             description: 'Upload PowerPoint presentations'
         },
     };
+
+    // ✅ UPDATED: Separate view and edit permissions clearly
+    const hasViewPermission = permissions?.can_view ?? false;
+    const hasCreatePermission = permissions?.can_create ?? false;
+    const hasEditPermission = permissions?.can_edit ?? false;
+
+    // ✅ UPDATED: Strict permission logic
+    // Create mode: MUST have can_create (can_view alone is NOT enough)
+    // Edit mode: can_edit for full access, can_view for read-only
+    const canEdit = isEditMode ? hasEditPermission : hasCreatePermission;
+    const canView = isEditMode ? (hasViewPermission || hasEditPermission) : hasCreatePermission;
+    const isReadOnly = canView && !canEdit;
+
+    // ✅ UPDATED: Auto-redirect with better logic
+    useEffect(() => {
+        if (!isEditMode && !hasCreatePermission) {
+            // Create mode needs can_create (not just can_view)
+            showError('You do not have permission to create content');
+            setTimeout(() => {
+                if (onBack) onBack();
+            }, 2000);
+        } else if (isEditMode && !hasViewPermission && !hasEditPermission) {
+            // Edit mode needs at least can_view or can_edit
+            showError('You do not have permission to view this content');
+            setTimeout(() => {
+                if (onBack) onBack();
+            }, 2000);
+        }
+    }, [isEditMode, hasCreatePermission, hasViewPermission, hasEditPermission]);
+
+    
 
     // ==================== STATE ====================
     const [title, setTitle] = useState('');
@@ -91,26 +125,20 @@ const FileUploadForm = ({
     const getFullFileUrl = (relativePath) => {
         if (!relativePath) return null;
         
-        // Jika sudah full URL (http/https), return as is
         if (relativePath.startsWith('http://') || relativePath.startsWith('https://')) {
             return relativePath;
         }
         
-        // Construct full URL dari relative path
-        // Remove /api/v1 jika ada, karena content_url sudah include /uploads
         const cleanBaseUrl = process.env.NEXT_PUBLIC_API_BASE;
-        
         return `${cleanBaseUrl}${relativePath}`;
     };
 
-    // ==================== EFFECTS ====================
     useEffect(() => {
         if (isEditMode && contentData) {
             setTitle(contentData.content_title || '');
             setDescription(contentData.content_body || '');
             setVideoUrl(contentData.content_url || '');
             
-            // ✅ Set existing file URL (relative path dari backend)
             if (contentData.content_url) {
                 setExistingFileUrl(contentData.content_url);
             }
@@ -136,7 +164,7 @@ const FileUploadForm = ({
     // ==================== HANDLERS ====================
     const handleDragOver = (e) => {
         e.preventDefault();
-        setIsDragging(true);
+        if (!isReadOnly) setIsDragging(true);
     };
 
     const handleDragLeave = (e) => {
@@ -147,6 +175,13 @@ const FileUploadForm = ({
     const handleDrop = (e) => {
         e.preventDefault();
         setIsDragging(false);
+        
+        // ✅ Check permission
+        if (isReadOnly) {
+            showWarning('You do not have permission to upload files');
+            return;
+        }
+        
         const files = e.dataTransfer.files;
         if (files.length > 0) {
             handleFileSelect(files[0]);
@@ -161,28 +196,41 @@ const FileUploadForm = ({
     };
 
     const handleFileSelect = async (file) => {
+        // ✅ Check permission
+        if (isReadOnly) {
+            showWarning('You do not have permission to upload files');
+            return;
+        }
+
         setValidationErrors(prev => ({ ...prev, file: null }));
         
         if (file.size > config.maxSize * 1024 * 1024) {
             showError(`File too large. Maximum size is ${config.maxSize}MB`);
             return;
         }
+        
         const section = 'content';
         try {
-            const result = await uploadFile(file, { contentTypeId,courseId,section });
+            const result = await uploadFile(file, { contentTypeId, courseId, section });
             showSuccess('File uploaded successfully');
-            setExistingFileUrl(null); // Clear existing when new file uploaded
+            setExistingFileUrl(null);
         } catch (err) {
             showError('File upload failed: ' + err.message);
         }
     };
 
     const handleRemoveFile = () => {
+        // ✅ Check permission
+        if (isReadOnly) {
+            showWarning('You do not have permission to remove files');
+            return;
+        }
+
         removeFile();
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
         }
-        // ✅ Restore existing file URL jika ada (saat cancel new upload)
+        
         if (isEditMode && contentData?.content_url) {
             setExistingFileUrl(contentData.content_url);
         }
@@ -201,6 +249,12 @@ const FileUploadForm = ({
     };
 
     const handleSave = async () => {
+        // ✅ Check permission
+        if (isReadOnly) {
+            showError(`You do not have permission to ${isEditMode ? 'update' : 'save'} content`);
+            return;
+        }
+
         if (!validateForm()) {
             return;
         }
@@ -215,20 +269,20 @@ const FileUploadForm = ({
 
         let contentUrl = '';
         if (videoUrl && config?.allowUrl) {
-            contentUrl = videoUrl; // Priority 1: Video URL
+            contentUrl = videoUrl;
         } else if (uploadedFile) {
-            contentUrl = uploadedFile.url; // Priority 2: New upload (relative path dari backend)
+            contentUrl = uploadedFile.url;
         } else if (existingFileUrl) {
-            contentUrl = existingFileUrl; // Priority 3: Existing (relative path)
+            contentUrl = existingFileUrl;
         }
 
         const data = {
             id_course: courseId,
             id_content_type: contentTypeId,
             content_title: title,
-            content_body : description,
+            content_body: description,
             time_duration: uploadedFile && uploadedFile.duration ? uploadedFile.duration : "00:00:00",
-            content_url: contentUrl, // ✅ Kirim relative path ke backend
+            content_url: contentUrl,
             ...(isEditMode ? {
                 id_course_content: contentData.id_course_content,
                 updated_by: createdBy,
@@ -256,9 +310,9 @@ const FileUploadForm = ({
         if (uploading) return;
         
         const result = await confirmAction({
-            title: 'Cancel upload?',
-            text: 'Unsaved changes will be lost',
-            confirmButtonText: 'Yes, cancel'
+            title: isReadOnly ? 'Close viewer?' : 'Cancel upload?',
+            text: isReadOnly ? '' : 'Unsaved changes will be lost',
+            confirmButtonText: isReadOnly ? 'Yes, close' : 'Yes, cancel'
         });
         
         if (result.isConfirmed) {
@@ -266,7 +320,7 @@ const FileUploadForm = ({
             setDescription('');
             setVideoUrl('');
             setExistingFileUrl(null);
-            handleRemoveFile();
+            if (!isReadOnly) handleRemoveFile();
             onBack();
         }
     };
@@ -279,7 +333,7 @@ const FileUploadForm = ({
         isExisting: true
     } : null);
 
-    const isFormValid = title.trim() && (uploadedFile || videoUrl || existingFileUrl);
+    const isFormValid = !isReadOnly && title.trim() && (uploadedFile || videoUrl || existingFileUrl);
 
     const formatFileSize = (bytes) => {
         if (!bytes || bytes === 'Unknown Size' || bytes === 'Existing file') return bytes;
@@ -287,21 +341,53 @@ const FileUploadForm = ({
         return mb >= 1 ? `${mb.toFixed(2)} MB` : `${(bytes / 1024).toFixed(2)} KB`;
     };
 
-    // ✅ Get file extension for icon/preview
     const getFileExtension = (filename) => {
         return filename.split('.').pop().toLowerCase();
     };
 
+    if (!canView) {
+        return (
+            <div className="min-h-screen bg-gray-50 p-6">
+                <div className="flex items-center justify-center min-h-[60vh]">
+                    <div className="max-w-md text-center">
+                        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <Lock className="w-8 h-8 text-red-600" />
+                        </div>
+                        <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
+                        <p className="text-gray-600 mb-6">
+                            You do not have permission to {isEditMode ? 'view' : 'create'} content.
+                        </p>
+                        <button
+                            onClick={onBack}
+                            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                            Back to Course Management
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     // ==================== RENDER ====================
     return (
         <div className="min-h-screen bg-gray-50 p-6">
-            {/* Enhanced Header */}
+            {/* ✅ Enhanced Header with Permission Badge */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
                 <div className="flex justify-between items-center">
-                    <div>
-                        <h1 className="text-2xl font-bold text-gray-900">
-                            {isEditMode ? 'Edit Content' : 'Upload Content'}
-                        </h1>
+                    <div className="flex-1">
+                        <div className="flex items-center gap-3">
+                            <h1 className="text-2xl font-bold text-gray-900">
+                                {isEditMode ? (isReadOnly ? 'View Content' : 'Edit Content') : 'Upload Content'}
+                            </h1>
+                            {/* ✅ Permission Badge */}
+                            {isReadOnly && (
+                                <span className="px-3 py-1 bg-red-600 text-white text-xs font-bold rounded-full flex items-center gap-1">
+                                    <Lock className="w-3 h-3" />
+                                    {isEditMode ? 'View Only' : 'No Permission'}
+                                </span>
+                            )}
+                        </div>
                         <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
                             <span>Course Management</span>
                             <ChevronRight className="w-4 h-4" />
@@ -325,8 +411,27 @@ const FileUploadForm = ({
                 </div>
             </div>
 
-            {/* Main Form */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            {/* ✅ Permission Warning Banner */}
+            {isReadOnly && (
+                <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-5 mb-6">
+                    <div className="flex items-center gap-3">
+                        <Shield className="w-6 h-6 text-blue-600 flex-shrink-0" />
+                        <div>
+                            <h4 className="text-sm font-bold text-blue-900 mb-1">View-Only Mode</h4>
+                            <p className="text-sm text-blue-700">
+                                You can view this content but cannot make changes. 
+                                {hasCreatePermission && !isEditMode && ' You can create new content.'}
+                                {hasEditPermission && isEditMode && ' You need edit permission to make changes.'}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Main Form - Add opacity when read-only */}
+            <div className={`bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden ${
+                isReadOnly ? 'opacity-75' : ''
+            }`}>
                 {/* Section: Content Information */}
                 <div className="p-6 border-b border-gray-200">
                     <div className="flex items-center gap-3 mb-6">
@@ -345,7 +450,9 @@ const FileUploadForm = ({
                         </div>
                         <div>
                             <h3 className="text-lg font-bold text-gray-900">Content Information</h3>
-                            <p className="text-sm text-gray-600">{config?.description}</p>
+                            <p className="text-sm text-gray-600">
+                                {isReadOnly ? 'View content details' : config?.description}
+                            </p>
                         </div>
                     </div>
 
@@ -362,14 +469,17 @@ const FileUploadForm = ({
                                     setTitle(e.target.value);
                                     setValidationErrors(prev => ({ ...prev, title: null }));
                                 }}
+                                disabled={isReadOnly}
                                 placeholder="Enter content title..."
                                 className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none focus:ring-2 transition-all ${
-                                    validationErrors.title
+                                    isReadOnly 
+                                        ? 'bg-gray-100 cursor-not-allowed'
+                                        : validationErrors.title
                                         ? 'border-red-300 focus:ring-red-500'
                                         : 'border-gray-200 focus:ring-blue-500 focus:border-blue-500'
                                 }`}
                             />
-                            {validationErrors.title && (
+                            {validationErrors.title && !isReadOnly && (
                                 <p className="text-xs text-red-600 mt-2 flex items-center gap-1">
                                     <AlertCircle className="w-3 h-3" />
                                     {validationErrors.title}
@@ -385,27 +495,41 @@ const FileUploadForm = ({
                             <textarea
                                 value={description}
                                 onChange={(e) => setDescription(e.target.value)}
+                                disabled={isReadOnly}
                                 placeholder="Add a brief description..."
                                 rows={3}
-                                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none transition-all"
+                                className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none focus:ring-2 resize-none transition-all ${
+                                    isReadOnly
+                                        ? 'bg-gray-100 cursor-not-allowed border-gray-200'
+                                        : 'border-gray-200 focus:ring-blue-500 focus:border-blue-500'
+                                }`}
                             />
                         </div>
                     </div>
                 </div>
 
-                {/* Section: Video URL (if video content) */}
+                {/* Section: Video URL */}
                 {config?.allowUrl && (
-                    <div className="p-6 bg-purple-50 border-b border-purple-200">
+                    <div className={`p-6 border-b ${
+                        isReadOnly ? 'bg-gray-50 border-gray-200' : 'bg-purple-50 border-purple-200'
+                    }`}>
                         <div className="flex items-start gap-3 mb-4">
-                            <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                                <LinkIcon className="w-6 h-6 text-purple-600" />
+                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                                isReadOnly ? 'bg-gray-100' : 'bg-purple-100'
+                            }`}>
+                                <LinkIcon className={`w-6 h-6 ${
+                                    isReadOnly ? 'text-gray-600' : 'text-purple-600'
+                                }`} />
                             </div>
                             <div className="flex-1">
                                 <h3 className="text-lg font-bold text-gray-900 mb-1">
-                                    Video URL (Alternative)
+                                    Video URL {!isReadOnly && '(Alternative)'}
                                 </h3>
                                 <p className="text-sm text-gray-600">
-                                    Paste a YouTube or Vimeo URL, or upload a video file below
+                                    {isReadOnly 
+                                        ? 'Video URL (if provided)'
+                                        : 'Paste a YouTube or Vimeo URL, or upload a video file below'
+                                    }
                                 </p>
                             </div>
                         </div>
@@ -419,19 +543,26 @@ const FileUploadForm = ({
                                     setVideoUrl(e.target.value);
                                     setValidationErrors(prev => ({ ...prev, file: null }));
                                 }}
+                                disabled={isReadOnly}
                                 placeholder="https://www.youtube.com/watch?v=..."
-                                className="w-full pl-12 pr-4 py-3 border-2 border-purple-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                                className={`w-full pl-12 pr-4 py-3 border-2 rounded-xl focus:outline-none focus:ring-2 transition-all ${
+                                    isReadOnly
+                                        ? 'bg-gray-100 cursor-not-allowed border-gray-300'
+                                        : 'border-purple-200 bg-white focus:ring-purple-500 focus:border-purple-500'
+                                }`}
                             />
                         </div>
 
-                        <div className="mt-3 p-3 bg-white border border-purple-200 rounded-lg">
-                            <div className="flex items-start gap-2">
-                                <Info className="w-4 h-4 text-purple-600 flex-shrink-0 mt-0.5" />
-                                <p className="text-xs text-gray-600">
-                                    Supported platforms: YouTube, Vimeo. Video URL takes priority over uploaded files.
-                                </p>
+                        {!isReadOnly && (
+                            <div className="mt-3 p-3 bg-white border border-purple-200 rounded-lg">
+                                <div className="flex items-start gap-2">
+                                    <Info className="w-4 h-4 text-purple-600 flex-shrink-0 mt-0.5" />
+                                    <p className="text-xs text-gray-600">
+                                        Supported platforms: YouTube, Vimeo. Video URL takes priority over uploaded files.
+                                    </p>
+                                </div>
                             </div>
-                        </div>
+                        )}
                     </div>
                 )}
 
@@ -439,13 +570,21 @@ const FileUploadForm = ({
                 <div className="p-6">
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                                <Upload className="w-6 h-6 text-green-600" />
+                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                                isReadOnly ? 'bg-gray-100' : 'bg-green-100'
+                            }`}>
+                                <Upload className={`w-6 h-6 ${
+                                    isReadOnly ? 'text-gray-600' : 'text-green-600'
+                                }`} />
                             </div>
                             <div>
-                                <h3 className="text-lg font-bold text-gray-900">File Upload</h3>
+                                <h3 className="text-lg font-bold text-gray-900">
+                                    {isReadOnly ? 'Uploaded File' : 'File Upload'}
+                                </h3>
                                 <p className="text-sm text-gray-600">
-                                    {isEditMode && existingFileUrl 
+                                    {isReadOnly 
+                                        ? 'View uploaded file information'
+                                        : isEditMode && existingFileUrl 
                                         ? 'Upload new file to replace existing file'
                                         : 'Drag and drop or click to browse'
                                     }
@@ -453,13 +592,15 @@ const FileUploadForm = ({
                             </div>
                         </div>
 
-                        <div className="text-right">
-                            <p className="text-xs text-gray-600">Max Size</p>
-                            <p className="text-sm font-bold text-gray-900">{config?.maxSize} MB</p>
-                        </div>
+                        {!isReadOnly && (
+                            <div className="text-right">
+                                <p className="text-xs text-gray-600">Max Size</p>
+                                <p className="text-sm font-bold text-gray-900">{config?.maxSize} MB</p>
+                            </div>
+                        )}
                     </div>
 
-                    {/* ✅ Show Existing File Info (Edit Mode - BEFORE new upload) */}
+                    {/* Existing File Info (same as before) */}
                     {isEditMode && existingFileUrl && !uploadedFile && (
                         <div className="mb-4 border-2 border-blue-300 bg-blue-50 rounded-xl overflow-hidden">
                             <div className="p-5">
@@ -538,22 +679,24 @@ const FileUploadForm = ({
                         </div>
                     )}
 
-                    {/* Drop Zone or New File Preview */}
-                    {!uploadedFile ? (
-                        /* Drop Zone */
+                    {/* Drop Zone or Preview */}
+                    {!uploadedFile && !isReadOnly ? (
+                        /* Drop Zone - Disabled if read-only */
                         <div>
                             <div
                                 onDragOver={handleDragOver}
                                 onDragLeave={handleDragLeave}
                                 onDrop={handleDrop}
-                                className={`border-2 border-dashed rounded-2xl p-12 text-center transition-all cursor-pointer ${
-                                    isDragging
-                                        ? 'border-blue-500 bg-blue-50 scale-[1.02] shadow-lg'
+                                className={`border-2 border-dashed rounded-2xl p-12 text-center transition-all ${
+                                    isReadOnly
+                                        ? 'border-gray-300 bg-gray-50 cursor-not-allowed'
+                                        : isDragging
+                                        ? 'border-blue-500 bg-blue-50 scale-[1.02] shadow-lg cursor-pointer'
                                         : validationErrors.file
-                                        ? 'border-red-300 bg-red-50'
-                                        : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
+                                        ? 'border-red-300 bg-red-50 cursor-pointer'
+                                        : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50 cursor-pointer'
                                 }`}
-                                onClick={() => !uploading && fileInputRef.current?.click()}
+                                onClick={() => !uploading && !isReadOnly && fileInputRef.current?.click()}
                             >
                                 <input
                                     ref={fileInputRef}
@@ -561,21 +704,32 @@ const FileUploadForm = ({
                                     accept={config?.accept}
                                     onChange={handleFileInputChange}
                                     className="hidden"
-                                    disabled={uploading}
+                                    disabled={uploading || isReadOnly}
                                 />
 
                                 <div className={`w-20 h-20 rounded-full mx-auto mb-4 flex items-center justify-center ${
+                                    isReadOnly ? 'bg-gray-200' :
                                     isDragging ? 'bg-blue-200 animate-bounce' : 'bg-gray-100'
                                 }`}>
-                                    <Icon className={`w-10 h-10 ${
-                                        isDragging ? 'text-blue-600' : 'text-gray-400'
-                                    }`} />
+                                    {isReadOnly ? (
+                                        <Lock className="w-10 h-10 text-gray-400" />
+                                    ) : (
+                                        <Icon className={`w-10 h-10 ${
+                                            isDragging ? 'text-blue-600' : 'text-gray-400'
+                                        }`} />
+                                    )}
                                 </div>
 
                                 <p className={`font-bold text-lg mb-2 ${
+                                    isReadOnly ? 'text-gray-500' :
                                     isDragging ? 'text-blue-600' : 'text-gray-900'
                                 }`}>
-                                    {isDragging ? 'Drop file here' : 'Click to upload or drag and drop'}
+                                    {isReadOnly 
+                                        ? 'No file uploaded'
+                                        : isDragging 
+                                        ? 'Drop file here' 
+                                        : 'Click to upload or drag and drop'
+                                    }
                                 </p>
                                 <p className="text-sm text-gray-600 mb-4">
                                     {config?.accept.replace(/\./g, '').toUpperCase()} files up to {config?.maxSize}MB
@@ -597,7 +751,6 @@ const FileUploadForm = ({
                                     </div>
                                 )}
 
-                                {/* Error Message */}
                                 {error && (
                                     <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
                                         <div className="flex items-center gap-2 text-red-600">
@@ -608,15 +761,15 @@ const FileUploadForm = ({
                                 )}
                             </div>
 
-                            {validationErrors.file && (
+                            {validationErrors.file && !isReadOnly && (
                                 <p className="text-sm text-red-600 mt-3 flex items-center gap-2">
                                     <AlertCircle className="w-4 h-4" />
                                     {validationErrors.file}
                                 </p>
                             )}
                         </div>
-                    ) : (
-                        /* ✅ New Uploaded File Preview */
+                    ) : uploadedFile ? (
+                        /* New Uploaded File Preview - same as before */
                         <div className="border-2 border-green-300 bg-green-50 rounded-2xl overflow-hidden">
                             <div className="p-5">
                                 <div className="flex items-center justify-between">
@@ -690,10 +843,10 @@ const FileUploadForm = ({
                                 </div>
                             )}
                         </div>
-                    )}
+                    ) : null}
                 </div>
 
-                {/* Action Buttons */}
+                {/* ✅ Action Buttons with Permission Check */}
                 <div className="p-6 bg-gray-50 border-t border-gray-200">
                     <div className="flex items-center justify-between">
                         <button 
@@ -702,38 +855,41 @@ const FileUploadForm = ({
                             className="px-5 py-2.5 bg-white border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                         >
                             <X className="w-5 h-5" />
-                            Cancel
+                            {isReadOnly ? 'Close' : 'Cancel'}
                         </button>
 
                         <div className="flex items-center gap-3">
-                            {!isFormValid && (
+                            {!isFormValid && !isReadOnly && (
                                 <div className="flex items-center gap-2 text-sm text-gray-600">
                                     <AlertCircle className="w-4 h-4 text-orange-500" />
                                     <span>Complete all required fields</span>
                                 </div>
                             )}
 
-                            <button 
-                                onClick={handleSave}
-                                disabled={!isFormValid || uploading}
-                                className={`px-6 py-2.5 rounded-xl font-bold transition-all shadow-md hover:shadow-lg flex items-center gap-2 ${
-                                    isFormValid && !uploading
-                                        ? 'bg-gradient-to-r from-green-600 to-green-700 text-white hover:from-green-700 hover:to-green-800'
-                                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                }`}
-                            >
-                                {uploading ? (
-                                    <>
-                                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                                        Uploading...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Save className="w-5 h-5" />
-                                        {isEditMode ? 'Update Content' : 'Save Content'}
-                                    </>
-                                )}
-                            </button>
+                            {/* ✅ Save Button - Only show if not read-only */}
+                            {!isReadOnly && (
+                                <button 
+                                    onClick={handleSave}
+                                    disabled={!isFormValid || uploading}
+                                    className={`px-6 py-2.5 rounded-xl font-bold transition-all shadow-md hover:shadow-lg flex items-center gap-2 ${
+                                        isFormValid && !uploading
+                                            ? 'bg-gradient-to-r from-green-600 to-green-700 text-white hover:from-green-700 hover:to-green-800'
+                                            : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                    }`}
+                                >
+                                    {uploading ? (
+                                        <>
+                                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                                            Uploading...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Save className="w-5 h-5" />
+                                            {isEditMode ? 'Update Content' : 'Save Content'}
+                                        </>
+                                    )}
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>

@@ -8,21 +8,33 @@ import {
     FolderOpen,
     Plus,
     ChevronDown,
-    ChevronUp
+    ChevronRight as ChevronRightIcon,
+    Lock,
+    Shield
 } from 'lucide-react';
 import Admin from "layouts/Admin.js";
 import { ProfileContext } from '@/contexts/profile/ProfileContext';
 import { useSweetAlert } from '@/hooks/useSweetAlert';
 import { useEbooks } from "@/hooks/useEbooks";
 import { useRoles } from "@/hooks/useRoles";
+import { getDeviceInfo } from '@/lib/deviceHelper';
+import { useMenuPermissions } from '@/hooks/useMenuPermissions'; // ✅ Import
+
 export default function MasterCategory() {
+    // ✅ ALL HOOKS FIRST
+    const permissions = useMenuPermissions();
+    const { getKaryawan, dataKaryawan } = useContext(ProfileContext);
+    const { showLoading, showSuccess, showError, confirmAction } = useSweetAlert();
+    const { categorys, subCategorys, fetchCategory, fetchSubCategory } = useEbooks();
+    const { handleCreateCategory, handleCreateSubCategory } = useRoles();
+    
     const [loading, setLoading] = useState(true);
     const [entriesPerPage, setEntriesPerPage] = useState(10);
     const [currentPage, setCurrentPage] = useState(1);
     const [searchTerm, setSearchTerm] = useState('');
     const [showModal, setShowModal] = useState(false);
     const [modalMode, setModalMode] = useState('add');
-    const [modalType, setModalType] = useState('category'); // 'category' or 'subcategory'
+    const [modalType, setModalType] = useState('category');
     const [selectedItem, setSelectedItem] = useState(null);
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [expandedCategories, setExpandedCategories] = useState({});
@@ -31,31 +43,20 @@ export default function MasterCategory() {
         subcategory_name: '',
         id_category: ''
     });
-
-    const { categorys, subCategorys,fetchCategory,fetchSubCategory } = useEbooks();
-    const { handleCreateCategory,handleCreateSubCategory } = useRoles();
-
+    
+    const deviceInfo = getDeviceInfo();
     const categories = categorys || [];
     const subcategories = subCategorys || [];
-    
-    const { getKaryawan, dataKaryawan } = useContext(ProfileContext);
-    const dataKaryawans = dataKaryawan?.length ? dataKaryawan[0] : [];
-    const { showLoading, showSuccess, showError, confirmAction } = useSweetAlert();
 
     useEffect(() => {
         setLoading(false);
         getKaryawan();
     }, []);
 
-    
-
-    
-    // Get subcategories for a category
     const getSubcategoriesForCategory = (categoryId) => {
         return subcategories.filter(sub => sub.id_category === categoryId);
     };
 
-    // Toggle expand category
     const toggleExpandCategory = (categoryId) => {
         setExpandedCategories(prev => ({
             ...prev,
@@ -63,20 +64,17 @@ export default function MasterCategory() {
         }));
     };
 
-    // Filter data based on search
     const filteredData = categories.filter(category =>
         category.category_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (category.id_category && category.id_category.toString().includes(searchTerm))
     );
 
-    // Pagination
     const totalEntries = filteredData.length;
     const totalPages = Math.ceil(totalEntries / entriesPerPage);
     const startIndex = (currentPage - 1) * entriesPerPage;
     const endIndex = Math.min(startIndex + entriesPerPage, totalEntries);
     const currentData = filteredData.slice(startIndex, endIndex);
 
-    // Generate page numbers
     const getPageNumbers = () => {
         const pages = [];
         const maxPagesToShow = 5;
@@ -93,7 +91,6 @@ export default function MasterCategory() {
         return pages;
     };
 
-    // Format date
     const formatDate = (dateString) => {
         if (!dateString) return '-';
         const date = new Date(dateString);
@@ -101,16 +98,26 @@ export default function MasterCategory() {
         return `${date.getDate()} ${months[date.getMonth()]}, ${date.getFullYear()}`;
     };
 
-    // Handle Add Category
+    // ✅ Handle Add Category - Check permission
     const handleAddCategory = () => {
+        if (!permissions.can_create) {
+            showError('You do not have permission to create categories');
+            return;
+        }
+
         setModalType('category');
         setModalMode('add');
         setFormData({ category_name: '', subcategory_name: '', id_category: '' });
         setShowModal(true);
     };
 
-    // Handle Add Subcategory
+    // ✅ Handle Add Subcategory - Check permission
     const handleAddSubcategory = (category) => {
+        if (!permissions.can_create) {
+            showError('You do not have permission to create subcategories');
+            return;
+        }
+
         setModalType('subcategory');
         setModalMode('add');
         setSelectedCategory(category);
@@ -118,8 +125,13 @@ export default function MasterCategory() {
         setShowModal(true);
     };
 
-    // Handle Edit Category
+    // ✅ Handle Edit Category - Check permission
     const handleEditCategory = (category) => {
+        if (!permissions.can_edit) {
+            showError('You do not have permission to edit categories');
+            return;
+        }
+
         setModalType('category');
         setModalMode('edit');
         setSelectedItem(category);
@@ -130,8 +142,13 @@ export default function MasterCategory() {
         setShowModal(true);
     };
 
-    // Handle Edit Subcategory
+    // ✅ Handle Edit Subcategory - Check permission
     const handleEditSubcategory = (subcategory) => {
+        if (!permissions.can_edit) {
+            showError('You do not have permission to edit subcategories');
+            return;
+        }
+
         setModalType('subcategory');
         setModalMode('edit');
         setSelectedItem(subcategory);
@@ -143,55 +160,84 @@ export default function MasterCategory() {
         setShowModal(true);
     };
 
-    // Handle Delete Category
+    // ✅ Handle Delete Category - Check permission
     const handleDeleteCategory = (category) => {
+        if (!permissions.can_delete) {
+            showError('You do not have permission to delete categories');
+            return;
+        }
+
         setModalType('category');
         setModalMode('delete');
         setSelectedItem(category);
         setShowModal(true);
     };
 
-    // Handle Delete Subcategory
+    // ✅ Handle Delete Subcategory - Check permission
     const handleDeleteSubcategory = (subcategory) => {
+        if (!permissions.can_delete) {
+            showError('You do not have permission to delete subcategories');
+            return;
+        }
+
         setModalType('subcategory');
         setModalMode('delete');
         setSelectedItem(subcategory);
         setShowModal(true);
     };
 
-    // Handle Submit
+    // ✅ Handle Submit - Check permission based on mode
     const handleSubmit = async (e) => {
         e.preventDefault();
-        console.log('Submitting form with data:', modalType);
+        
         if (modalType === 'category') {
             if (modalMode === 'add') {
+                if (!permissions.can_create) {
+                    showError('You do not have permission to create categories');
+                    return;
+                }
+
                 const categoryData = {
                     category_name: formData.category_name,
-                    created_by: dataKaryawans.nama || 'System',
-                    created_device: 'web'
+                    created_by: dataKaryawan.nama || 'System',
+                    created_device: deviceInfo.device
                 };
                 
-                const result = await confirmAction('Are you sure you want to add this category?');
+                const result = await confirmAction({
+                    title: 'Add Category',
+                    text: 'Are you sure you want to add this category?',
+                    icon: 'question'
+                });
                 if (!result.isConfirmed) return;
-                console.log('Adding category with data:', categoryData);
+                
                 showLoading('Adding new category...');
                 try {
                     await handleCreateCategory(categoryData);
                     await fetchCategory();
-                    showSuccess('Subcategory added successfully');
+                    showSuccess('Category added successfully');
                     setShowModal(false);
                     setFormData({ category_name: '', subcategory_name: '', id_category: '' });
                 } catch (error) {
                     showError(`Failed to add category: ${error.message}`);
                 }
             } else if (modalMode === 'edit') {
+                if (!permissions.can_edit) {
+                    showError('You do not have permission to edit categories');
+                    return;
+                }
+
                 const categoryData = {
+                    id_category: formData.id_category,
                     category_name: formData.category_name,
-                    updated_by: dataKaryawans.nama || 'System',
-                    updated_device: 'web'
+                    updated_by: dataKaryawan.nama || 'System',
+                    updated_device: deviceInfo.device
                 };
                 
-                const result = await confirmAction('Are you sure you want to save changes?');
+                const result = await confirmAction({
+                    title: 'Update Category',
+                    text: 'Are you sure you want to save changes?',
+                    icon: 'question'
+                });
                 if (!result.isConfirmed) return;
                 
                 showLoading('Saving changes...');
@@ -200,12 +246,20 @@ export default function MasterCategory() {
                     await fetchCategory();
                     showSuccess('Category updated successfully');
                     setShowModal(false);
-
                 } catch (error) {
                     showError(`Failed to update category: ${error.message}`);
                 }
             } else if (modalMode === 'delete') {
-                const result = await confirmAction('Are you sure you want to delete this category?');
+                if (!permissions.can_delete) {
+                    showError('You do not have permission to delete categories');
+                    return;
+                }
+
+                const result = await confirmAction({
+                    title: 'Delete Category',
+                    text: 'Are you sure you want to delete this category?',
+                    icon: 'warning'
+                });
                 if (!result.isConfirmed) return;
                 
                 showLoading('Deleting category...');
@@ -229,14 +283,23 @@ export default function MasterCategory() {
             }
         } else if (modalType === 'subcategory') {
             if (modalMode === 'add') {
+                if (!permissions.can_create) {
+                    showError('You do not have permission to create subcategories');
+                    return;
+                }
+
                 const subcategoryData = {
                     subcategory_name: formData.subcategory_name,
                     id_category: formData.id_category,
-                    created_by: dataKaryawans.nama || 'System',
-                    created_device: 'web'
+                    created_by: dataKaryawan.nama || 'System',
+                    created_device: deviceInfo.device
                 };
                 
-                const result = await confirmAction('Are you sure you want to add this subcategory?');
+                const result = await confirmAction({
+                    title: 'Add Subcategory',
+                    text: 'Are you sure you want to add this subcategory?',
+                    icon: 'question'
+                });
                 if (!result.isConfirmed) return;
                 
                 showLoading('Adding new subcategory...');
@@ -250,14 +313,24 @@ export default function MasterCategory() {
                     showError(`Failed to add subcategory: ${error.message}`);
                 }
             } else if (modalMode === 'edit') {
+                if (!permissions.can_edit) {
+                    showError('You do not have permission to edit subcategories');
+                    return;
+                }
+
                 const subcategoryData = {
+                    id_subcategory: formData.id_subcategory,
                     subcategory_name: formData.subcategory_name,
                     id_category: formData.id_category,
-                    updated_by: dataKaryawans.nama || 'System',
-                    updated_device: 'web'
+                    updated_by: dataKaryawan.nama || 'System',
+                    updated_device: deviceInfo.device
                 };
                 
-                const result = await confirmAction('Are you sure you want to save changes?');
+                const result = await confirmAction({
+                    title: 'Update Subcategory',
+                    text: 'Are you sure you want to save changes?',
+                    icon: 'question'
+                });
                 if (!result.isConfirmed) return;
                 
                 showLoading('Saving changes...');
@@ -270,7 +343,16 @@ export default function MasterCategory() {
                     showError(`Failed to update subcategory: ${error.message}`);
                 }
             } else if (modalMode === 'delete') {
-                const result = await confirmAction('Are you sure you want to delete this subcategory?');
+                if (!permissions.can_delete) {
+                    showError('You do not have permission to delete subcategories');
+                    return;
+                }
+
+                const result = await confirmAction({
+                    title: 'Delete Subcategory',
+                    text: 'Are you sure you want to delete this subcategory?',
+                    icon: 'warning'
+                });
                 if (!result.isConfirmed) return;
                 
                 showLoading('Deleting subcategory...');
@@ -282,7 +364,7 @@ export default function MasterCategory() {
                     const responseData = await response.json();
 
                     if (responseData.success) {
-                        await fetchSubcategories();
+                        await fetchSubCategory();
                         showSuccess('Subcategory deleted successfully');
                         setShowModal(false);
                     } else {
@@ -295,14 +377,51 @@ export default function MasterCategory() {
         }
     };
 
+    // ✅ AFTER all hooks - Check view permission
+    if (!permissions.can_view) {
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-gray-50">
+                <div className="max-w-md text-center p-6">
+                    <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Lock className="w-8 h-8 text-red-600" />
+                    </div>
+                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
+                    <p className="text-gray-600 mb-6">
+                        You do not have permission to view master category.
+                    </p>
+                    <button
+                        onClick={() => window.history.back()}
+                        className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                        Go Back
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="p-6 bg-gray-50 min-h-screen">
             {/* Header */}
             <div className="mb-6 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 <div className="flex justify-between items-center">
                     <div>
-                        <h1 className="text-2xl font-bold text-gray-900 mb-1">Master Category</h1>
-                        <p className="text-gray-600 text-sm">Manage categories and subcategories</p>
+                        <div className="flex items-center gap-3">
+                            <h1 className="text-2xl font-bold text-gray-900">Master Category</h1>
+                            {/* ✅ Permission Badge */}
+                            {!permissions.can_edit && !permissions.can_create && !permissions.can_delete && (
+                                <span className="px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded-full flex items-center gap-1">
+                                    <Lock className="w-3 h-3" />
+                                    View Only
+                                </span>
+                            )}
+                        </div>
+                        <p className="text-gray-600 text-sm mt-1">
+                            {permissions.can_edit 
+                                ? 'Manage categories and subcategories'
+                                : 'View categories and subcategories (read-only mode)'
+                            }
+                        </p>
                     </div>
                     
                     {/* Breadcrumb */}
@@ -315,12 +434,25 @@ export default function MasterCategory() {
                 </div>
             </div>
 
+            {/* ✅ Permission Warning Banner */}
+            {!permissions.can_edit && !permissions.can_create && !permissions.can_delete && (
+                <div className="mb-6 bg-blue-50 border-2 border-blue-200 rounded-xl p-5">
+                    <div className="flex items-center gap-3">
+                        <Shield className="w-6 h-6 text-blue-600 flex-shrink-0" />
+                        <div>
+                            <h4 className="text-sm font-bold text-blue-900 mb-1">View-Only Mode</h4>
+                            <p className="text-sm text-blue-700">
+                                You can view category data but cannot make changes. Contact your administrator for edit access.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Main Container */}
             <div className="bg-white rounded-lg shadow-sm">
-                {/* Controls */}
                 <div className="p-6">
                     <div className="flex sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                        {/* Entries Selector */}
                         <div className="flex items-center gap-2">
                             <span className="text-sm text-gray-600">Show</span>
                             <select 
@@ -341,13 +473,24 @@ export default function MasterCategory() {
                         </div>
 
                         <div className="flex items-center gap-4">
-                            {/* Add Button */}
-                            <button
-                                onClick={handleAddCategory}
-                                className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors"
-                            >
-                                Add New Category
-                            </button>
+                            {/* ✅ Add Category Button - Conditional */}
+                            {permissions.can_create ? (
+                                <button
+                                    onClick={handleAddCategory}
+                                    className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors"
+                                >
+                                    Add New Category
+                                </button>
+                            ) : (
+                                <button
+                                    disabled
+                                    className="px-4 py-2 bg-gray-300 text-gray-500 text-sm rounded-md cursor-not-allowed flex items-center gap-2"
+                                    title="No create permission"
+                                >
+                                    <Lock className="w-4 h-4" />
+                                    Add New Category
+                                </button>
+                            )}
 
                             {/* Search */}
                             <div className="relative">
@@ -464,13 +607,13 @@ export default function MasterCategory() {
                                                                 >
                                                                     <Edit className="w-4 h-4" />
                                                                 </button>
-                                                                <button
+                                                                {/* <button
                                                                     onClick={() => handleDeleteCategory(category)}
                                                                     className="p-1.5 hover:text-red-600 transition-colors"
                                                                     title="Delete"
                                                                 >
                                                                     <Trash2 className="w-4 h-4" />
-                                                                </button>
+                                                                </button> */}
                                                             </div>
                                                         </td>
                                                     </tr>
@@ -510,13 +653,13 @@ export default function MasterCategory() {
                                                                     >
                                                                         <Edit className="w-4 h-4" />
                                                                     </button>
-                                                                    <button
+                                                                    {/* <button
                                                                         onClick={() => handleDeleteSubcategory(subcategory)}
                                                                         className="p-1.5 hover:text-red-600 transition-colors"
                                                                         title="Delete"
                                                                     >
                                                                         <Trash2 className="w-4 h-4" />
-                                                                    </button>
+                                                                    </button> */}
                                                                 </div>
                                                             </td>
                                                         </tr>

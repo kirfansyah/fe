@@ -7,7 +7,7 @@ import ContentAdditionView from "../../components/Course/AddContent";
 import { useCourses } from "../../hooks/useCourses";
 import { ChevronRight, BookOpen, Users, Home } from 'lucide-react';
 import { useRouter } from "next/router";
-import { ProfileContext } from "../../contexts/profile/ProfileContext";
+import { useMenuPermissions } from '@/hooks/useMenuPermissions';
 
 export default function Management() {
     const [activeTab, setActiveTab] = useState('courses-list');
@@ -21,17 +21,19 @@ export default function Management() {
         contentTypes, 
         groupEnroll, 
         companies, 
-        addCourse, 
+        addCourse,
+        fetchCourses,
+        fetchEnrollData,
         deleteCourse, 
+        deleteContent,
         enrollData,
-        isLoading,    // ✅ Loading states
-        isSaving, 
-        isDeleting 
+        isLoading,  
+        isSaving
     } = useCourses();
     
     const router = useRouter();
-    const { dataKaryawan } = useContext(ProfileContext);
-    const dataKaryawans = dataKaryawan?.[0] || { nama: '' };
+
+    const permissions = useMenuPermissions();
     
     const CONTENT_TYPE_ROUTES = {
         3: '/course/content/pre-test-edit',
@@ -43,11 +45,22 @@ export default function Management() {
     };
 
     const handleAddContent = (courseId) => {
+
+        if (!permissions.can_create) {
+            alert('You do not have permission to add content');
+            return;
+        }
+
         setSelectedCourseId(courseId);
         setCurrentPage('addContent');
     };
 
     const handleEditContent = (courseId, contentId, contentTypeId) => {
+        if (!permissions.can_edit) {
+            alert('You do not have permission to edit content');
+            return;
+        }
+
         const specialRoute = CONTENT_TYPE_ROUTES[contentTypeId];
         if (specialRoute) {
             router.push({
@@ -65,11 +78,42 @@ export default function Management() {
         setSelectedContentId(contentId); 
     };
 
-    const handleSaveSuccess = () => {
+    const handleViewContent = (courseId, contentId, contentTypeId) => {
+        if (!permissions.can_view) {
+            alert('You do not have permission to view content');
+            return;
+        }
+
+        const specialRoute = CONTENT_TYPE_ROUTES[contentTypeId];
+        if (specialRoute) {
+            router.push({
+                pathname: specialRoute,
+                query: { 
+                    courseId: courseId, 
+                    contentId: contentId,
+                    contentTypeId: contentTypeId
+                }
+            });
+            return;
+        }
+        setSelectedCourseId(courseId);
+        setCurrentPage('editContent');
+        setSelectedContentId(contentId); 
+    };
+
+    const handleSaveSuccess = async () => {
         setCurrentPage('main');
         setSelectedContentId(null);
         setSelectedCourseId('');
+        await fetchCourses();
+        await fetchEnrollData();
     };
+
+    const handleDeleteSuccess = async () => {
+        await fetchCourses();
+        await fetchEnrollData();
+    }
+    
 
     // ✅ Dynamic Breadcrumb
     const getBreadcrumbs = () => {
@@ -80,7 +124,29 @@ export default function Management() {
         };
         return breadcrumbs[currentPage] || breadcrumbs.main;
     };
-
+    if (!permissions.can_view) {
+        return (
+            <div className="p-6 bg-gray-50 min-h-screen">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+                    <div className="max-w-md mx-auto">
+                        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                        </div>
+                        <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
+                        <p className="text-gray-600 mb-6">You do not have permission to access this page.</p>
+                        <button
+                            onClick={() => router.push('/dashboard')}
+                            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                            Back to Dashboard
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
     const MainPage = () => ( 
         <div className="p-6 bg-gray-50 min-h-screen">
             {/* ✅ FIXED: Minimalis Header (consistent dengan design system) */}
@@ -142,11 +208,14 @@ export default function Management() {
                             courses={courses} 
                             onAddContent={handleAddContent} 
                             onEditContent={handleEditContent}
+                            onViewContent={handleViewContent}
                             onSave={addCourse}
                             onDelete={deleteCourse}
-                            isLoading={isLoading}    // ✅ Passed
-                            isSaving={isSaving}      // ✅ Passed
-                            isDeleting={isDeleting}  // ✅ Passed
+                            onDeleteContent={deleteContent} 
+                            onDeleteContentSuccess={handleDeleteSuccess}
+                            isLoading={isLoading}    
+                            isSaving={isSaving}
+                            permissions={permissions}
                         />
                     )}
                     
@@ -159,8 +228,10 @@ export default function Management() {
                             activeEnrollmentTab={activeEnrollmentTab} 
                             setActiveEnrollmentTab={setActiveEnrollmentTab}
                             onSuccess={handleSaveSuccess}
-                            isLoading={isLoading}    // ✅ ADDED
-                            isSaving={isSaving}      // ✅ ADDED
+                            onDeleteContentSuccess={handleDeleteSuccess}
+                            isLoading={isLoading}    
+                            isSaving={isSaving}
+                            permissions={permissions}
                         />
                     )}
                 </div>
@@ -176,6 +247,7 @@ export default function Management() {
             contentTypes={contentTypes}
             mode="add"
             contentId={null}
+            permissions={permissions}
         />
     );
 
@@ -187,6 +259,7 @@ export default function Management() {
             contentTypes={contentTypes}
             mode="edit"
             contentId={selectedContentId}
+            permissions={permissions}
         />
     );
 

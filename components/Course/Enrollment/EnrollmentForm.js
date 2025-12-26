@@ -1,6 +1,6 @@
 import { 
     X, Building2, Calendar, Settings, Target, Check,
-    AlertCircle, ChevronRight, ChevronLeft, Save, Edit
+    AlertCircle, ChevronRight, ChevronLeft, Save, Edit, Lock
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -16,7 +16,8 @@ export default function EnrollmentForm({
     availableCompanies = [],
     onUpdateField,
     onToggleGroup,
-    onSave
+    onSave,
+    permissions // ✅ Receive permissions
 }) {
     const [currentStep, setCurrentStep] = useState(1);
     const [isSaving, setIsSaving] = useState(false);
@@ -25,21 +26,23 @@ export default function EnrollmentForm({
 
     const isExisting = !!enrollment.id_course_enrollment;
     const isSpecific = enrollment.enroll_type_name === 'Specific' || enrollment.id_enrollment_type === 2;
+    
+    // ✅ Determine if user can edit
+    const canEdit = isExisting ? permissions?.can_edit : permissions?.can_create;
+    const canSave = isExisting ? permissions?.can_edit : permissions?.can_create;
+
     const extractGroupingIds = (groupings) => {
         if (!Array.isArray(groupings) || groupings.length === 0) {
             return [];
         }
         
         return groupings.map(item => {
-           
             if (typeof item === 'number') {
                 return item;
             }
-           
             if (item && typeof item === 'object' && item.id_grouping !== undefined) {
                 return parseInt(item.id_grouping);
             }
-           
             if (typeof item === 'string') {
                 const num = parseInt(item);
                 return isNaN(num) ? null : num;
@@ -47,10 +50,10 @@ export default function EnrollmentForm({
             return null;
         }).filter(id => id !== null && !isNaN(id) && id > 0);
     };
+
     const selectedGroups = extractGroupingIds(enrollment.groupings);
     const selectedCompany = companyUnits.find(c => c.id === enrollment.company_id);
 
-    // Format values
     const enrollmentType = enrollment.enroll_type_name || 
                           (enrollment.id_enrollment_type === 1 ? 'General' : 
                            enrollment.id_enrollment_type === 2 ? 'Specific' : '');
@@ -65,14 +68,13 @@ export default function EnrollmentForm({
                           (enrollment.remedial_allowed ? 'Yes' : 'No') : 'Yes';
     const remedial_limit = enrollment.remedial_limit || 1;
     
-    // Reset step when modal opens
     useEffect(() => {
         if (isOpen) {
             setCurrentStep(1);
             setValidationErrors({});
-            setEditMode(false);
+            setEditMode(!isExisting && canEdit);
         }
-    }, [isOpen]);
+    }, [isOpen, isExisting, canEdit]);
 
     const totalSteps = isSpecific ? 4 : 3;
 
@@ -130,14 +132,17 @@ export default function EnrollmentForm({
     };
 
     const handleSave = async () => {
+        // ✅ Check permission before save
+        if (!canSave) {
+            return;
+        }
+
         if (!validateCurrentStep()) return;
         
         setIsSaving(true);
         try {
-            // ✅ Await the save and get result
             const result = await onSave(courseId, enrollmentIndex);
             
-            // ✅ Close only if successful
             if (result?.success) {
                 await new Promise(resolve => setTimeout(resolve, 800));
                 onClose();
@@ -150,6 +155,10 @@ export default function EnrollmentForm({
     };
 
     const handleEnableEdit = () => {
+        // ✅ Check permission
+        if (!permissions?.can_edit) {
+            return;
+        }
         setEditMode(true);
         setCurrentStep(1);
     };
@@ -174,7 +183,8 @@ export default function EnrollmentForm({
         return true;
     };
 
-    const isReadOnly = isExisting && !editMode;
+    // ✅ Updated read-only logic
+    const isReadOnly = (isExisting && !editMode) || !canEdit;
 
     if (!isOpen) return null;
 
@@ -190,12 +200,20 @@ export default function EnrollmentForm({
                                     ? (editMode ? 'Edit Enrollment' : 'View Enrollment')
                                     : 'Add Company Enrollment'}
                             </h3>
-                            {isExisting && !editMode && (
+                            
+                            {/* ✅ Permission Badges */}
+                            {!canEdit && (
+                                <span className="px-3 py-1 bg-red-600 text-white text-xs font-bold rounded-full flex items-center gap-1">
+                                    <Lock className="w-3 h-3" />
+                                    No Permission
+                                </span>
+                            )}
+                            {canEdit && isExisting && !editMode && (
                                 <span className="px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded-full">
                                     Read-Only
                                 </span>
                             )}
-                            {isExisting && editMode && (
+                            {canEdit && isExisting && editMode && (
                                 <span className="px-3 py-1 bg-orange-600 text-white text-xs font-bold rounded-full">
                                     Editing
                                 </span>
@@ -261,8 +279,21 @@ export default function EnrollmentForm({
                     </div>
                 </div>
 
-                {/* Read-Only Banner */}
-                {isReadOnly && (
+                {/* ✅ Permission Warning Banner */}
+                {!canEdit && (
+                    <div className="mx-6 mt-6 p-4 bg-red-50 border-2 border-red-200 rounded-xl flex items-center gap-3">
+                        <Lock className="w-5 h-5 text-red-600 flex-shrink-0" />
+                        <div>
+                            <p className="text-sm font-semibold text-red-900">No Edit Permission</p>
+                            <p className="text-sm text-red-700">
+                                You do not have permission to {isExisting ? 'edit' : 'create'} enrollments. You can only view this information.
+                            </p>
+                        </div>
+                    </div>
+                )}
+
+                {/* ✅ Read-Only Banner with Permission Check */}
+                {canEdit && isReadOnly && (
                     <div className="mx-6 mt-6 p-4 bg-blue-50 border-2 border-blue-200 rounded-xl flex items-center justify-between">
                         <div className="flex items-center gap-3">
                             <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0" />
@@ -280,7 +311,7 @@ export default function EnrollmentForm({
                     </div>
                 )}
 
-                {/* Modal Body - Scrollable */}
+                {/* Modal Body - Scrollable - SAME AS BEFORE */}
                 <div className="flex-1 overflow-y-auto p-6">
                     {/* Step 1: Basic Info */}
                     {currentStep === 1 && (
@@ -802,14 +833,15 @@ export default function EnrollmentForm({
                     )}
                 </div>
 
-                {/* Footer */}
+
+                {/* ✅ Updated Footer with Permission Checks */}
                 <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50">
                     <div className="text-sm text-gray-600">
                         {!isReadOnly && `Step ${currentStep} of ${totalSteps}`}
                     </div>
                     
                     <div className="flex items-center gap-3">
-                        {isReadOnly ? (
+                        {isReadOnly || !canEdit ? (
                             <button
                                 onClick={onClose}
                                 className="px-5 py-2.5 bg-white border-2 border-gray-300 text-gray-700 rounded-xl font-bold hover:bg-gray-50 transition-all"
@@ -857,9 +889,9 @@ export default function EnrollmentForm({
                                     <button
                                         type="button"
                                         onClick={handleSave}
-                                        disabled={!canProceed() || isSaving}
+                                        disabled={!canProceed() || isSaving || !canSave}
                                         className={`px-6 py-2.5 rounded-xl font-bold transition-all flex items-center gap-2 shadow-md hover:shadow-lg ${
-                                            canProceed() && !isSaving
+                                            canProceed() && !isSaving && canSave
                                                 ? 'bg-green-600 text-white hover:bg-green-700'
                                                 : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                                         }`}

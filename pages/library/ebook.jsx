@@ -49,7 +49,6 @@ export default function Management() {
 
   const {
     ebooks,
-    companys,
     categorys,
     subCategorys,
     employees,
@@ -432,13 +431,12 @@ export default function Management() {
   const AddContentPage = () => (
     <ContentAdditionView
       onBack={() => setCurrentPage("main")}
-      companys={companys}
       categorys={categorys}
     />
   );
 
   return (
-    <div className="min-h-screen bg-gray-50/50">
+    <div>
       {currentPage === "main" && <MainPage />}
       {currentPage === "addContent" && <AddContentPage />}
       {currentPage === "ViewEbook" && <ViewContentEbook />}

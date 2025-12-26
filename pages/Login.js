@@ -72,7 +72,7 @@ const Login = () => {
                 <div className="flex flex-col mb-2 py-2" ref={dropdownRef}>
                   <label className="text-gray-600 text-left text-base font-normal mb-1 flex items-center gap-2">
                     <FaBuilding className="w-4 h-4" />
-                    Unit Usaha*
+                    Lokasi Usaha*
                   </label>
                   
                   <div className="relative">
@@ -202,16 +202,6 @@ const Login = () => {
                     ?
                   </p>
                 </div>
-
-                {/* DEBUG INFO (Development only) */}
-                {process.env.NODE_ENV === 'development' && username && (
-                  <div className="mb-3 p-2 bg-blue-50 border border-blue-200 rounded text-xs">
-                    <div className="font-semibold text-blue-800 mb-1">Payload:</div>
-                    <div className="text-blue-700 font-mono">
-                      site_id: {siteId}, is_karyawan: {isKaryawan.toString()}, nik: {username}
-                    </div>
-                  </div>
-                )}
 
                 {/* BUTTON SUBMIT */}
                 <button
