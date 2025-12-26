@@ -160,6 +160,7 @@ class EbookService {
       const formData = new FormData();
 
       // Append text fields
+      formData.append("company_id", ebookData.company_id);
       formData.append("title", ebookData.title);
       formData.append("id_category", ebookData.id_category);
       formData.append("id_subcategory", ebookData.id_subcategory);

@@ -1,11 +1,27 @@
-import { useState, useEffect } from "react";
-import { ArrowLeft, Eye, BookOpen, FileText } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import {
+  ArrowLeft,
+  Eye,
+  BookOpen,
+  FileText,
+  ChevronLeft,
+  ChevronRight,
+  X,
+  Maximize,
+  Minimize,
+} from "lucide-react";
 import { useEbooks } from "../../hooks/useEbooks";
+import PdfViewer from "../../components/Library/PdfViewerTrainner";
 
 export default function ViewEbook({ onBack, ebookId }) {
   const { getEbookDetailById, loading } = useEbooks();
   const [ebook, setEbook] = useState(null);
   const [isViewerOpen, setIsViewerOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(100);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const readerContainerRef = useRef(null);
 
   useEffect(() => {
     if (ebookId) {
@@ -17,6 +33,7 @@ export default function ViewEbook({ onBack, ebookId }) {
     try {
       const data = await getEbookDetailById(ebookId);
       setEbook(data);
+      setTotalPages(data.total_pages || 100);
     } catch (error) {
       console.error("Error loading ebook:", error);
       alert("Failed to load ebook details");
@@ -25,11 +42,171 @@ export default function ViewEbook({ onBack, ebookId }) {
 
   const handleOpenViewer = () => {
     setIsViewerOpen(true);
+    setCurrentPage(1);
   };
 
   const handleCloseViewer = () => {
     setIsViewerOpen(false);
+    setCurrentPage(1);
+    if (isFullscreen) {
+      setIsFullscreen(false);
+    }
   };
+
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      handlePageChange(currentPage + 1);
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      handlePageChange(currentPage - 1);
+    }
+  };
+
+  const toggleFullscreen = async () => {
+    console.log("🖥️ Toggle fullscreen clicked, current:", isFullscreen);
+
+    if (!isFullscreen) {
+      // Enter fullscreen
+      try {
+        const element = readerContainerRef.current;
+        if (element) {
+          if (element.requestFullscreen) {
+            await element.requestFullscreen();
+          } else if (element.webkitRequestFullscreen) {
+            await element.webkitRequestFullscreen();
+          } else if (element.mozRequestFullScreen) {
+            await element.mozRequestFullScreen();
+          } else if (element.msRequestFullscreen) {
+            await element.msRequestFullscreen();
+          }
+        }
+        setIsFullscreen(true);
+      } catch (err) {
+        console.error("Error entering fullscreen:", err);
+      }
+    } else {
+      // Exit fullscreen
+      try {
+        if (document.exitFullscreen) {
+          await document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) {
+          await document.webkitExitFullscreen();
+        } else if (document.mozCancelFullScreen) {
+          await document.mozCancelFullScreen();
+        } else if (document.msExitFullscreen) {
+          await document.msExitFullscreen();
+        }
+        setIsFullscreen(false);
+      } catch (err) {
+        console.error("Error exiting fullscreen:", err);
+      }
+    }
+  };
+
+  // Listen to fullscreen changes
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const isCurrentlyFullscreen = !!(
+        document.fullscreenElement ||
+        document.webkitFullscreenElement ||
+        document.mozFullScreenElement ||
+        document.msFullscreenElement
+      );
+
+      setIsFullscreen(isCurrentlyFullscreen);
+      console.log("🖥️ Fullscreen changed:", isCurrentlyFullscreen);
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
+    document.addEventListener("mozfullscreenchange", handleFullscreenChange);
+    document.addEventListener("MSFullscreenChange", handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      document.removeEventListener(
+        "webkitfullscreenchange",
+        handleFullscreenChange
+      );
+      document.removeEventListener(
+        "mozfullscreenchange",
+        handleFullscreenChange
+      );
+      document.removeEventListener(
+        "MSFullscreenChange",
+        handleFullscreenChange
+      );
+    };
+  }, []);
+
+  // Keyboard navigation
+  useEffect(() => {
+    if (!isViewerOpen) return;
+
+    const handleKeyPress = async (e) => {
+      if (e.key === "ArrowRight") {
+        if (currentPage < totalPages) {
+          setCurrentPage((prev) => prev + 1);
+        }
+      } else if (e.key === "ArrowLeft") {
+        if (currentPage > 1) {
+          setCurrentPage((prev) => prev - 1);
+        }
+      } else if (e.key === "f" || e.key === "F") {
+        // Toggle fullscreen
+        if (!isFullscreen) {
+          try {
+            const element = readerContainerRef.current;
+            if (element) {
+              if (element.requestFullscreen) {
+                await element.requestFullscreen();
+              } else if (element.webkitRequestFullscreen) {
+                await element.webkitRequestFullscreen();
+              } else if (element.mozRequestFullScreen) {
+                await element.mozRequestFullScreen();
+              } else if (element.msRequestFullscreen) {
+                await element.msRequestFullscreen();
+              }
+            }
+          } catch (err) {
+            console.error("Error entering fullscreen:", err);
+          }
+        } else {
+          try {
+            if (document.exitFullscreen) {
+              await document.exitFullscreen();
+            } else if (document.webkitExitFullscreen) {
+              await document.webkitExitFullscreen();
+            } else if (document.mozCancelFullScreen) {
+              await document.mozCancelFullScreen();
+            } else if (document.msExitFullscreen) {
+              await document.msExitFullscreen();
+            }
+          } catch (err) {
+            console.error("Error exiting fullscreen:", err);
+          }
+        }
+      } else if (e.key === "Escape") {
+        // ESC will automatically exit fullscreen if in fullscreen mode
+        // If not in fullscreen, close the viewer
+        if (!isFullscreen) {
+          handleCloseViewer();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyPress);
+    return () => window.removeEventListener("keydown", handleKeyPress);
+  }, [isViewerOpen, currentPage, totalPages, isFullscreen]);
 
   if (loading) {
     return (
@@ -255,45 +432,189 @@ export default function ViewEbook({ onBack, ebookId }) {
         </div>
       </div>
 
-      {/* eBook Viewer Modal */}
+      {/* eBook Viewer Modal - Full Screen */}
       {isViewerOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex flex-col">
-          {/* Viewer Header */}
-          <div className="bg-gray-900 text-white px-6 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={handleCloseViewer}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
-              >
-                <ArrowLeft className="w-5 h-5" />
-                <span>Close Reader</span>
-              </button>
-              <h3 className="text-lg font-semibold">{ebook.title}</h3>
-            </div>
-          </div>
+        <div
+          ref={readerContainerRef}
+          className="fixed inset-0 bg-black z-[9999] flex flex-col"
+          style={{
+            overflow: "hidden",
+            width: "100vw",
+            height: "100vh",
+          }}
+        >
+          {/* Header - Hidden in Fullscreen */}
+          {!isFullscreen && (
+            <div
+              className="bg-gradient-to-r from-blue-700 to-blue-600 text-white shadow-lg"
+              style={{ flexShrink: 0, height: "64px" }}
+            >
+              <div className="px-4 md:px-6 py-3 md:py-4 flex items-center justify-between h-full">
+                <div className="flex items-center gap-2 md:gap-4 flex-1 min-w-0">
+                  <button
+                    onClick={handleCloseViewer}
+                    className="flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors text-sm md:text-base shrink-0"
+                  >
+                    <X size={18} className="md:w-5 md:h-5" />
+                    <span className="hidden md:inline">Close</span>
+                  </button>
+                  <div className="h-4 md:h-6 w-px bg-white/30"></div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-sm md:text-lg font-semibold truncate">
+                      {ebook.title}
+                    </h3>
+                    <p className="text-xs text-blue-100 truncate hidden md:block">
+                      {ebook.author || "Unknown Author"}
+                    </p>
+                  </div>
+                </div>
 
-          {/* Viewer Content */}
-          <div className="flex-1 overflow-hidden">
-            {ebook.file_url ? (
-              <iframe
-                src={`/api/proxy/proxy-pdf?url=${encodeURIComponent(
-                  ebook.file_url
-                )}`}
-                className="w-full h-full"
-                title={ebook.title}
-                style={{ border: "none" }}
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <div className="text-center text-white">
-                  <FileText className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                  <p className="text-xl mb-2">eBook file not available</p>
-                  <p className="text-gray-400">
-                    The eBook file cannot be displayed in the viewer.
-                  </p>
+                <div className="flex items-center gap-2 md:gap-3 shrink-0">
+                  <button
+                    onClick={toggleFullscreen}
+                    className="px-2 md:px-4 py-1.5 md:py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors flex items-center gap-1 md:gap-2"
+                    title="Fullscreen (F key)"
+                  >
+                    <Maximize size={16} className="md:w-5 md:h-5" />
+                    <span className="hidden md:inline text-sm">Fullscreen</span>
+                  </button>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Main Content Container */}
+          <div
+            className="relative bg-gray-900 flex-1"
+            style={{
+              overflow: "hidden",
+            }}
+          >
+            {/* Prev Button */}
+            <button
+              onClick={handlePrevPage}
+              disabled={currentPage === 1}
+              className={`absolute left-4 md:left-8 top-1/2 -translate-y-1/2 w-10 h-10 md:w-12 md:h-12 rounded-full shadow-lg hover:shadow-xl disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center group z-20 ${
+                isFullscreen ? "bg-white/90 hover:bg-white" : "bg-white"
+              }`}
+              aria-label="Previous page"
+            >
+              <ChevronLeft
+                size={20}
+                className="md:w-6 md:h-6 text-gray-700 group-hover:text-blue-600 transition-colors group-disabled:text-gray-400"
+              />
+            </button>
+
+            {/* eBook Display Area */}
+            <div
+              className="w-full h-full bg-white flex items-center justify-center"
+              style={{
+                overflow: "hidden",
+                position: "relative",
+              }}
+            >
+              <div
+                className="w-full h-full"
+                style={{
+                  overflow: "auto",
+                }}
+              >
+                {ebook.file_url ? (
+                  <PdfViewer
+                    file={`/api/pdf-proxy?url=${encodeURIComponent(
+                      ebook.file_url
+                    )}`}
+                    currentPage={currentPage}
+                    initialPage={1}
+                    showControls={false}
+                    onLoadSuccess={(numPages) => {
+                      setTotalPages(numPages);
+                      console.log("✅ PDF loaded with", numPages, "pages");
+                    }}
+                    onPageChange={(isLastPage) => {
+                      if (isLastPage && currentPage >= totalPages) {
+                        console.log("✅ Reached last page of PDF");
+                      }
+                    }}
+                    onError={(errorMsg) => {
+                      console.error("PDF Error:", errorMsg);
+                    }}
+                  />
+                ) : (
+                  <div
+                    className="w-full h-full flex items-center justify-center text-center text-gray-500 p-6 md:p-12"
+                    style={{ pointerEvents: "auto" }}
+                  >
+                    <div>
+                      <FileText className="w-16 h-16 mx-auto mb-4 text-red-400" />
+                      <h2 className="text-xl md:text-2xl font-bold mb-2 text-red-600">
+                        File Not Found
+                      </h2>
+                      <p className="text-base md:text-lg text-gray-600">
+                        The eBook file is not available.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Next Button */}
+            <button
+              onClick={handleNextPage}
+              disabled={currentPage === totalPages}
+              className={`absolute right-4 md:right-8 top-1/2 -translate-y-1/2 w-10 h-10 md:w-12 md:h-12 rounded-full shadow-lg hover:shadow-xl disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center group z-20 ${
+                isFullscreen ? "bg-white/90 hover:bg-white" : "bg-white"
+              }`}
+              aria-label="Next page"
+            >
+              <ChevronRight
+                size={20}
+                className="md:w-6 md:h-6 text-gray-700 group-hover:text-blue-600 transition-colors group-disabled:text-gray-400"
+              />
+            </button>
+
+            {/* Fullscreen Controls - Floating Header */}
+            {isFullscreen && (
+              <div className="absolute top-2 md:top-4 right-2 md:right-4 flex items-center gap-2 md:gap-3 z-30">
+                <button
+                  onClick={toggleFullscreen}
+                  className="p-2 md:p-2.5 bg-black/70 hover:bg-black/80 text-white rounded-lg transition-colors backdrop-blur-sm"
+                  title="Exit Fullscreen (F key)"
+                >
+                  <Minimize size={18} className="md:w-5 md:h-5" />
+                </button>
+
+                <button
+                  onClick={handleCloseViewer}
+                  className="p-2 md:p-2.5 bg-red-500/90 hover:bg-red-600 text-white rounded-lg transition-colors backdrop-blur-sm"
+                  title="Close eBook"
+                >
+                  <X size={18} className="md:w-5 md:h-5" />
+                </button>
+              </div>
             )}
+
+            {/* Page Counter */}
+            <div
+              className={`absolute bottom-2 md:bottom-4 left-1/2 -translate-x-1/2 backdrop-blur-sm px-4 md:px-6 py-2 md:py-2.5 rounded-full shadow-lg z-20 ${
+                isFullscreen
+                  ? "bg-black/70 text-white"
+                  : "bg-white/95 text-gray-600"
+              }`}
+            >
+              <span className="text-xs md:text-sm font-medium">
+                Page{" "}
+                <span
+                  className={`font-bold ${
+                    isFullscreen ? "text-blue-400" : "text-blue-600"
+                  }`}
+                >
+                  {currentPage}
+                </span>{" "}
+                of {totalPages}
+              </span>
+            </div>
           </div>
         </div>
       )}
