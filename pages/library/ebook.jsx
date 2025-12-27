@@ -1,5 +1,6 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useContext } from "react";
 import Admin from "layouts/Admin.js";
+import { ProfileContext } from "@/contexts/profile/ProfileContext";
 import EbookListView from "../../components/Library/EbookList";
 import MonitoringView from "../../components/Library/Monitoring";
 import ContentAdditionView from "../../components/Course/AddContent";
@@ -13,14 +14,22 @@ import {
   CircleX,
   AlertCircle,
   CheckCircle,
+  Lock,
+  Shield,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import "react-quill/dist/quill.snow.css";
 import { useSweetAlert } from "@/hooks/useSweetAlert";
 
+import { getDeviceInfo } from "@/lib/deviceHelper";
+import { useMenuPermissions } from "@/hooks/useMenuPermissions"; // ✅ Import
+
 const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });
 
 export default function Management() {
+  const permissions = useMenuPermissions();
+  const { getKaryawan, dataKaryawan } = useContext(ProfileContext);
+  const deviceInfo = getDeviceInfo();
   const [activeTab, setActiveTab] = useState("ebooks-list");
   const [currentPage, setCurrentPage] = useState("main");
   const [selectedEbookId, setSelectedEbookId] = useState("");
@@ -49,6 +58,7 @@ export default function Management() {
 
   const {
     ebooks,
+    companys,
     categorys,
     subCategorys,
     employees,
@@ -108,10 +118,14 @@ export default function Management() {
     setCurrentPage("addContent");
   };
 
-  // Open modal handler - called from EbookList
+  // ✅ Open modal handler - called from EbookList with permission check
   const handleOpenModal = (ebook) => {
     if (ebook) {
-      // Edit mode
+      // Edit mode - Check edit permission
+      if (!permissions.can_edit) {
+        showError("You do not have permission to edit eBooks");
+        return;
+      }
       setIsEditMode(true);
       setCurrentEbookId(ebook.id_ebook);
       setSelectedCompany(ebook.company_id?.toString() || "");
@@ -125,7 +139,11 @@ export default function Management() {
       setCoverUpload(null);
       setEbookUpload(null);
     } else {
-      // Add mode
+      // Add mode - Check create permission
+      if (!permissions.can_create) {
+        showError("You do not have permission to create eBooks");
+        return;
+      }
       setIsEditMode(false);
       setCurrentEbookId(null);
       resetForm();
@@ -227,8 +245,18 @@ export default function Management() {
     return `${base} border-green-500 focus:ring-green-500`;
   };
 
-  // Save handler
+  // ✅ Save handler with permission check
   const handleSaveEbook = async () => {
+    // Check permission based on mode
+    if (isEditMode && !permissions.can_edit) {
+      showError("You do not have permission to edit eBooks");
+      return;
+    }
+    if (!isEditMode && !permissions.can_create) {
+      showError("You do not have permission to create eBooks");
+      return;
+    }
+
     if (!validateAll()) {
       showWarning("Please fill in all required fields.");
       return;
@@ -244,8 +272,8 @@ export default function Management() {
       description,
       cover_image: coverUpload,
       file_path: ebookUpload,
-      created_by: "Admin",
-      created_device: "Web",
+      created_by: dataKaryawan.nama || "System",
+      created_device: deviceInfo.device,
     };
 
     const currentTitle = ebookTitle;
@@ -297,7 +325,12 @@ export default function Management() {
     }
   };
 
+  // ✅ Delete handler with permission check
   const handleDeleteEbook = async (id) => {
+    if (!permissions.can_delete) {
+      showError("You do not have permission to delete eBooks");
+      return;
+    }
     try {
       await deleteEbook(id);
     } catch (error) {
@@ -329,9 +362,22 @@ export default function Management() {
       <div className="mb-6 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-1">Library</h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold text-gray-900 mb-1">Library</h1>
+              {/* ✅ Permission Badge */}
+              {!permissions.can_edit &&
+                !permissions.can_create &&
+                !permissions.can_delete && (
+                  <span className="px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded-full flex items-center gap-1">
+                    <Lock className="w-3 h-3" />
+                    View Only
+                  </span>
+                )}
+            </div>
             <p className="text-gray-600 text-sm">
-              Manage your library and monitoring
+              {permissions.can_edit
+                ? "Manage your library and monitoring"
+                : "View library and monitoring (read-only mode)"}
             </p>
           </div>
           <div className="flex items-center gap-2 text-sm">
@@ -342,6 +388,26 @@ export default function Management() {
           </div>
         </div>
       </div>
+
+      {/* ✅ Permission Warning Banner */}
+      {!permissions.can_edit &&
+        !permissions.can_create &&
+        !permissions.can_delete && (
+          <div className="mb-6 bg-blue-50 border-2 border-blue-200 rounded-xl p-5">
+            <div className="flex items-center gap-3">
+              <Shield className="w-6 h-6 text-blue-600 flex-shrink-0" />
+              <div>
+                <h4 className="text-sm font-bold text-blue-900 mb-1">
+                  View-Only Mode
+                </h4>
+                <p className="text-sm text-blue-700">
+                  You can view library data but cannot make changes. Contact
+                  your administrator for edit access.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
       {/* Tab Navigation */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -391,6 +457,7 @@ export default function Management() {
                   onViewContent={handleViewEbook}
                   onDelete={handleDeleteEbook}
                   onOpenModal={handleOpenModal}
+                  permissions={permissions}
                 />
               </div>
             )}
@@ -434,6 +501,31 @@ export default function Management() {
       categorys={categorys}
     />
   );
+
+  // ✅ Check view permission - Access Denied if no view permission
+  if (!permissions.can_view) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="max-w-md text-center p-6">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Lock className="w-8 h-8 text-red-600" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            Access Denied
+          </h2>
+          <p className="text-gray-600 mb-6">
+            You do not have permission to view the library.
+          </p>
+          <button
+            onClick={() => window.history.back()}
+            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
