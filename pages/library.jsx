@@ -6,7 +6,6 @@ import { ChevronRight, Star, FileText, Video } from "lucide-react";
 
 import EbookListView from "../components/Library/EbookEmployee";
 import EbookEmployeeView from "../components/Library/EbookEmployee";
-import ContentAdditionView from "../components/Course/AddContent";
 import ContentViewEbook from "../components/Library/ViewEbook";
 import { useEbooks } from "../hooks/useEbooks";
 
@@ -86,13 +85,6 @@ export default function Library() {
     <ContentViewEbook
       onBack={() => setCurrentPage("main")}
       ebookId={selectedEbookId}
-    />
-  );
-
-  const AddContentPage = () => (
-    <ContentAdditionView
-      onBack={() => setCurrentPage("main")}
-      categorys={categorys}
     />
   );
 
