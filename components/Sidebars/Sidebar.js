@@ -36,7 +36,7 @@ export default function Sidebar() {
       
       // Submenu items (jika ada)
       "MENU_GROUPING": listLanguage.grouping || "Grouping",
-      "MENU_CATEGORY_EBOOK": listLanguage.category_ebook || "Category Ebook",
+      "MENU_CATEGORY_EBOOK": listLanguage.ebook_category || "Ebook Category",
       "MENU_ROLE_MGMT": listLanguage.role_management || "Role Management",
       "MENU_MENU_MGMT": listLanguage.menu_management || "Menu Management",
     };

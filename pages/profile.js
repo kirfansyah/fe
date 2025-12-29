@@ -1,6 +1,6 @@
 import { useState, useContext } from "react";
-import WebLayout from "../layouts/WebLayout";
-import { ProfileContext } from "../contexts/profile/ProfileContext";
+import WebLayout from "@/layouts/WebLayout";
+import { ProfileContext } from "@/contexts/profile/ProfileContext";
 import {
   BookOpen,
   Clock,
@@ -23,13 +23,17 @@ import {
   Play,
   Building2,
   Briefcase,
-  IdCard
+  IdCard,
+  RefreshCw,
+  TrendingDown,
+  FileCheck,
+  FileX
 } from "lucide-react";
 import Link from "next/link";
-import { useCourses } from "../hooks/useCourses";
+import { useCourses } from "@/hooks/useCourses";
 
 export default function ModernProfile() {
-  const { getKaryawan, dataKaryawan } = useContext(ProfileContext);
+  const { dataKaryawan } = useContext(ProfileContext);
   const { profileInfo } = useCourses();
   const [activeTab, setActiveTab] = useState("overview");
 
@@ -41,28 +45,21 @@ export default function ModernProfile() {
     position_name: apiData.position_name || "",
     dept_abbr: apiData.dept_abbr || "",
     company_name: apiData.company_name || "",
-    profile_photo_url: dataKaryawan.profile_photo_url || "/img/user.png",
+    profile_photo_url: dataKaryawan?.profile_photo_url || "/img/user.png",
 
     stats: {
       enrolled: apiData.course_enrolled || 0,
       outstanding: apiData.course_outstanding || 0,
       completed: apiData.course_completed || 0,
-      passed: apiData.course_status?.[0]?.passed || 0,
       totalHours: Math.floor(parseInt(apiData.course_total_time?.split(":")[0] || 0)),
       totalMinutes: parseInt(apiData.course_total_time?.split(":")[1] || 0),
-    },
-
-    course_status: apiData.course_status?.[0] || {
-      passed: 0,
-      in_progress: 0,
-      failed: 0,
-      course_total: 0,
     },
 
     courseStatus: {
       passed: apiData.course_status?.[0]?.passed || 0,
       inProgress: apiData.course_status?.[0]?.in_progress || 0,
       failed: apiData.course_status?.[0]?.failed || 0,
+      total: apiData.course_status?.[0]?.course_total || 0,
     },
 
     courseResults: (apiData.course_results || []).map((course) => ({
@@ -80,25 +77,28 @@ export default function ModernProfile() {
       read: apiData.ebook_read || 0,
       completed: apiData.ebook_completed || 0,
       incomplete: apiData.ebook_incomplete || 0,
-      readingHours: Math.floor(apiData.ebook_reading_time / 60) || 0,
-      readingMinutes: apiData.ebook_reading_time % 60 || 0,
+      readingHours: Math.floor((apiData.ebook_reading_time || 0) / 60),
+      readingMinutes: (apiData.ebook_reading_time || 0) % 60,
     },
   };
+
+  const totalCourses = profileData.courseStatus.total || 
+    (profileData.courseStatus.passed + profileData.courseStatus.inProgress + profileData.courseStatus.failed);
 
   const completionRate = profileData.stats.enrolled > 0 
     ? Math.round((profileData.stats.completed / profileData.stats.enrolled) * 100) 
     : 0;
 
-  const passRate = profileData.course_status.course_total > 0
-    ? Math.round((profileData.course_status.passed / profileData.course_status.course_total) * 100)
+  const passRate = totalCourses > 0
+    ? Math.round((profileData.courseStatus.passed / totalCourses) * 100)
     : 0;
 
   return (
     <WebLayout>
       <div className="min-h-screen bg-gray-50">
-        {/* ✅ NON-STICKY Header - tidak akan menimpa menu */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
-          {/* Breadcrumb / Back Button */}
+          
+          {/* Breadcrumb */}
           <div className="flex items-center justify-between mb-6">
             <Link
               href="/dashboard"
@@ -116,70 +116,39 @@ export default function ModernProfile() {
             </div>
           </div>
 
-          {/* Profile Header Card */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-6">
-            <div className="bg-gradient-to-r from-blue-800 via-blue-700 to-blue-800 px-6 py-8 sm:px-8">
-              <div className="flex flex-col sm:flex-row items-center gap-6">
+          {/* Profile Card - Clean Simple Style */}
+          <div className="mb-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Profile</h2>
+            
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div className="flex items-center gap-4">
                 {/* Avatar */}
-                <div className="relative flex-shrink-0">
-                  <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 p-1">
+                <div className="flex-shrink-0">
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border-2 border-gray-100">
                     <img
                       src={
-                        profileData.profile_photo_url.startsWith('http') 
+                        profileData.profile_photo_url?.startsWith('http') 
                           ? profileData.profile_photo_url 
                           : `${process.env.BASE_URL || ''}${profileData.profile_photo_url}`
                       }
                       alt={profileData.nama || "Profile"}
-                      className="w-full h-full rounded-full object-cover bg-white"
+                      className="w-full h-full object-cover"
                       onError={(e) => {
                         e.target.src = '/img/user.png';
                       }}
                     />
                   </div>
-                  <div className="absolute bottom-1 right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-white"></div>
                 </div>
 
-                {/* Profile Info */}
-                <div className="flex-1 text-center sm:text-left">
-                  <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-lg sm:text-xl font-bold text-gray-900 truncate">
                     {profileData.nama || "User"}
-                  </h1>
-                  
-                  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-4 gap-y-1 text-slate-300">
-                    <div className="flex items-center gap-1.5">
-                      <IdCard className="w-4 h-4" />
-                      <span className="text-sm">{profileData.no_ktp || "-"}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <Briefcase className="w-4 h-4" />
-                      <span className="text-sm">{profileData.position_name || "-"}</span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-4 gap-y-1 mt-1 text-slate-400">
-                    <div className="flex items-center gap-1.5">
-                      <Building2 className="w-4 h-4" />
-                      <span className="text-sm">{profileData.dept_abbr || "-"}</span>
-                    </div>
-                    <span className="text-sm">{profileData.company_name || "-"}</span>
-                  </div>
-                </div>
-
-                {/* Quick Stats */}
-                <div className="flex flex-wrap justify-center gap-3">
-                  <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 text-center min-w-[80px]">
-                    <div className="text-xl sm:text-2xl font-bold text-white">{completionRate}%</div>
-                    <div className="text-xs text-slate-300">Completion</div>
-                  </div>
-                  <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 text-center min-w-[80px]">
-                    <div className="text-xl sm:text-2xl font-bold text-white">{profileData.stats.completed}</div>
-                    <div className="text-xs text-slate-300">Completed</div>
-                  </div>
-                  <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 text-center min-w-[80px]">
-                    <div className="text-lg sm:text-xl font-bold text-white">
-                      {profileData.stats.totalHours}h {profileData.stats.totalMinutes}m
-                    </div>
-                    <div className="text-xs text-slate-300">Learning</div>
+                  </h3>
+                  <div className="flex flex-wrap items-center gap-x-2 text-sm text-gray-500 mt-1">
+                    <span>{profileData.position_name || "-"}</span>
+                    <span className="text-gray-300">|</span>
+                    <span>{profileData.company_name || "-"}</span>
                   </div>
                 </div>
               </div>
@@ -190,22 +159,20 @@ export default function ModernProfile() {
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-1.5 mb-6">
             <div className="flex gap-1 overflow-x-auto">
               {[
-                { id: 'overview', label: 'Overview', icon: BarChart3 },
-                { id: 'courses', label: 'Courses', icon: BookOpen },
-                { id: 'ebooks', label: 'E-Books', icon: BookText },
+                { id: 'overview', label: 'Course Profile', icon: BarChart3 },
                 { id: 'competencies', label: 'Competencies', icon: Award },
               ].map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm transition-all whitespace-nowrap ${
+                  className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-medium text-sm transition-all whitespace-nowrap ${
                     activeTab === tab.id
                       ? "bg-slate-800 text-white shadow-sm"
                       : "text-gray-600 hover:bg-gray-100"
                   }`}
                 >
                   <tab.icon className="w-4 h-4" />
-                  <span className="hidden sm:inline">{tab.label}</span>
+                  {tab.label}
                 </button>
               ))}
             </div>
@@ -215,12 +182,13 @@ export default function ModernProfile() {
           <div className="pb-8">
             {activeTab === "overview" && (
               <div className="space-y-6">
-                {/* Stats Grid */}
+                
+                {/* Course Stats Cards */}
                 <div className="grid lg:grid-cols-4 gap-4">
                   <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
                     <div className="flex items-center justify-between mb-3">
                       <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
-                        <BookOpen className="w-5 h-5 text-blue-600" />
+                        <RefreshCw className="w-5 h-5 text-blue-600" />
                       </div>
                       <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
                         Total
@@ -235,7 +203,7 @@ export default function ModernProfile() {
                   <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
                     <div className="flex items-center justify-between mb-3">
                       <div className="w-10 h-10 bg-amber-50 rounded-lg flex items-center justify-center">
-                        <AlertCircle className="w-5 h-5 text-amber-600" />
+                        <TrendingDown className="w-5 h-5 text-amber-600" />
                       </div>
                       <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-1 rounded-full">
                         Pending
@@ -250,7 +218,7 @@ export default function ModernProfile() {
                   <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
                     <div className="flex items-center justify-between mb-3">
                       <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
-                        <CheckCheck className="w-5 h-5 text-green-600" />
+                        <FileCheck className="w-5 h-5 text-green-600" />
                       </div>
                       <span className="text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full">
                         Done
@@ -274,69 +242,76 @@ export default function ModernProfile() {
                     <div className="text-2xl font-bold text-gray-900 mb-1">
                       {profileData.stats.totalHours}h {profileData.stats.totalMinutes}m
                     </div>
-                    <div className="text-sm text-gray-500">Learning Hours</div>
+                    <div className="text-sm text-gray-500">Learning Time</div>
                   </div>
                 </div>
 
-                {/* Main Content Grid */}
+                {/* Charts Row - 3 Columns */}
                 <div className="grid lg:grid-cols-3 gap-6">
-                  {/* Course Status */}
+                  
+                  {/* Course Status - Donut Chart */}
                   <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-                    <div className="flex items-center justify-between mb-6">
-                      <h3 className="font-semibold text-gray-900">Course Status</h3>
-                      <Target className="w-5 h-5 text-gray-400" />
-                    </div>
+                    <h3 className="font-semibold text-gray-900 text-center mb-6">Courses Status</h3>
 
                     <div className="flex items-center justify-center mb-6">
-                      <div className="relative w-36 h-36 sm:w-40 sm:h-40">
+                      <div className="relative w-40 h-40">
                         <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                          <circle cx="50" cy="50" r="40" stroke="#f3f4f6" strokeWidth="8" fill="none" />
+                          <circle cx="50" cy="50" r="38" stroke="#f3f4f6" strokeWidth="10" fill="none" />
                           
-                          <circle
-                            cx="50" cy="50" r="40"
-                            stroke="#ef4444"
-                            strokeWidth="8"
-                            fill="none"
-                            strokeDasharray={`${(profileData.courseStatus.failed / 100) * 251.2} 251.2`}
-                            strokeDashoffset="0"
-                            className="transition-all duration-1000"
-                          />
-                          
-                          <circle
-                            cx="50" cy="50" r="40"
-                            stroke="#3b82f6"
-                            strokeWidth="8"
-                            fill="none"
-                            strokeDasharray={`${(profileData.courseStatus.inProgress / 100) * 251.2} 251.2`}
-                            strokeDashoffset={`${-(profileData.courseStatus.failed / 100) * 251.2}`}
-                            className="transition-all duration-1000"
-                          />
-                          
-                          <circle
-                            cx="50" cy="50" r="40"
-                            stroke="#22c55e"
-                            strokeWidth="8"
-                            fill="none"
-                            strokeDasharray={`${(profileData.courseStatus.passed / 100) * 251.2} 251.2`}
-                            strokeDashoffset={`${-((profileData.courseStatus.failed + profileData.courseStatus.inProgress) / 100) * 251.2}`}
-                            className="transition-all duration-1000"
-                          />
+                          {totalCourses > 0 && (
+                            <>
+                              {profileData.courseStatus.failed > 0 && (
+                                <circle
+                                  cx="50" cy="50" r="38"
+                                  stroke="#ef4444"
+                                  strokeWidth="10"
+                                  fill="none"
+                                  strokeDasharray={`${(profileData.courseStatus.failed / totalCourses) * 238.76} 238.76`}
+                                  strokeLinecap="round"
+                                />
+                              )}
+                              
+                              {profileData.courseStatus.inProgress > 0 && (
+                                <circle
+                                  cx="50" cy="50" r="38"
+                                  stroke="#3b82f6"
+                                  strokeWidth="10"
+                                  fill="none"
+                                  strokeDasharray={`${(profileData.courseStatus.inProgress / totalCourses) * 238.76} 238.76`}
+                                  strokeDashoffset={`${-(profileData.courseStatus.failed / totalCourses) * 238.76}`}
+                                  strokeLinecap="round"
+                                />
+                              )}
+                              
+                              {profileData.courseStatus.passed > 0 && (
+                                <circle
+                                  cx="50" cy="50" r="38"
+                                  stroke="#22c55e"
+                                  strokeWidth="10"
+                                  fill="none"
+                                  strokeDasharray={`${(profileData.courseStatus.passed / totalCourses) * 238.76} 238.76`}
+                                  strokeDashoffset={`${-((profileData.courseStatus.failed + profileData.courseStatus.inProgress) / totalCourses) * 238.76}`}
+                                  strokeLinecap="round"
+                                />
+                              )}
+                            </>
+                          )}
                         </svg>
                         <div className="absolute inset-0 flex items-center justify-center flex-col">
-                          <span className="text-3xl font-bold text-gray-900">{passRate}%</span>
-                          <span className="text-xs text-gray-500">Pass Rate</span>
+                          <span className="text-3xl font-bold text-gray-900">{totalCourses}</span>
+                          <span className="text-xs text-gray-500">Courses</span>
                         </div>
                       </div>
                     </div>
 
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <div className="w-3 h-3 rounded-full bg-green-500"></div>
                           <span className="text-sm text-gray-600">Passed</span>
                         </div>
                         <span className="text-sm font-semibold text-gray-900">
-                          {profileData.courseStatus.passed}%
+                          {totalCourses > 0 ? Math.round((profileData.courseStatus.passed / totalCourses) * 100) : 0}%
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
@@ -345,7 +320,7 @@ export default function ModernProfile() {
                           <span className="text-sm text-gray-600">In Progress</span>
                         </div>
                         <span className="text-sm font-semibold text-gray-900">
-                          {profileData.courseStatus.inProgress}%
+                          {totalCourses > 0 ? Math.round((profileData.courseStatus.inProgress / totalCourses) * 100) : 0}%
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
@@ -354,115 +329,121 @@ export default function ModernProfile() {
                           <span className="text-sm text-gray-600">Failed</span>
                         </div>
                         <span className="text-sm font-semibold text-gray-900">
-                          {profileData.courseStatus.failed}%
+                          {totalCourses > 0 ? Math.round((profileData.courseStatus.failed / totalCourses) * 100) : 0}%
                         </span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Course Results */}
+                  {/* Course Results - Line Chart */}
                   <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-                    <div className="flex items-center justify-between mb-6">
-                      <h3 className="font-semibold text-gray-900">Recent Scores</h3>
-                      <TrendingUp className="w-5 h-5 text-gray-400" />
-                    </div>
-
-                    <div className="space-y-4 max-h-64 overflow-y-auto pr-1">
-                      {profileData.courseResults.length > 0 ? (
-                        profileData.courseResults.slice(0, 5).map((course, index) => (
-                          <div key={index}>
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-sm text-gray-700 truncate pr-3 max-w-[160px]">
-                                {course.name}
-                              </span>
-                              <span className={`text-sm font-bold px-2 py-0.5 rounded ${
-                                course.score >= 80 
-                                  ? 'text-green-700 bg-green-50' 
-                                  : course.score >= 60 
-                                  ? 'text-amber-700 bg-amber-50' 
-                                  : 'text-red-700 bg-red-50'
-                              }`}>
-                                {course.score}
-                              </span>
-                            </div>
-                            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                              <div
-                                className={`h-full rounded-full transition-all duration-700 ${
-                                  course.score >= 80 
-                                    ? 'bg-green-500' 
-                                    : course.score >= 60 
-                                    ? 'bg-amber-500' 
-                                    : 'bg-red-500'
-                                }`}
-                                style={{ width: `${course.score}%` }}
+                    <h3 className="font-semibold text-gray-900 text-center mb-6">Courses Result</h3>
+                    
+                    {profileData.courseResults.length > 0 ? (
+                      <>
+                        <div className="relative h-48">
+                          <svg className="w-full h-full" viewBox="0 0 280 140" preserveAspectRatio="xMidYMid meet">
+                            {/* Y-axis */}
+                            <text x="12" y="15" fontSize="9" fill="#9ca3af">100</text>
+                            <text x="17" y="40" fontSize="9" fill="#9ca3af">75</text>
+                            <text x="17" y="65" fontSize="9" fill="#9ca3af">50</text>
+                            <text x="17" y="90" fontSize="9" fill="#9ca3af">25</text>
+                            <text x="22" y="115" fontSize="9" fill="#9ca3af">0</text>
+                            
+                            {/* Grid */}
+                            {[10, 35, 60, 85, 110].map((y, i) => (
+                              <line key={i} x1="35" y1={y} x2="270" y2={y} stroke="#f3f4f6" strokeWidth="1" strokeDasharray={i === 4 ? "0" : "3,3"} />
+                            ))}
+                            
+                            {/* Line */}
+                            {profileData.courseResults.length > 1 && (
+                              <path
+                                d={profileData.courseResults.slice(0, 5).map((r, i) => {
+                                  const spacing = 200 / Math.max(profileData.courseResults.slice(0, 5).length - 1, 1);
+                                  const x = 50 + (i * spacing);
+                                  const y = 110 - (r.score * 1);
+                                  return `${i === 0 ? 'M' : 'L'} ${x},${y}`;
+                                }).join(' ')}
+                                fill="none"
+                                stroke="#a78bfa"
+                                strokeWidth="2"
                               />
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="text-center py-8">
-                          <BookOpen className="w-10 h-10 text-gray-300 mx-auto mb-2" />
-                          <p className="text-sm text-gray-500">No course results yet</p>
+                            )}
+                            
+                            {/* Points */}
+                            {profileData.courseResults.slice(0, 5).map((r, i) => {
+                              const spacing = profileData.courseResults.slice(0, 5).length > 1 ? 200 / (profileData.courseResults.slice(0, 5).length - 1) : 0;
+                              const x = profileData.courseResults.slice(0, 5).length === 1 ? 150 : 50 + (i * spacing);
+                              const y = 110 - (r.score * 1);
+                              const colors = ['#a78bfa', '#22c55e', '#f59e0b', '#3b82f6', '#ec4899'];
+                              
+                              return (
+                                <g key={i}>
+                                  <circle cx={x} cy={y} r="5" fill={colors[i % colors.length]} stroke="white" strokeWidth="2" />
+                                  <text x={x} y={y - 10} fontSize="9" fill="#6b7280" textAnchor="middle">{r.score}</text>
+                                </g>
+                              );
+                            })}
+                          </svg>
                         </div>
-                      )}
-                    </div>
 
-                    {profileData.courseResults.length > 5 && (
-                      <button 
-                        onClick={() => setActiveTab('courses')}
-                        className="w-full mt-4 text-sm text-blue-600 hover:text-blue-700 font-medium"
-                      >
-                        View all {profileData.courseResults.length} courses →
-                      </button>
+                        <div className="flex flex-wrap justify-center gap-3 mt-2">
+                          {profileData.courseResults.slice(0, 3).map((r, i) => {
+                            const colors = ['bg-purple-400', 'bg-green-500', 'bg-amber-500'];
+                            return (
+                              <div key={i} className="flex items-center gap-1.5">
+                                <div className={`w-2.5 h-2.5 rounded-full ${colors[i]}`}></div>
+                                <span className="text-xs text-gray-600 max-w-[80px] truncate">{r.name}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-48">
+                        <BookOpen className="w-12 h-12 text-gray-300 mb-3" />
+                        <p className="text-gray-500 text-sm">No results yet</p>
+                      </div>
                     )}
                   </div>
 
                   {/* Mandatory Courses */}
                   <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
                     <div className="flex items-center justify-between mb-6">
-                      <h3 className="font-semibold text-gray-900">Mandatory Courses</h3>
-                      <div className="flex items-center gap-1 text-xs text-gray-500">
+                      <h3 className="font-semibold text-gray-900">Mandatory Course List</h3>
+                      <span className="text-xs text-gray-500">
                         <span className="font-semibold text-green-600">
                           {profileData.mandatoryCourses.filter(c => c.completed).length}
                         </span>
-                        <span>/</span>
-                        <span>{profileData.mandatoryCourses.length}</span>
-                      </div>
+                        /{profileData.mandatoryCourses.length}
+                      </span>
                     </div>
 
-                    <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                    <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
                       {profileData.mandatoryCourses.length > 0 ? (
                         profileData.mandatoryCourses.map((course) => (
                           <div
                             key={course.id}
-                            className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${
-                              course.completed
-                                ? "bg-green-50"
-                                : "bg-gray-50 hover:bg-gray-100"
+                            className={`flex items-center gap-3 p-3 rounded-lg ${
+                              course.completed ? "bg-green-50" : "bg-gray-50"
                             }`}
                           >
-                            <div className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center ${
-                              course.completed
-                                ? "bg-green-500"
-                                : "border-2 border-gray-300 bg-white"
+                            <div className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 ${
+                              course.completed ? "bg-green-500" : "border-2 border-gray-300 bg-white"
                             }`}>
-                              {course.completed && (
-                                <CheckCircle2 className="w-3 h-3 text-white" />
-                              )}
+                              {course.completed && <CheckCircle2 className="w-3 h-3 text-white" />}
                             </div>
-                            <span className={`text-sm flex-1 line-clamp-2 ${
-                              course.completed
-                                ? "text-green-800"
-                                : "text-gray-700"
+                            <span className={`text-sm line-clamp-2 ${
+                              course.completed ? "text-green-800" : "text-gray-700"
                             }`}>
                               {course.title}
                             </span>
                           </div>
                         ))
                       ) : (
-                        <div className="text-center py-8">
-                          <CheckCheck className="w-10 h-10 text-gray-300 mx-auto mb-2" />
-                          <p className="text-sm text-gray-500">No mandatory courses</p>
+                        <div className="flex flex-col items-center justify-center py-8">
+                          <CheckCheck className="w-12 h-12 text-gray-300 mb-3" />
+                          <p className="text-gray-500 text-sm">No mandatory courses</p>
                         </div>
                       )}
                     </div>
@@ -470,148 +451,48 @@ export default function ModernProfile() {
                 </div>
 
                 {/* E-Book Stats */}
-                <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-                  <div className="flex items-center justify-between mb-6">
-                    <h3 className="font-semibold text-gray-900">E-Book Progress</h3>
-                    <BookMarked className="w-5 h-5 text-gray-400" />
-                  </div>
-
-                  <div className="grid lg:grid-cols-4 gap-4">
-                    <div className="text-center p-4 bg-blue-50 rounded-xl">
-                      <div className="text-2xl sm:text-3xl font-bold text-blue-600 mb-1">
-                        {profileData.ebooks.read}
-                      </div>
-                      <div className="text-sm text-blue-700">Books Read</div>
-                    </div>
-                    <div className="text-center p-4 bg-green-50 rounded-xl">
-                      <div className="text-2xl sm:text-3xl font-bold text-green-600 mb-1">
-                        {profileData.ebooks.completed}
-                      </div>
-                      <div className="text-sm text-green-700">Completed</div>
-                    </div>
-                    <div className="text-center p-4 bg-amber-50 rounded-xl">
-                      <div className="text-2xl sm:text-3xl font-bold text-amber-600 mb-1">
-                        {profileData.ebooks.incomplete}
-                      </div>
-                      <div className="text-sm text-amber-700">In Progress</div>
-                    </div>
-                    <div className="text-center p-4 bg-purple-50 rounded-xl">
-                      <div className="text-2xl sm:text-3xl font-bold text-purple-600 mb-1">
-                        {profileData.ebooks.readingHours}h {profileData.ebooks.readingMinutes}m
-                      </div>
-                      <div className="text-sm text-purple-700">Reading Time</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === "courses" && (
-              <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-lg font-semibold text-gray-900">All Course Results</h3>
-                  <div className="text-sm text-gray-500">
-                    {profileData.courseResults.length} courses
-                  </div>
-                </div>
-
-                {profileData.courseResults.length > 0 ? (
-                  <div className="space-y-3">
-                    {profileData.courseResults.map((course, index) => (
-                      <div 
-                        key={index} 
-                        className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                            course.score >= 80 
-                              ? 'bg-green-100' 
-                              : course.score >= 60 
-                              ? 'bg-amber-100' 
-                              : 'bg-red-100'
-                          }`}>
-                            {course.score >= 80 ? (
-                              <Trophy className="w-5 h-5 text-green-600" />
-                            ) : course.score >= 60 ? (
-                              <Target className="w-5 h-5 text-amber-600" />
-                            ) : (
-                              <XCircle className="w-5 h-5 text-red-600" />
-                            )}
-                          </div>
-                          <div>
-                            <h4 className="font-medium text-gray-900">{course.name}</h4>
-                            <p className="text-sm text-gray-500">
-                              {course.score >= 80 ? 'Excellent' : course.score >= 60 ? 'Good' : 'Needs Improvement'}
-                            </p>
-                          </div>
-                        </div>
-                        <div className={`text-xl font-bold ${
-                          course.score >= 80 
-                            ? 'text-green-600' 
-                            : course.score >= 60 
-                            ? 'text-amber-600' 
-                            : 'text-red-600'
-                        }`}>
-                          {course.score}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-16">
-                    <GraduationCap className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                    <h4 className="text-lg font-medium text-gray-900 mb-2">No Courses Yet</h4>
-                    <p className="text-gray-500 mb-4">Start learning to see your progress here</p>
-                    <Link 
-                      href="/courses" 
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition-colors"
-                    >
-                      <Play className="w-4 h-4" />
-                      Browse Courses
-                    </Link>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {activeTab === "ebooks" && (
-              <div className="space-y-6">
                 <div className="grid lg:grid-cols-4 gap-4">
-                  <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-5 text-white">
-                    <BookMarked className="w-8 h-8 mb-3 opacity-80" />
-                    <div className="text-3xl font-bold mb-1">{profileData.ebooks.read}</div>
-                    <div className="text-sm text-blue-100">Books Read</div>
+                  <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
+                        <BookMarked className="w-5 h-5 text-blue-600" />
+                      </div>
+                    </div>
+                    <div className="text-2xl font-bold text-gray-900 mb-1">{profileData.ebooks.read}</div>
+                    <div className="text-sm text-gray-500">eBook Read</div>
                   </div>
-                  <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-5 text-white">
-                    <CheckCircle2 className="w-8 h-8 mb-3 opacity-80" />
-                    <div className="text-3xl font-bold mb-1">{profileData.ebooks.completed}</div>
-                    <div className="text-sm text-green-100">Completed</div>
+
+                  <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
+                        <FileCheck className="w-5 h-5 text-green-600" />
+                      </div>
+                    </div>
+                    <div className="text-2xl font-bold text-gray-900 mb-1">{profileData.ebooks.completed}</div>
+                    <div className="text-sm text-gray-500">eBook Completed</div>
                   </div>
-                  <div className="bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl p-5 text-white">
-                    <AlertCircle className="w-8 h-8 mb-3 opacity-80" />
-                    <div className="text-3xl font-bold mb-1">{profileData.ebooks.incomplete}</div>
-                    <div className="text-sm text-amber-100">In Progress</div>
+
+                  <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="w-10 h-10 bg-amber-50 rounded-lg flex items-center justify-center">
+                        <FileX className="w-5 h-5 text-amber-600" />
+                      </div>
+                    </div>
+                    <div className="text-2xl font-bold text-gray-900 mb-1">{profileData.ebooks.incomplete}</div>
+                    <div className="text-sm text-gray-500">eBook Incomplete</div>
                   </div>
-                  <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-5 text-white">
-                    <Clock className="w-8 h-8 mb-3 opacity-80" />
-                    <div className="text-2xl font-bold mb-1">
+
+                  <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center">
+                        <Clock className="w-5 h-5 text-purple-600" />
+                      </div>
+                    </div>
+                    <div className="text-2xl font-bold text-gray-900 mb-1">
                       {profileData.ebooks.readingHours}h {profileData.ebooks.readingMinutes}m
                     </div>
-                    <div className="text-sm text-purple-100">Reading Time</div>
+                    <div className="text-sm text-gray-500">Reading Hours</div>
                   </div>
-                </div>
-
-                <div className="bg-white rounded-xl p-8 shadow-sm border border-gray-100 text-center">
-                  <BookText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <h4 className="text-lg font-medium text-gray-900 mb-2">Your E-Book Library</h4>
-                  <p className="text-gray-500 mb-4">Access your reading materials and track progress</p>
-                  <Link 
-                    href="/library" 
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition-colors"
-                  >
-                    <BookOpen className="w-4 h-4" />
-                    Go to Library
-                  </Link>
                 </div>
               </div>
             )}

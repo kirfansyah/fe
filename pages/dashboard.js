@@ -17,15 +17,11 @@ const Dashboard = () => {
   const profileData = dataKaryawan || {};
   const getMenuLabel = (menuCode, defaultLabel) => {
     const languageMap = {
-      // Main Menus
-      "MENU_HOME": listLanguage.home || "Home",
-      
-      
-      "HDR_TRAINER_PORTAL": '/img/website.png',
-      "HDR_PROFILE": '/img/profile.png',
-      "HDR_COURSE": '/img/learning.png',
-      "HDR_CALENDAR": '/img/calendar.png',
-      "HDR_LIBRARY": '/img/bookshelf.png',
+      "HDR_TRAINER_PORTAL": listLanguage.training_portal || "Trainer Portal",
+      "HDR_PROFILE": listLanguage.profile || "Profile",
+      "HDR_COURSE": listLanguage.course || "Course",
+      "HDR_CALENDAR": listLanguage.calendar || "Calendar",
+      "HDR_LIBRARY": listLanguage.library || "Library"
     };
     
     return languageMap[menuCode] || defaultLabel;
@@ -47,7 +43,7 @@ const Dashboard = () => {
     ?.filter(menu => menu.parent_id === null && menu.permissions?.can_view)
     .map(menu => ({
       id: menu.id_menu,
-      label: menu.menu_name,
+      label: getMenuLabel(menu.menu_code, menu.menu_name),
       icon: getIconPath(menu.menu_code),
       link: menu.menu_url,
       menuCode: menu.menu_code,

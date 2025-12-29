@@ -338,6 +338,79 @@ class RoleService {
         }
     }
 
+    /**
+     * Dashboard Analytics
+     * @param {Object} filters - Filter parameters
+     * @returns {Promise} API response
+     */
+    static async getEmployeeCourseResult(filters = {}) {
+        try {
+            const queryParams = new URLSearchParams();
+            
+            // if (filters.year) queryParams.append('year', filters.year);
+            // if (filters.month) queryParams.append('month', filters.month);
+            if (filters.company_id) queryParams.append('company_id', filters.company_id);
+            if (filters.id_course) queryParams.append('id_course', filters.id_course);
+
+            const queryString = queryParams.toString();
+            const endpoint = queryString 
+                ? `/dashboard/employee/courses-result?${queryString}` 
+                : '/dashboard/employee/courses-result';
+
+            const response = await API.get(endpoint);
+            return {
+                success: true,
+                data: response.data.data || {},
+                message: response.data.message || 'Success',
+                pagination: response.data.pagination
+            };
+        } catch (error) {
+            console.error('RoleService.getEmployeeCourseResult Error:', error);
+            return {
+                success: false,
+                data: {},
+                message: error.response?.data?.message || 'Failed to fetch employee course result',
+                pagination: null
+            };
+        }
+    }
+
+    /**
+     * Dashboard Analytics
+     * @param {Object} filters - Filter parameters
+     * @returns {Promise} API response
+     */
+    static async getCalenderHome(filters = {}) {
+        try {
+            const queryParams = new URLSearchParams();
+            
+            if (filters.year) queryParams.append('year', filters.year);
+            if (filters.month) queryParams.append('month', filters.month);
+            if (filters.company_id) queryParams.append('company_id', filters.company_id);
+
+            const queryString = queryParams.toString();
+            const endpoint = queryString 
+                ? `/calender?${queryString}` 
+                : '/calender';
+
+            const response = await API.get(endpoint);
+            return {
+                success: true,
+                data: response.data.data || {},
+                message: response.data.message || 'Success',
+                pagination: response.data.pagination
+            };
+        } catch (error) {
+            console.error('RoleService.getCalenderHome Error:', error);
+            return {
+                success: false,
+                data: {},
+                message: error.response?.data?.message || 'Failed to fetch calender',
+                pagination: null
+            };
+        }
+    }
+
     /** 
      * Dashboard Schedule
      * @returns {Promise} API response
@@ -357,6 +430,29 @@ class RoleService {
                 success: false,
                 data: [],
                 message: error.response?.data?.message || 'Failed to fetch schedule'
+            };
+        }   
+    }
+
+    /** 
+     * Dashboard Schedule
+     * @returns {Promise} API response
+     */
+    static async getNotification()
+    {   
+        try {
+            const response = await API.get("/dashboard/notifications"); 
+            return {
+                success: true,
+                data: response.data.data || [],
+                message: response.data.message || 'Success'
+            };
+        } catch (error) {
+            console.error('RoleService.getNotification Error:', error);
+            return {
+                success: false,
+                data: [],
+                message: error.response?.data?.message || 'Failed to fetch notification'
             };
         }   
     }

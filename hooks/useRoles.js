@@ -194,6 +194,20 @@ export function useRoles() {
         return result;
     }, []);
 
+    const fetchEmployeeCourseResult  = useCallback(async (filters = {}) => {
+        setLoading(true);
+        setError(null);
+
+        const result = await RoleService.getEmployeeCourseResult(filters);
+
+        if (!result.success) {
+            setError(result.message);
+        }
+
+        setLoading(false);
+        return result;
+    }, []);
+
     const fetchSchedule = useCallback(async () => {
         setLoading(true);
         setError(null);
@@ -208,10 +222,38 @@ export function useRoles() {
         return result;
     }, []);
 
+    const fetchNotification = useCallback(async () => {
+        setLoading(true);
+        setError(null);
+
+        const result = await RoleService.getNotification();
+
+        if (!result.success) {
+            setError(result.message);
+        }
+
+        setLoading(false);
+        return result;
+    }, []);
+
+    const fetchCalenderHome  = useCallback(async (filters = {}) => {
+        setLoading(true);
+        setError(null);
+
+        const result = await RoleService.getCalenderHome(filters);
+
+        if (!result.success) {
+            setError(result.message);
+        }
+
+        setLoading(false);
+        return result;
+    }, []);
+
     // ✅ Initial load
     useEffect(() => {
-        Promise.all([fetchRoles(), fetchMenus()]);
-    }, [fetchRoles, fetchMenus]);
+        Promise.all([fetchRoles(), fetchMenus(), fetchEmployeeCourseResult(), fetchCalenderHome(), fetchNotification(),fetchSchedule]);
+    }, [fetchRoles, fetchMenus, fetchEmployeeCourseResult, fetchCalenderHome, fetchNotification,fetchSchedule]);
 
     return {
         roles,
@@ -228,6 +270,10 @@ export function useRoles() {
         fetchSchedule,
         handleCreateCategory,
         handleCreateSubCategory,
-        handleUpdateUser
+        handleUpdateUser,
+        fetchEmployeeCourseResult,
+        fetchCalenderHome,
+        fetchNotification,
+        fetchSchedule
     };
 }
