@@ -1,6 +1,12 @@
 import { useState } from "react";
-import { Search, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  FileSpreadsheet,
+} from "lucide-react";
 import ExcelJS from "exceljs";
+import { useSweetAlert } from "@/hooks/useSweetAlert";
 
 export default function OnlineLearningView({ onlineLearning }) {
   const [selectedOnlineLearning, setSelectedOnlineLearning] = useState([]);
@@ -69,6 +75,8 @@ export default function OnlineLearningView({ onlineLearning }) {
     endIndex
   );
 
+  const { showWarning, showSuccess, showError } = useSweetAlert();
+
   const handleFilterChange = () => {
     setCurrentPage(1);
   };
@@ -116,94 +124,116 @@ export default function OnlineLearningView({ onlineLearning }) {
   };
 
   const handleExportExcel = async () => {
-    if (!filteredOnlineLearning.length) {
-      alert("Data tidak ada!");
+    if (selectedOnlineLearning.length === 0) {
+      showWarning("Please select at least one data to export");
       return;
     }
 
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet("Online Training", {
-      views: [{ state: "frozen", ySplit: 1 }],
-    });
+    try {
+      const selectedData = onlineLearning.filter((item) =>
+        selectedOnlineLearning.includes(item.id_user_enrollment)
+      );
 
-    worksheet.columns = [
-      { header: "No", key: "no", width: 6 },
-      { header: "Company Unit", key: "company", width: 28 },
-      { header: "Department", key: "dept", width: 12 },
-      { header: "Employee ID", key: "empId", width: 14 },
-      { header: "Employee Name", key: "name", width: 28 },
-      { header: "Position", key: "position", width: 18 },
-      { header: "Course Name", key: "courseName", width: 30 },
-      { header: "Pretest", key: "pretest", width: 20 },
-      { header: "Posttest", key: "posttest", width: 22 },
-      { header: "Status", key: "status", width: 30 },
-      { header: "Course Attempt", key: "courseAttempt", width: 14 },
-      { header: "Date", key: "date", width: 14 },
-      { header: "Refreshment Date", key: "refDate", width: 40 },
-    ];
+      if (!selectedData.length) {
+        showWarning("Selected data not found");
+        return;
+      }
 
-    worksheet.getRow(1).eachCell((cell) => {
-      cell.font = { bold: true };
-      cell.alignment = { vertical: "middle", horizontal: "center" };
-      cell.border = {
-        top: { style: "thin" },
-        bottom: { style: "thin" },
-        left: { style: "thin" },
-        right: { style: "thin" },
-      };
-    });
-
-    filteredOnlineLearning.forEach((item, index) => {
-      worksheet.addRow({
-        no: index + 1,
-        company: item.company_name || "-",
-        dept: item.dept_abbr || "-",
-        empId: item.employee_id || "-",
-        name: item.full_name,
-        position: item.position_name || "-",
-        courseName: item.course_title,
-        pretest: item.pretest,
-        posttest: item.posttest,
-        status: item.status,
-        courseAttempt: item.course_attempt,
-        date: item.date ? new Date(item.date) : "",
-        refDate: item.refreshment_date ? new Date(item.refreshment_date) : "",
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Online Training", {
+        views: [{ state: "frozen", ySplit: 1 }],
       });
-    });
 
-    worksheet.eachRow((row, rowNumber) => {
-      if (rowNumber === 1) return;
+      worksheet.columns = [
+        { header: "No", key: "no", width: 6 },
+        { header: "Company Unit", key: "company", width: 28 },
+        { header: "Department", key: "dept", width: 12 },
+        { header: "Employee ID", key: "empId", width: 14 },
+        { header: "Employee Name", key: "name", width: 28 },
+        { header: "Position", key: "position", width: 18 },
+        { header: "Course Name", key: "course", width: 30 },
+        { header: "Pretest", key: "pretest", width: 12 },
+        { header: "Posttest", key: "posttest", width: 12 },
+        { header: "Status", key: "status", width: 20 },
+        { header: "Course Attempt", key: "attempt", width: 14 },
+        { header: "Date", key: "date", width: 14 },
+        { header: "Refreshment Date", key: "refDate", width: 18 },
+      ];
 
-      row.eachCell((cell, colNumber) => {
+      worksheet.getRow(1).eachCell((cell) => {
+        cell.font = { bold: true };
+        cell.alignment = { vertical: "middle", horizontal: "center" };
         cell.border = {
           top: { style: "thin" },
           bottom: { style: "thin" },
           left: { style: "thin" },
           right: { style: "thin" },
         };
-
-        if ([1, 3, 4, 11, 12].includes(colNumber)) {
-          cell.alignment = { horizontal: "center", vertical: "middle" };
-        }
       });
-    });
 
-    worksheet.getColumn("date").numFmt = "dd-mm-yyyy";
-    worksheet.getColumn("refDate").numFmt = "dd-mm-yyyy";
+      selectedData.forEach((item, index) => {
+        worksheet.addRow({
+          no: index + 1,
+          company: item.company_name || "-",
+          dept: item.dept_abbr || "-",
+          empId: item.employee_id || "-",
+          name: item.full_name || "-",
+          position: item.position_name || "-",
+          course: item.course_title || "-",
+          pretest: item.pretest ?? "-",
+          posttest: item.posttest ?? "-",
+          status: item.status || "-",
+          attempt: item.course_attempt ?? "-",
+          date: item.date ? new Date(item.date) : "",
+          refDate: item.refreshment_date ? new Date(item.refreshment_date) : "",
+        });
+      });
 
-    const buffer = await workbook.xlsx.writeBuffer();
-    const blob = new Blob([buffer], {
-      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    });
+      worksheet.eachRow((row, rowNumber) => {
+        if (rowNumber === 1) return;
 
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `Online Learning_${new Date()
-      .toISOString()
-      .slice(0, 10)}.xlsx`;
-    a.click();
-    window.URL.revokeObjectURL(url);
+        row.eachCell((cell, colNumber) => {
+          cell.border = {
+            top: { style: "thin" },
+            bottom: { style: "thin" },
+            left: { style: "thin" },
+            right: { style: "thin" },
+          };
+
+          if ([1, 3, 4, 11, 12].includes(colNumber)) {
+            cell.alignment = { horizontal: "center", vertical: "middle" };
+          }
+        });
+      });
+
+      worksheet.getColumn("date").numFmt = "dd-mm-yyyy";
+      worksheet.getColumn("refDate").numFmt = "dd-mm-yyyy";
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+
+      const today = new Date();
+      const dateStr = `${today.getFullYear()}${String(
+        today.getMonth() + 1
+      ).padStart(2, "0")}${String(today.getDate()).padStart(2, "0")}`;
+
+      a.download = `Online_Learning_${dateStr}.xlsx`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+
+      showSuccess(
+        `Successfully exported ${selectedData.length} records to Excel`
+      );
+    } catch (error) {
+      console.error(error);
+      showError("Failed to export to Excel. Please try again.");
+    }
   };
 
   return (
@@ -311,10 +341,16 @@ export default function OnlineLearningView({ onlineLearning }) {
 
           <button
             onClick={handleExportExcel}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white 
-               rounded-lg hover:bg-green-700 transition-colors"
+            disabled={selectedOnlineLearning.length === 0}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-green-500 font-medium text-sm"
           >
-            Export Excel
+            <FileSpreadsheet size={16} />
+            <span>Export Excel</span>
+            {selectedOnlineLearning.length > 0 && (
+              <span className="bg-white text-green-600 px-2 py-0.5 rounded-full text-xs font-semibold">
+                {selectedOnlineLearning.length}
+              </span>
+            )}
           </button>
         </div>
       </div>
