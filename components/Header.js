@@ -40,9 +40,24 @@ const Header = () => {
     const [unreadCount, setUnreadCount] = useState(0);
     const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
     
+    // Mobile detection state
+    const [isMobile, setIsMobile] = useState(false);
+    
     useEffect(() => {
         getSession();
         getKaryawan();
+    }, []);
+    
+    // Detect mobile screen
+    useEffect(() => {
+        const checkMobile = () => {
+            setIsMobile(window.innerWidth < 640);
+        };
+        
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        
+        return () => window.removeEventListener('resize', checkMobile);
     }, []);
     
     // Fetch notifications
@@ -111,19 +126,20 @@ const Header = () => {
           const now = new Date();
           const diffInSeconds = Math.floor((now - date) / 1000);
           
-          if (diffInSeconds < 60) return listLanguage.just_now;
-          if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} ${listLanguage.minutes_ago}`;
-          if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} ${listLanguage.hours_ago}`;
-          if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} ${listLanguage.days_ago}`;
+          if (diffInSeconds < 60) return listLanguage.just_now || 'Baru saja';
+          if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} ${listLanguage.minutes_ago || 'menit lalu'}`;
+          if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} ${listLanguage.hours_ago || 'jam lalu'}`;
+          if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} ${listLanguage.days_ago || 'hari lalu'}`;
           return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
     };
     
     // Handle mark as read
     const handleMarkAsRead = async (notificationId) => {
         try {
-          if (markNotificationRead) {
-            await markNotificationRead(notificationId);
-          }
+          // Uncomment when API is ready
+          // if (markNotificationRead) {
+          //   await markNotificationRead(notificationId);
+          // }
           setNotifications(prev => 
             prev.map(n => n.id_notification === notificationId ? { ...n, is_read: true } : n)
           );
@@ -159,136 +175,143 @@ const Header = () => {
                         <ul className='flex justify-between items-center space-x-3 select-none'>
                             
                             {/* Notification Bell */}
-                                        {isAuthenticated && (
-                                          <li className='flex items-center relative'>
-                                            <Menu as='div' className="relative">
-                                              <Menu.Button 
-                                                className='w-10 h-10 rounded-full cursor-pointer flex items-center justify-center relative hover:bg-gray-100 transition-colors'
-                                                onClick={() => setShowNotificationDropdown(!showNotificationDropdown)}
-                                              >
-                                                <Bell className="w-6 h-6 text-blue-900" />
-                                                {unreadCount > 0 && (
-                                                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center animate-pulse">
-                                                    {unreadCount > 9 ? '9+' : unreadCount}
-                                                  </span>
-                                                )}
-                                              </Menu.Button>
-                            
-                                              <Transition
-                                                as={Fragment}
-                                                enter='transition ease-out duration-200'
-                                                enterFrom='transform opacity-0 scale-95 -translate-y-2'
-                                                enterTo='transform opacity-100 scale-100 translate-y-0'
-                                                leave='transition ease-in duration-150'
-                                                leaveFrom='transform opacity-100 scale-100 translate-y-0'
-                                                leaveTo='transform opacity-0 scale-95 -translate-y-2'
-                                              >
-                                                <Menu.Items className='absolute right-0 mt-2 w-96 origin-top-right rounded-xl bg-white shadow-2xl ring-1 ring-black ring-opacity-5 focus:outline-none overflow-hidden'>
-                                                  {/* Header */}
-                                                  <div className="px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-purple-50">
-                                                    <div className="flex items-center justify-between">
-                                                      <div className="flex items-center gap-2">
-                                                        <Bell className="w-5 h-5 text-blue-600" />
-                                                        <h3 className="font-bold text-gray-900">{listLanguage.notifications}</h3>
-                                                        {unreadCount > 0 && (
-                                                          <span className="px-2 py-0.5 bg-blue-500 text-white text-xs font-semibold rounded-full">
-                                                            {unreadCount} new
-                                                          </span>
+                            {isAuthenticated && (
+                              <li className='flex items-center relative'>
+                                <Menu as='div' className="relative">
+                                  <Menu.Button 
+                                    className='w-10 h-10 rounded-full cursor-pointer flex items-center justify-center relative hover:bg-gray-100 transition-colors'
+                                    onClick={() => setShowNotificationDropdown(!showNotificationDropdown)}
+                                  >
+                                    <Bell className="w-6 h-6 text-blue-900" />
+                                    {unreadCount > 0 && (
+                                      <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center animate-pulse">
+                                        {unreadCount > 9 ? '9+' : unreadCount}
+                                      </span>
+                                    )}
+                                  </Menu.Button>
+            
+                                  <Transition
+                                    as={Fragment}
+                                    enter='transition ease-out duration-200'
+                                    enterFrom='transform opacity-0 scale-95 -translate-y-2'
+                                    enterTo='transform opacity-100 scale-100 translate-y-0'
+                                    leave='transition ease-in duration-150'
+                                    leaveFrom='transform opacity-100 scale-100 translate-y-0'
+                                    leaveTo='transform opacity-0 scale-95 -translate-y-2'
+                                  >
+                                    <Menu.Items 
+                                      className={`${
+                                        isMobile 
+                                          ? 'fixed left-4 right-4 top-16' 
+                                          : 'absolute right-0 mt-2 w-96'
+                                      } origin-top-right rounded-xl bg-white shadow-2xl ring-1 ring-black ring-opacity-5 focus:outline-none overflow-hidden z-[100]`}
+                                    >
+                                      {/* Header */}
+                                      <div className="px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-purple-50">
+                                        <div className="flex items-center justify-between gap-2">
+                                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                                            <Bell className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                                            <h3 className="font-bold text-gray-900 text-sm sm:text-base">
+                                              {listLanguage.notifications || 'Notifikasi'}
+                                            </h3>
+                                            {unreadCount > 0 && (
+                                              <span className="px-2 py-0.5 bg-blue-500 text-white text-xs font-semibold rounded-full">
+                                                {unreadCount}
+                                              </span>
+                                            )}
+                                          </div>
+                                          {unreadCount > 0 && (
+                                            <button
+                                              onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  handleMarkAllAsRead();
+                                              }}
+                                              className="text-xs text-blue-600 hover:text-blue-800 font-medium hover:underline whitespace-nowrap flex-shrink-0"
+                                            >
+                                                {listLanguage.mark_all_read || 'Tandai semua'}
+                                            </button>
+                                          )}
+                                        </div>
+                                      </div>
+                
+                                      {/* Notification List */}
+                                      <div className="max-h-[60vh] sm:max-h-96 overflow-y-auto">
+                                        {loadingNotifications ? (
+                                          <div className="flex items-center justify-center py-8">
+                                            <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+                                          </div>
+                                        ) : notifications.length > 0 ? (
+                                          notifications.slice(0, 5).map((notif) => (
+                                            <Menu.Item key={notif.id_notification}>
+                                              {({ active }) => (
+                                                <div
+                                                  className={`px-4 py-3 border-b border-gray-50 cursor-pointer transition-all ${
+                                                    getNotificationBg(notif.category, notif.is_read)
+                                                  } ${active ? 'bg-gray-100' : ''}`}
+                                                  onClick={() => !notif.is_read && handleMarkAsRead(notif.id_notification)}
+                                                >
+                                                  <div className="flex gap-3">
+                                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                                                      notif.is_read ? 'bg-gray-100' : 'bg-white shadow-sm'
+                                                    }`}>
+                                                      {getNotificationIcon(notif.category)}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                      <div className="flex items-start justify-between gap-2">
+                                                        <p className={`text-sm font-semibold ${notif.is_read ? 'text-gray-600' : 'text-gray-900'}`}>
+                                                          {notif.title}
+                                                        </p>
+                                                        {!notif.is_read && (
+                                                          <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1.5"></span>
                                                         )}
                                                       </div>
-                                                      {unreadCount > 0 && (
-                                                        <button
-                                                          onClick={(e) => {
-                                                              e.stopPropagation();
-                                                              handleMarkAllAsRead();
-                                                          }}
-                                                          className="text-xs text-blue-600 hover:text-blue-800 font-medium hover:underline"
-                                                        >
-                                                            {listLanguage.mark_all_read}
-                                                        </button>
-                                                      )}
+                                                      <p className={`text-xs mt-1 line-clamp-2 ${notif.is_read ? 'text-gray-500' : 'text-gray-700'}`}>
+                                                        {notif.message}
+                                                      </p>
+                                                      <p className="text-xs text-gray-400 mt-1.5">
+                                                        {formatTimeAgo(notif.created_at)}
+                                                      </p>
                                                     </div>
                                                   </div>
-                            
-                                                  {/* Notification List */}
-                                                  <div className="max-h-96 overflow-y-auto">
-                                                    {loadingNotifications ? (
-                                                      <div className="flex items-center justify-center py-8">
-                                                        <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
-                                                      </div>
-                                                    ) : notifications.length > 0 ? (
-                                                      notifications.slice(0, 5).map((notif) => (
-                                                        <Menu.Item key={notif.id_notification}>
-                                                          {({ active }) => (
-                                                            <div
-                                                              className={`px-4 py-3 border-b border-gray-50 cursor-pointer transition-all ${
-                                                                getNotificationBg(notif.category, notif.is_read)
-                                                              } ${active ? 'bg-gray-100' : ''}`}
-                                                              onClick={() => !notif.is_read && handleMarkAsRead(notif.id_notification)}
-                                                            >
-                                                              <div className="flex gap-3">
-                                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                                                                  notif.is_read ? 'bg-gray-100' : 'bg-white shadow-sm'
-                                                                }`}>
-                                                                  {getNotificationIcon(notif.category)}
-                                                                </div>
-                                                                <div className="flex-1 min-w-0">
-                                                                  <div className="flex items-start justify-between gap-2">
-                                                                    <p className={`text-sm font-semibold ${notif.is_read ? 'text-gray-600' : 'text-gray-900'}`}>
-                                                                      {notif.title}
-                                                                    </p>
-                                                                    {!notif.is_read && (
-                                                                      <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1.5"></span>
-                                                                    )}
-                                                                  </div>
-                                                                  <p className={`text-xs mt-1 line-clamp-2 ${notif.is_read ? 'text-gray-500' : 'text-gray-700'}`}>
-                                                                    {notif.message}
-                                                                  </p>
-                                                                  <p className="text-xs text-gray-400 mt-1.5">
-                                                                    {formatTimeAgo(notif.created_at)}
-                                                                  </p>
-                                                                </div>
-                                                              </div>
-                                                            </div>
-                                                          )}
-                                                        </Menu.Item>
-                                                      ))
-                                                    ) : (
-                                                      <div className="flex flex-col items-center justify-center py-8 text-center">
-                                                        <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-3">
-                                                          <Bell className="w-6 h-6 text-gray-400" />
-                                                        </div>
-                                                        <p className="text-gray-500">{listLanguage.no_notifications}</p>
-                                                        <p className="text-gray-400">{listLanguage.no_notifications_subtitle}</p>
-                                                      </div>
-                                                    )}
-                                                  </div>
-                            
-                                                  {/* Footer */}
-                                                  {notifications.length > 0 && (
-                                                    <div className="px-4 py-3 border-t border-gray-100 bg-gray-50">
-                                                      <button
-                                                        onClick={() => router.push('/notifications')}
-                                                        className="w-full flex items-center justify-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
-                                                      >
-                                                        {listLanguage.view_all_notifications}
-                                                        <ChevronRight className="w-4 h-4" />
-                                                      </button>
-                                                    </div>
-                                                  )}
-                                                </Menu.Items>
-                                              </Transition>
-                                            </Menu>
-                                          </li>
+                                                </div>
+                                              )}
+                                            </Menu.Item>
+                                          ))
+                                        ) : (
+                                          <div className="flex flex-col items-center justify-center py-8 text-center px-4">
+                                            <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-3">
+                                              <Bell className="w-6 h-6 text-gray-400" />
+                                            </div>
+                                            <p className="text-sm text-gray-500">{listLanguage.no_notifications || 'Tidak ada notifikasi'}</p>
+                                            <p className="text-xs text-gray-400 mt-1">{listLanguage.no_notifications_subtitle || 'Kamu akan menerima notifikasi di sini'}</p>
+                                          </div>
                                         )}
-                            
+                                      </div>
+                
+                                      {/* Footer */}
+                                      {notifications.length > 0 && (
+                                        <div className="px-4 py-3 border-t border-gray-100 bg-gray-50">
+                                          <button
+                                            onClick={() => router.push('/notifications')}
+                                            className="w-full flex items-center justify-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
+                                          >
+                                            {listLanguage.view_all_notifications || 'Lihat semua notifikasi'}
+                                            <ChevronRight className="w-4 h-4" />
+                                          </button>
+                                        </div>
+                                      )}
+                                    </Menu.Items>
+                                  </Transition>
+                                </Menu>
+                              </li>
+                            )}
 
                             {isAuthenticated ? (
                                 <li className='flex items-center px-1 border-l'>
-                                    <label className='pl-2 text-blue-900 font-normal mr-2 lg:block'>
+                                    <label className='pl-2 text-blue-900 font-normal mr-2 lg:block hidden'>
                                         {dataKaryawan?.nama}
                                     </label>
-                                    <Menu as='div'>
+                                    <Menu as='div' className="relative">
                                         <div> 
                                             <Menu.Button className='w-10 h-10 rounded-full cursor-pointer flex items-center relative border-none overflow-hidden'>
                                                 <img
@@ -306,9 +329,9 @@ const Header = () => {
                                                 leaveFrom='transform opacity-100 scale-100'
                                                 leaveTo='transform opacity-0 scale-95'
                                             >
-                                                <Menu.Items className='absolute right-0 mt-2 w-56 origin-top-right divide-y divide-gray-100 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none'>
+                                                <Menu.Items className='absolute right-0 mt-2 w-56 origin-top-right divide-y divide-gray-100 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50'>
                                                     <div className='px-1 py-1'>
-                                                        <label className='p-2 text-blue-900 lg:hidden block border-b-2 border-gray-200'>
+                                                        <label className='p-2 text-blue-900 lg:hidden block'>
                                                             {dataKaryawan?.nama}
                                                         </label>
                                                         <Menu.Item>
@@ -340,7 +363,7 @@ const Header = () => {
                                                                             : "text-blue-900"
                                                                     } group flex w-full items-center rounded-md px-2 py-2 text-sm`}
                                                                 >
-                                                                    {listLanguage.password_setting}
+                                                                    {listLanguage.password_setting || 'Ubah Password'}
                                                                 </button>
                                                             )}
                                                         </Menu.Item>
@@ -355,7 +378,7 @@ const Header = () => {
                                                                             : "text-blue-900"
                                                                     } group flex w-full items-center rounded-md px-2 py-2 text-sm`}
                                                                 >
-                                                                    {listLanguage.logout}
+                                                                    {listLanguage.logout || 'Keluar'}
                                                                 </button>
                                                             )}
                                                         </Menu.Item>
@@ -390,7 +413,7 @@ const Header = () => {
                                             pathname == "/login" ? "underline" : ""
                                         }`}
                                     >
-                                        <Link href='/login'>{listLanguage.login}</Link>
+                                        <Link href='/login'>{listLanguage.login || 'Masuk'}</Link>
                                     </li>
                                 </>
                             )}
