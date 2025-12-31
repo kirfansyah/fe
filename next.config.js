@@ -53,7 +53,7 @@ module.exports = withPWA({
         destination: "/login",
       },
       {
-        source: "/api/v1/:path*",
+        source: "/api/proxy/:path*",
         destination: `${process.env.API_URL}/:path*`,
       },
     ];
