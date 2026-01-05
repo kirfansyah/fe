@@ -164,7 +164,7 @@ const Header = () => {
 
     return ( 
         <>
-            <header className='flex items-center w-full h-16 bg-transparent sticky top-0 left-0 z-99 backdrop-blur backdrop-filter'>
+            <header className='flex items-center w-full h-16 bg-transparent sticky top-0 left-0 z-[999] backdrop-blur backdrop-filter'>
                 <div className='relative w-full container mx-auto flex items-center justify-between h-full px-4'>
                     <div className='flex items-center'>
                         <a href='/'>
