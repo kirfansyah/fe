@@ -25,6 +25,8 @@ export default function EbookEmployee() {
     fetchEbookDetail,
   } = useEbookEmployee();
 
+  console.log("ebooks", ebooks);
+
   const [selectedEbooks, setSelectedEbooks] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [pageSize, setPageSize] = useState(10);
@@ -62,9 +64,7 @@ export default function EbookEmployee() {
     ),
   ];
   const company_units = [
-    ...new Set(
-      ebooks.map((e) => e.company_unit_name || e.company_unit).filter(Boolean)
-    ),
+    ...new Set(ebooks.map((e) => e.company_name).filter(Boolean)),
   ];
   const authors = [...new Set(ebooks.map((e) => e.author).filter(Boolean))];
 
@@ -80,8 +80,7 @@ export default function EbookEmployee() {
       !selectedSubCategory ||
       (ebook.subcategory_name || ebook.sub_category) === selectedSubCategory;
     const matchCompanyUnit =
-      !selectedCompanyUnit ||
-      (ebook.company_unit_name || ebook.company_unit) === selectedCompanyUnit;
+      !selectedCompanyUnit || ebook.company_name === selectedCompanyUnit;
     const matchAuthor = !selectedAuthor || ebook.author === selectedAuthor;
 
     return (
@@ -735,9 +734,9 @@ export default function EbookEmployee() {
                         {ebook.author || "-"}
                       </td>
                       <td className="px-4 py-3">
-                        {ebook.company_unit_name || ebook.company_unit ? (
+                        {ebook.company_name ? (
                           <span className="inline-block px-2 py-1 bg-indigo-50 text-indigo-700 text-xs font-medium rounded">
-                            {ebook.company_unit_name || ebook.company_unit}
+                            {ebook.company_name}
                           </span>
                         ) : (
                           <span className="text-gray-400">-</span>
