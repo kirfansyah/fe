@@ -16,7 +16,6 @@ import {
   Loader2,
   ChevronRight
 } from "lucide-react";
-import ChangePasswordModal from "components/ChangePasswordModal";
 import { useRoles } from "@/hooks/useRoles";
 
 const Header = () => {
@@ -348,20 +347,6 @@ const Header = () => {
                               </button>
                             )}
                           </Menu.Item>
-                           
-                          <Menu.Item>
-                            {({ active }) => (
-                              <button
-                                onClick={() => setShowChangePassword(true)}
-                                className={`${
-                                  active
-                                    ? "bg-blue-900 text-white"
-                                    : "text-blue-900"
-                                } group flex w-full items-center rounded-md px-2 py-2 text-sm`}>
-                                {listLanguage.password_setting || 'Ubah Password'}
-                              </button>
-                            )}
-                          </Menu.Item>
                           
                           <Menu.Item>
                             {({ active }) => (
@@ -423,10 +408,6 @@ const Header = () => {
           </ul>
         </div>
       </header>
-      <ChangePasswordModal 
-        isOpen={showChangePassword}
-        onClose={() => setShowChangePassword(false)}
-      />
     </>
   );
 };

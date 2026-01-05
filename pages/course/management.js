@@ -26,6 +26,7 @@ export default function Management() {
         fetchEnrollData,
         deleteCourse, 
         deleteContent,
+        duplicateTest,
         enrollData,
         isLoading,  
         isSaving
@@ -99,6 +100,17 @@ export default function Management() {
         setSelectedCourseId(courseId);
         setCurrentPage('editContent');
         setSelectedContentId(contentId); 
+    };
+
+    const handleDuplicateTest = async (duplicateData) => {
+        try {
+            await duplicateTest(duplicateData);
+            await fetchCourses();
+            await fetchEnrollData();
+        } catch (error) {
+            throw error; 
+        }
+        setCurrentPage('main');
     };
 
     const handleSaveSuccess = async () => {
@@ -215,6 +227,7 @@ export default function Management() {
                             onDeleteContentSuccess={handleDeleteSuccess}
                             isLoading={isLoading}    
                             isSaving={isSaving}
+                            onDuplicateTest={handleDuplicateTest}
                             permissions={permissions}
                         />
                     )}

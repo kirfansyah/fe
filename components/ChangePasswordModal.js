@@ -34,13 +34,6 @@ export default function ChangePasswordModal({ isOpen, onClose, currentUser }) {
         confirm: false
     });
 
-    // Profile photo states
-    const [profilePhoto, setProfilePhoto] = useState(currentUser?.photo || null);
-    const [previewPhoto, setPreviewPhoto] = useState(currentUser?.photo || null);
-    const [photoFile, setPhotoFile] = useState(null);
-    const [photoError, setPhotoError] = useState('');
-    const fileInputRef = useRef(null);
-
     const [errors, setErrors] = useState({});
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
@@ -59,50 +52,9 @@ export default function ChangePasswordModal({ isOpen, onClose, currentUser }) {
         { id: 'special', text: 'One special character', regex: /[@$!%*?&#]/ }
     ];
 
-    // Handle file selection
-    const handleFileSelect = (e) => {
-        const file = e.target.files[0];
-        setPhotoError('');
 
-        if (!file) return;
 
-        // Validate file type
-        const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-        if (!validTypes.includes(file.type)) {
-            setPhotoError('Please upload a valid image (JPG, PNG, or WebP)');
-            return;
-        }
-
-        // Validate file size (max 5MB)
-        const maxSize = 5 * 1024 * 1024; // 5MB
-        if (file.size > maxSize) {
-            setPhotoError('Image size must be less than 5MB');
-            return;
-        }
-
-        // Create preview
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            setPreviewPhoto(reader.result);
-            setPhotoFile(file);
-        };
-        reader.readAsDataURL(file);
-    };
-
-    // Trigger file input
-    const handlePhotoClick = () => {
-        fileInputRef.current?.click();
-    };
-
-    // Remove photo
-    const handleRemovePhoto = () => {
-        setPreviewPhoto(null);
-        setPhotoFile(null);
-        setPhotoError('');
-        if (fileInputRef.current) {
-            fileInputRef.current.value = '';
-        }
-    };
+    
 
     // Check password strength
     const checkPasswordStrength = (password) => {
@@ -215,10 +167,10 @@ export default function ChangePasswordModal({ isOpen, onClose, currentUser }) {
         const isChangingPassword = formData.current_password || 
                                    formData.new_password || 
                                    formData.confirm_password;
-        const isChangingPhoto = photoFile !== null;
+        
 
-        if (!isChangingPassword && !isChangingPhoto) {
-            setErrors({ submit: 'Please change your password or photo to update' });
+        if (!isChangingPassword) {
+            setErrors({ submit: 'Please change your password to update' });
             return;
         }
 
@@ -235,10 +187,6 @@ export default function ChangePasswordModal({ isOpen, onClose, currentUser }) {
                     confirm_new_password: formData.confirm_password
                 }),
                 
-                // Photo data (if changing)
-                ...(isChangingPhoto && {
-                    profile_photo: photoFile
-                }),
             };
 
             
@@ -261,7 +209,7 @@ export default function ChangePasswordModal({ isOpen, onClose, currentUser }) {
             const errorMessage = 
                 error.response?.data?.message || 
                 error.message || 
-                'Failed to update profile. Please try again.';
+                'Failed to update Password. Please try again.';
             
             setErrors({ submit: errorMessage });
         } finally {
@@ -285,9 +233,6 @@ export default function ChangePasswordModal({ isOpen, onClose, currentUser }) {
             setErrors({});
             setSuccess(false);
             setPasswordStrength({ score: 0, text: '', color: '', passed: {} });
-            setPreviewPhoto(currentUser?.photo || null);
-            setPhotoFile(null);
-            setPhotoError('');
             onClose();
         }
     };
@@ -295,25 +240,19 @@ export default function ChangePasswordModal({ isOpen, onClose, currentUser }) {
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-                {/* Header */}
-                <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-blue-50 to-blue-100">
-                    <div className="flex items-center gap-2">
-                        <User className="w-5 h-5 text-blue-600" />
-                        <h3 className="text-lg font-semibold text-gray-900">Update Profile</h3>
-                    </div>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[50] p-4">
+            <div className="bg-white rounded-lg max-w-md w-full p-8 shadow-2xl max-h-[90vh] overflow-y-auto">
+                <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-2xl font-bold text-gray-900">Update Password</h3>
                     <button
-                        onClick={handleClose}
-                        disabled={loading}
-                        className="p-1 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50"
+                    onClick={handleClose}
+                    disabled={loading}
+                    className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-gray-100 transition-colors"
                     >
-                        <X className="w-5 h-5 text-gray-500" />
+                    <X className="w-5 h-5 text-gray-500" />
                     </button>
                 </div>
-
-                {/* Body */}
-                <div className="p-6">
+                <div className="grid mb-4 gap-6">
                     {/* Success Alert */}
                     {success && (
                         <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
@@ -321,7 +260,7 @@ export default function ChangePasswordModal({ isOpen, onClose, currentUser }) {
                                 <CheckCircle className="w-5 h-5 text-green-600 mr-2" />
                                 <div>
                                     <p className="text-sm font-medium text-green-800">
-                                        Profile updated successfully!
+                                        Password updated successfully!
                                     </p>
                                     <p className="text-xs text-green-600 mt-0.5">
                                         Closing in a moment...
@@ -342,90 +281,8 @@ export default function ChangePasswordModal({ isOpen, onClose, currentUser }) {
                     )}
 
                     <form onSubmit={handleSubmit} className="space-y-6">
-                        {/* Profile Photo Section */}
-                        <div className="border-b border-gray-200 pb-6">
-                            <label className="block text-sm font-medium text-gray-700 mb-3">
-                                Profile Photo
-                            </label>
-                            
-                            <div className="flex items-center gap-4">
-                                {/* Photo Preview */}
-                                <div className="relative">
-                                    <div className="w-24 h-24 rounded-full overflow-hidden bg-gray-100 border-2 border-gray-200">
-                                        {previewPhoto ? (
-                                            <img
-                                                src={previewPhoto}
-                                                alt="Profile"
-                                                className="w-full h-full object-cover"
-                                            />
-                                        ) : (
-                                            <div className="w-full h-full flex items-center justify-center">
-                                                <User className="w-12 h-12 text-gray-400" />
-                                            </div>
-                                        )}
-                                    </div>
-                                    
-                                    {/* Camera button overlay */}
-                                    <button
-                                        type="button"
-                                        onClick={handlePhotoClick}
-                                        className="absolute bottom-0 right-0 p-2 bg-blue-600 rounded-full text-white hover:bg-blue-700 transition-colors shadow-lg"
-                                        title="Change photo"
-                                    >
-                                        <Camera className="w-4 h-4" />
-                                    </button>
-                                </div>
-
-                                {/* Upload/Remove Buttons */}
-                                <div className="flex-1">
-                                    <input
-                                        ref={fileInputRef}
-                                        type="file"
-                                        accept="image/jpeg,image/jpg,image/png,image/webp"
-                                        onChange={handleFileSelect}
-                                        className="hidden"
-                                    />
-                                    
-                                    <div className="flex gap-2">
-                                        <button
-                                            type="button"
-                                            onClick={handlePhotoClick}
-                                            className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors border border-blue-200"
-                                        >
-                                            <Upload className="w-4 h-4" />
-                                            Upload Photo
-                                        </button>
-                                        
-                                        {previewPhoto && (
-                                            <button
-                                                type="button"
-                                                onClick={handleRemovePhoto}
-                                                className="flex items-center gap-2 px-3 py-2 text-sm bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors border border-red-200"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                                Remove
-                                            </button>
-                                        )}
-                                    </div>
-                                    
-                                    <p className="text-xs text-gray-500 mt-2">
-                                        JPG, PNG or WebP. Max 5MB.
-                                    </p>
-                                    
-                                    {photoError && (
-                                        <p className="text-xs text-red-600 mt-1">{photoError}</p>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-
                         {/* Password Section Header */}
                         <div>
-                            <div className="flex items-center gap-2 mb-4">
-                                <Key className="w-5 h-5 text-gray-600" />
-                                <h4 className="text-sm font-medium text-gray-700">Change Password (Optional)</h4>
-                            </div>
-
                             <div className="space-y-4">
                                 {/* Current Password */}
                                 <div>
@@ -552,7 +409,7 @@ export default function ChangePasswordModal({ isOpen, onClose, currentUser }) {
                                         <p className="mt-1 text-xs text-red-600">{errors.confirm_password}</p>
                                     )}
                                     {formData.new_password && formData.confirm_password && 
-                                     formData.new_password === formData.confirm_password && (
+                                        formData.new_password === formData.confirm_password && (
                                         <p className="mt-1 text-xs text-green-600 flex items-center">
                                             <CheckCircle className="w-3 h-3 mr-1" />
                                             Passwords match
@@ -588,21 +445,12 @@ export default function ChangePasswordModal({ isOpen, onClose, currentUser }) {
                         </div>
                     </form>
                 </div>
-
                 {/* Footer */}
-                <div className="px-6 py-4 bg-gray-50 flex justify-end gap-3 border-t border-gray-200">
-                    <button
-                        type="button"
-                        onClick={handleClose}
-                        disabled={loading}
-                        className="px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50"
-                    >
-                        Cancel
-                    </button>
+                <div className="flex gap-3">
                     <button
                         onClick={handleSubmit}
                         disabled={loading}
-                        className="px-4 py-2 text-sm text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        className="flex-1 px-6 py-3 text-sm text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                     >
                         {loading ? (
                             <>
@@ -612,9 +460,17 @@ export default function ChangePasswordModal({ isOpen, onClose, currentUser }) {
                         ) : (
                             <>
                                 <CheckCircle className="w-4 h-4" />
-                                Update Profile
+                                Update Password
                             </>
                         )}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={handleClose}
+                        disabled={loading}
+                        className="px-6 py-3 text-sm text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50"
+                    >
+                        Cancel
                     </button>
                 </div>
             </div>

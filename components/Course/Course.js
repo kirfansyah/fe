@@ -1,7 +1,7 @@
 import { 
     Plus, Trash2, Globe, GlobeLock, FileText, ChevronDown, ChevronRight,
     Video, FileCheck, ClipboardList, Edit, X, Search, Upload,
-    Grid, List, Shield,
+    Grid, List, Copy,
     Eye
 } from "lucide-react";
 import { useState, useContext } from "react";
@@ -22,6 +22,7 @@ export default function Course({
     onDeleteContent,
     onViewContent,
     onDeleteContentSuccess,
+    onDuplicateTest,
     permissions // ✅ Receive permissions from parent
 }) {
     const [expandedCourse, setExpandedCourse] = useState(null);
@@ -198,6 +199,47 @@ export default function Course({
             return;
         }
         onViewContent(courseId, contentId, contentTypeId);
+    };
+
+    const handleDuplicateTest = async (courseId, contentId, currentTypeId, currentTypeName) => {
+        if (!permissions?.can_create) {
+            showError('You do not have permission to duplicate content');
+            return;
+        }
+        
+        // Determine target type based on current type
+        const targetTypeId = 7; // Assuming 7 is the ID for Post Test
+        const targetTypeName = 'Post Test';
+        
+        const result = await confirmAction({
+            title: `Duplicate as ${targetTypeName}?`,
+            text: `This will create a copy of "${currentTypeName}" as ${targetTypeName}`,
+            confirmButtonText: 'Yes, duplicate it!',
+            icon: 'question'
+        });
+        
+        if (!result.isConfirmed) return;
+        
+        try {
+            showLoading(`Duplicating to ${targetTypeName}...`);
+            
+            // Call parent handler dengan target type id
+            await onDuplicateTest({
+                courseId,
+                contentId,
+                targetTypeId,
+                targetTypeName
+            });
+            
+            // Refresh data
+            if (onDeleteContentSuccess) {
+                await onDeleteContentSuccess();
+            }
+            
+            await showSuccess(`Successfully duplicated as ${targetTypeName}!`);
+        } catch (error) {
+            showError('Failed to duplicate test: ' + error.message);
+        }
     };
 
     const handleCancel = () => {
@@ -625,6 +667,21 @@ export default function Course({
                                                         title="Edit content"
                                                     >
                                                         <Edit className="w-4 h-4" />
+                                                    </button>
+                                                )}
+
+                                                {permissions?.can_create && (content.id_content_type === 3 || content.id_content_type === 8) && (
+                                                    <button
+                                                        onClick={() => handleDuplicateTest(
+                                                            course.id_course, 
+                                                            content.id_course_content,
+                                                            content.id_content_type,
+                                                            content.content_type_name
+                                                        )}
+                                                        className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors border border-green-200"
+                                                        title={`Duplicate as ${content.id_content_type === 3 ? 'Posttest' : 'Pretest'}`}
+                                                    >
+                                                        <Copy className="w-4 h-4" />
                                                     </button>
                                                 )}
                                                 
