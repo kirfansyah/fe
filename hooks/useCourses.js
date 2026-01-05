@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback, useContext } from "react";
 import ManagementService from '@/services/ManagementService';
 import { useRouter } from 'next/router';
 import { ProfileContext } from '@/contexts/profile/ProfileContext';
-
+import { getDeviceInfo } from '@/lib/deviceHelper';
 export function useCourses(contentId = null) {
     const [courses, setCourses] = useState([]);
     const [contentTypes, setContentTypes] = useState([]);
@@ -292,6 +292,74 @@ export function useCourses(contentId = null) {
         return result;
     }, [dataKaryawan]);
 
+    const duplicateTest = useCallback(async (duplicateData) => {
+        setIsSaving(true);
+        setError(null);
+        
+        try {
+            const contentResult = await fetchContentByID(duplicateData.contentId);
+            
+            if (!contentResult.success) {
+                throw new Error('Failed to fetch content data');
+            }
+            
+            const originalContent = contentResult.data;
+            const deviceInfo = getDeviceInfo();
+            const userName = dataKaryawan?.nama || 'System';
+            
+            const transformedQuestions = (originalContent.questions || []).map((question) => ({
+                question_no: question.question_no,
+                question_text: question.question_text,
+                correct_answer_points: question.correct_answer_points,
+                created_by: userName,
+                created_device: deviceInfo.device || 'web',
+                options: (question.options || []).map(option => ({
+                    option_label: option.option_label,
+                    option_text: option.option_text,
+                    is_correct: option.is_correct
+                }))
+            }));
+            
+            const newContentData = {
+                id_course: duplicateData.courseId,
+                id_content_type: duplicateData.targetTypeId, 
+                content_title: `${originalContent.content_title} (Copy)`,
+                total_points: originalContent.total_points,
+                total_number: originalContent.total_number,
+                point_distribution_type: originalContent.point_distribution_type,
+                time_duration: originalContent.time_duration,
+                random_type: originalContent.random_type,
+                created_by: userName,
+                created_device: deviceInfo.device || 'web',
+                questions: transformedQuestions
+            };
+            
+            
+            const result = await handleSavePreTest(newContentData);
+            
+            if (result.success) {
+                await fetchCourses();
+                await fetchEnrollData();
+            } else {
+                setError(result.message);
+            }
+            
+            setIsSaving(false);
+            return result;
+            
+        } catch (error) {
+            console.error('Duplicate test error:', error);
+            setError(error.message);
+            setIsSaving(false);
+            
+            return {
+                success: false,
+                message: error.message || 'Failed to duplicate content',
+                data: null
+            };
+        }
+    }, [fetchContentByID, handleSavePreTest, fetchCourses, fetchEnrollData, dataKaryawan]);
+
     // ✅ Initial load
     useEffect(() => {
         Promise.all([
@@ -339,6 +407,7 @@ export function useCourses(contentId = null) {
         fetchCompanyUnits,
         fetchEnrollData,
         addGroupEnroll,
-        deleteContent
+        deleteContent,
+        duplicateTest
     };
 }
