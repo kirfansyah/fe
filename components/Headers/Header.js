@@ -305,67 +305,77 @@ const Header = () => {
 
             {isAuthenticated ? (
               <li className='flex items-center px-1 border-l'>
-                <label className='pl-2 text-blue-900 font-normal mr-2 hidden lg:block'>
-                  {dataKaryawan?.nama}
-                </label>
-                <Menu as='div' className="relative">
-                  <div> 
-                    <Menu.Button className='w-10 h-10 rounded-full cursor-pointer flex items-center relative border-none overflow-hidden'>
-                      <img
-                        src='/img/user.png'
-                        style={{ objectFit: "cover" }}
-                        className='absolute top-0 left-0'
-                      />
-                    </Menu.Button>
-                    <Transition
-                      as={Fragment}
-                      enter='transition ease-out duration-100'
-                      enterFrom='transform opacity-0 scale-95'
-                      enterTo='transform opacity-100 scale-100'
-                      leave='transition ease-in duration-75'
-                      leaveFrom='transform opacity-100 scale-100'
-                      leaveTo='transform opacity-0 scale-95'>
-                      <Menu.Items className='absolute right-0 mt-2 w-56 origin-top-right divide-y divide-gray-100 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50'>
-                        <div className='px-1 py-1'>
-                          <label className='p-2 text-blue-900 lg:hidden block'>
-                            {dataKaryawan?.nama}
-                          </label>
-                          <Menu.Item>
-                            {({ active }) => (
-                              <button
-                                onClick={() =>
-                                  router.push("/profile", null, {
-                                    shallow: true,
-                                  })
-                                }
-                                className={`${
-                                  active
-                                    ? "bg-blue-900 text-white"
-                                    : "text-blue-900"
-                                } group flex w-full items-center rounded-md px-2 py-2 text-sm`}>
-                                Profile
-                              </button>
-                            )}
-                          </Menu.Item>
+                  <label className='pl-2 text-blue-900 font-normal mr-2 hidden lg:block'>
+                      {dataKaryawan?.nama}
+                  </label>
+                  <Menu as='div' className="relative">
+                      <div> 
+                          <Menu.Button className='w-10 h-10 rounded-full cursor-pointer flex items-center relative border-none overflow-hidden bg-gray-200'>
+                              <img
+                                  src={
+                                      dataKaryawan?.profile_photo_url 
+                                          ? `${process.env.NEXT_PUBLIC_API_BASE || ''}/${dataKaryawan.profile_photo_url.replace(/^\//, '')}`
+                                          : `https://ui-avatars.com/api/?name=${encodeURIComponent(dataKaryawan?.nama || 'User')}&background=3b82f6&color=fff`
+                                  }
+                                  alt={dataKaryawan?.nama || 'Profile'}
+                                  className='w-full h-full object-cover rounded-full'
+                                  onError={(e) => {
+                                      if (!e.target.src.includes('ui-avatars.com')) {
+                                          e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(dataKaryawan?.nama || 'User')}&background=3b82f6&color=fff`;
+                                      }
+                                  }}
+                              />
+                          </Menu.Button>
                           
-                          <Menu.Item>
-                            {({ active }) => (
-                              <button
-                                onClick={Logout}
-                                className={`${
-                                  active
-                                    ? "bg-red-600 text-white"
-                                    : "text-blue-900"
-                                } group flex w-full items-center rounded-md px-2 py-2 text-sm`}>
-                                {listLanguage.logout || 'Keluar'}
-                              </button>
-                            )}
-                          </Menu.Item>
-                        </div>
-                      </Menu.Items>
-                    </Transition>
-                  </div>
-                </Menu>
+                          <Transition
+                              as={Fragment}
+                              enter='transition ease-out duration-100'
+                              enterFrom='transform opacity-0 scale-95'
+                              enterTo='transform opacity-100 scale-100'
+                              leave='transition ease-in duration-75'
+                              leaveFrom='transform opacity-100 scale-100'
+                              leaveTo='transform opacity-0 scale-95'
+                          >
+                              {/* ✅ FIX: Tambahkan isMobile conditional */}
+                              <Menu.Items className={`${
+                                  isMobile 
+                                      ? 'fixed right-4 top-20'  // Mobile: fixed dari kanan (sesuai header height)
+                                      : 'absolute right-0 mt-2'  // Desktop: absolute dari button
+                              } w-56 origin-top-right divide-y divide-gray-100 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50`}>
+                                  <div className='px-1 py-1'>
+                                      <label className='p-2 text-blue-900 lg:hidden block'>
+                                          {dataKaryawan?.nama}
+                                      </label>
+                                      <Menu.Item>
+                                          {({ active }) => (
+                                              <button
+                                                  onClick={() => router.push("/profile", null, { shallow: true })}
+                                                  className={`${
+                                                      active ? "bg-blue-900 text-white" : "text-blue-900"
+                                                  } group flex w-full items-center rounded-md px-2 py-2 text-sm`}
+                                              >
+                                                  Profile
+                                              </button>
+                                          )}
+                                      </Menu.Item>
+                                      
+                                      <Menu.Item>
+                                          {({ active }) => (
+                                              <button
+                                                  onClick={Logout}
+                                                  className={`${
+                                                      active ? "bg-red-600 text-white" : "text-blue-900"
+                                                  } group flex w-full items-center rounded-md px-2 py-2 text-sm`}
+                                              >
+                                                  {listLanguage.logout || 'Keluar'}
+                                              </button>
+                                          )}
+                                      </Menu.Item>
+                                  </div>
+                              </Menu.Items>
+                          </Transition>
+                      </div>
+                  </Menu>
               </li>
             ) : (
               <>
