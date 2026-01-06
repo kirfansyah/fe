@@ -229,7 +229,7 @@ export default function CompleteModernProfile() {
                       <div className="w-32 h-32 rounded-full bg-gradient-to-br from-blue-400 to-purple-600 p-1 shadow-2xl">
                         <img
                           src={photoPreview || (
-                             `${process.env.NEXT_PUBLIC_API_URL || ''}${profileData.profile_photo_url}`
+                             `${process.env.NEXT_PUBLIC_API_BASE || ''}${profileData.profile_photo_url}`
                           )}
                           alt={profileData.nama || "Profile"}
                           className="w-full h-full rounded-full object-cover bg-white"
