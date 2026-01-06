@@ -419,7 +419,8 @@ class ManagementService {
             const response = await API.get("/employee", {
                 params: {
                     page,
-                    limit: pageSize
+                    limit: pageSize,
+                    employment_status: '1'
                 }
             });
             return {
