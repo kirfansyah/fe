@@ -588,6 +588,7 @@ export default function Management() {
                         )}
                       >
                         <option value="">Select Company</option>
+                        <option value="0">All Company</option>
                         {companys?.map((c) => (
                           <option key={c.id} value={c.id}>
                             {c.company_name}
