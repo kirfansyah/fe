@@ -53,7 +53,10 @@ export const useSweetAlert = () => {
             title,
             text: message,
             confirmButtonColor: '#1e3a8a',
-            confirmButtonText: 'OK'
+            confirmButtonText: 'OK',
+            customClass: { 
+                confirmButton: "swal-ok-style",
+            }
         });
     };
 
@@ -64,7 +67,10 @@ export const useSweetAlert = () => {
             title,
             text: message,
             confirmButtonColor: '#f59e0b',
-            confirmButtonText: 'OK'
+            confirmButtonText: 'OK',
+            customClass: { 
+                confirmButton: "swal-ok-style",
+            }
         });
     };
 
@@ -118,7 +124,11 @@ export const useSweetAlert = () => {
             cancelButtonColor: '#6b7280',
             confirmButtonText: 'OK',
             cancelButtonText: 'Batal',
-            ...otherOptions
+            ...otherOptions,
+            customClass: { 
+                confirmButton: "swal-ok-style",
+                cancelButton: "swal-cancel-style",
+            }
         });
     };
 
