@@ -14,8 +14,8 @@ import { useState, useEffect } from "react";
 import EnrollmentFormModal from "./EnrollmentForm";
 import Swal from 'sweetalert2';
 
-export default function CourseCard({ 
-    course, 
+export default function CourseCard({
+    course,
     index,
     isExpanded,
     onToggleExpand,
@@ -78,7 +78,7 @@ export default function CourseCard({
 
         const newEnrollmentIndex = enrollments.length;
         setPendingModalOpen(newEnrollmentIndex);
-        onAddEnrollment(course.id_course); 
+        onAddEnrollment(course.id_course);
     };
 
     const handleSaveEnrollment = async (courseId, enrollmentIndex) => {
@@ -115,12 +115,16 @@ export default function CourseCard({
             cancelButtonColor: '#6b7280',
             confirmButtonText: 'Yes, Delete',
             cancelButtonText: 'Cancel',
-            reverseButtons: true
+            reverseButtons: true,
+            customClass: {
+                cancelButton: "swal-cancel-style",
+                confirmButton: "swal-confirm-style",
+            }
         });
 
         if (!result.isConfirmed) return;
 
-        
+
         const deleteResult = await onDeleteEnrollment(
             course.id_course,
             enrollment.id_course_enrollment,
@@ -154,9 +158,9 @@ export default function CourseCard({
     // ✅ Handle Edit (with permission check)
     const handleEditClick = (enrollment, idx, e) => {
         e?.stopPropagation(); // Prevent event bubbling
-        
+
         const isExisting = !!enrollment.id_course_enrollment;
-        
+
         if (isExisting && !permissions?.can_edit) {
             Swal.fire({
                 icon: 'error',
@@ -222,7 +226,7 @@ export default function CourseCard({
                                         {existingEnrollments.length} Active
                                     </span>
                                 )}
-                                
+
                                 {newEnrollments.length > 0 && (
                                     <span className="px-3 py-1 bg-yellow-100 text-yellow-700 text-xs font-bold rounded-full flex items-center gap-1.5 shadow-sm animate-pulse">
                                         <AlertCircle className="w-3.5 h-3.5" />
@@ -241,7 +245,7 @@ export default function CourseCard({
                             {existingEnrollments.length > 0 && (
                                 <div className="mt-2 flex items-center gap-2 flex-wrap">
                                     {existingEnrollments.slice(0, 3).map(enrollment => (
-                                        <span 
+                                        <span
                                             key={enrollment.id_course_enrollment}
                                             className="text-xs text-gray-600 bg-gray-100 px-2.5 py-1 rounded-lg flex items-center gap-1.5 border border-gray-200"
                                         >
@@ -259,13 +263,12 @@ export default function CourseCard({
                         </div>
                     </div>
 
-                    <button 
+                    <button
                         type="button"
-                        className={`flex items-center gap-2 px-5 py-2.5 rounded-xl transition-all border-2 font-bold shadow-sm hover:shadow-md ${
-                            enrollments.length > 0 
+                        className={`flex items-center gap-2 px-5 py-2.5 rounded-xl transition-all border-2 font-bold shadow-sm hover:shadow-md ${enrollments.length > 0
                                 ? 'text-green-700 bg-green-50 border-green-300 hover:bg-green-100'
                                 : 'text-blue-700 bg-blue-50 border-blue-300 hover:bg-blue-100'
-                        }`}
+                            }`}
                     >
                         {isExpanded ? (
                             <ChevronDown className="w-5 h-5" />
@@ -273,7 +276,7 @@ export default function CourseCard({
                             <ChevronRight className="w-5 h-5" />
                         )}
                         <span className="text-sm">
-                            {enrollments.length > 0 
+                            {enrollments.length > 0
                                 ? `View (${enrollments.length})`
                                 : canInteract ? 'Add Company' : 'View Details'
                             }
@@ -283,7 +286,7 @@ export default function CourseCard({
 
                 {/* Expanded Section */}
                 {isExpanded && (
-                    <div 
+                    <div
                         className="border-t border-gray-200 bg-gradient-to-br from-gray-50 to-gray-100 p-6"
                         onClick={(e) => e.stopPropagation()}
                     >
@@ -293,13 +296,13 @@ export default function CourseCard({
                                     Company Enrollments
                                 </h5>
                                 <p className="text-xs text-gray-600">
-                                    {canInteract 
+                                    {canInteract
                                         ? 'Click enrollment to view or edit details'
                                         : 'View-only mode - you cannot make changes'
                                     }
                                 </p>
                             </div>
-                            
+
                             {permissions?.can_create && (
                                 <button
                                     type="button"
@@ -317,23 +320,20 @@ export default function CourseCard({
                             {enrollments.map((enrollment, idx) => {
                                 const isExisting = !!enrollment.id_course_enrollment;
                                 const canEdit = isExisting ? permissions?.can_edit : permissions?.can_create;
-                                
+
                                 return (
                                     <div
                                         key={enrollment.id_course_enrollment || enrollment.temp_id || idx}
-                                        className={`flex items-center justify-between p-4 rounded-xl border-2 transition-all ${
-                                            isExisting
+                                        className={`flex items-center justify-between p-4 rounded-xl border-2 transition-all ${isExisting
                                                 ? 'bg-white border-green-200'
                                                 : 'bg-yellow-50 border-yellow-300'
-                                        }`}
+                                            }`}
                                     >
                                         <div className="flex items-center gap-3 flex-1">
-                                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                                                isExisting ? 'bg-green-100' : 'bg-yellow-100'
-                                            }`}>
-                                                <Building2 className={`w-5 h-5 ${
-                                                    isExisting ? 'text-green-600' : 'text-yellow-600'
-                                                }`} />
+                                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isExisting ? 'bg-green-100' : 'bg-yellow-100'
+                                                }`}>
+                                                <Building2 className={`w-5 h-5 ${isExisting ? 'text-green-600' : 'text-yellow-600'
+                                                    }`} />
                                             </div>
                                             <div className="flex-1">
                                                 <p className="font-bold text-gray-900">
@@ -403,7 +403,7 @@ export default function CourseCard({
                                                     <Lock className="w-4 h-4" />
                                                 </button>
                                             ) : null}
-                                            
+
                                             {/* Delete Button - Permission Based */}
                                             {!isExisting || permissions?.can_delete ? (
                                                 <button
@@ -442,12 +442,12 @@ export default function CourseCard({
                                         No Enrollments Yet
                                     </h4>
                                     <p className="text-sm text-gray-600 mb-4">
-                                        {permissions?.can_create 
+                                        {permissions?.can_create
                                             ? 'Add companies to enroll in this course'
                                             : 'No companies enrolled in this course yet'
                                         }
                                     </p>
-                                    
+
                                     {permissions?.can_create && (
                                         <button
                                             type="button"
