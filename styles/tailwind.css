@@ -450,7 +450,7 @@ textarea::placeholder {
 button,
 [role="button"] {
   cursor: pointer;
-}
+} 
 
 table {
   border-collapse: collapse;
@@ -5989,4 +5989,18 @@ select {
 .swal-confirm-style:hover {
   background-color: #941d05 !important;
   box-shadow: none !important;
+}
+
+
+.swal-ok-style,
+.swal-ok-style:focus,
+.swal-ok-style:hover {
+  background-color: #3d7802 !important;
+  box-shadow: none !important;
+}
+
+@media (max-width: 639px) {
+  .mobile-full {
+    width: 100%;
+  }
 }

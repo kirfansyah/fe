@@ -1,5 +1,12 @@
 import { useState } from "react";
-import { Search, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  FileSpreadsheet,
+} from "lucide-react";
+import ExcelJS from "exceljs";
+import { useSweetAlert } from "@/hooks/useSweetAlert";
 
 export default function OnlineLearningView({ onlineLearning }) {
   const [selectedOnlineLearning, setSelectedOnlineLearning] = useState([]);
@@ -19,15 +26,13 @@ export default function OnlineLearningView({ onlineLearning }) {
   const statuses = [...new Set(onlineLearning.map((e) => e.status))];
   const start_times = [
     ...new Set(
-      onlineLearning.map((e) =>
-        new Date(e.issue_date).toLocaleDateString("id-ID")
-      )
+      onlineLearning.map((e) => new Date(e.date).toLocaleDateString("id-ID"))
     ),
   ].sort();
 
   const filteredOnlineLearning = onlineLearning.filter((onlineLearning) => {
     const matchSearch =
-      (onlineLearning.nama?.toLowerCase() || "").includes(
+      (onlineLearning.full_name?.toLowerCase() || "").includes(
         searchQuery.toLowerCase()
       ) ||
       (onlineLearning.no_ktp || "").includes(searchQuery) ||
@@ -49,7 +54,7 @@ export default function OnlineLearningView({ onlineLearning }) {
       !selectedStatus || onlineLearning.status === selectedStatus;
     const matchDate =
       !selectedDate ||
-      new Date(onlineLearning.issue_date).toLocaleDateString("id-ID") ===
+      new Date(onlineLearning.date).toLocaleDateString("id-ID") ===
         selectedDate;
 
     return (
@@ -70,13 +75,17 @@ export default function OnlineLearningView({ onlineLearning }) {
     endIndex
   );
 
+  const { showWarning, showSuccess, showError } = useSweetAlert();
+
   const handleFilterChange = () => {
     setCurrentPage(1);
   };
 
   const handleSelectAll = (checked) => {
     if (checked) {
-      setSelectedOnlineLearning(paginatedOnlineLearning.map((emp) => emp.id));
+      setSelectedOnlineLearning(
+        paginatedOnlineLearning.map((emp) => emp.id_user_enrollment)
+      );
     } else {
       setSelectedOnlineLearning([]);
     }
@@ -114,9 +123,122 @@ export default function OnlineLearningView({ onlineLearning }) {
     }
   };
 
+  const handleExportExcel = async () => {
+    if (selectedOnlineLearning.length === 0) {
+      showWarning("Please select at least one data to export");
+      return;
+    }
+
+    try {
+      const selectedData = onlineLearning.filter((item) =>
+        selectedOnlineLearning.includes(item.id_user_enrollment)
+      );
+
+      if (!selectedData.length) {
+        showWarning("Selected data not found");
+        return;
+      }
+
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Online Training", {
+        views: [{ state: "frozen", ySplit: 1 }],
+      });
+
+      worksheet.columns = [
+        { header: "No", key: "no", width: 6 },
+        { header: "Company Unit", key: "company", width: 28 },
+        { header: "Department", key: "dept", width: 12 },
+        { header: "Employee ID", key: "empId", width: 14 },
+        { header: "Employee Name", key: "name", width: 28 },
+        { header: "Position", key: "position", width: 18 },
+        { header: "Course Name", key: "course", width: 30 },
+        { header: "Pretest", key: "pretest", width: 12 },
+        { header: "Posttest", key: "posttest", width: 12 },
+        { header: "Status", key: "status", width: 20 },
+        { header: "Course Attempt", key: "attempt", width: 14 },
+        { header: "Date", key: "date", width: 14 },
+        { header: "Refreshment Date", key: "refDate", width: 18 },
+      ];
+
+      worksheet.getRow(1).eachCell((cell) => {
+        cell.font = { bold: true };
+        cell.alignment = { vertical: "middle", horizontal: "center" };
+        cell.border = {
+          top: { style: "thin" },
+          bottom: { style: "thin" },
+          left: { style: "thin" },
+          right: { style: "thin" },
+        };
+      });
+
+      selectedData.forEach((item, index) => {
+        worksheet.addRow({
+          no: index + 1,
+          company: item.company_name || "-",
+          dept: item.dept_abbr || "-",
+          empId: item.employee_id || "-",
+          name: item.full_name || "-",
+          position: item.position_name || "-",
+          course: item.course_title || "-",
+          pretest: item.pretest ?? "-",
+          posttest: item.posttest ?? "-",
+          status: item.status || "-",
+          attempt: item.course_attempt ?? "-",
+          date: item.date ? new Date(item.date) : "",
+          refDate: item.refreshment_date ? new Date(item.refreshment_date) : "",
+        });
+      });
+
+      worksheet.eachRow((row, rowNumber) => {
+        if (rowNumber === 1) return;
+
+        row.eachCell((cell, colNumber) => {
+          cell.border = {
+            top: { style: "thin" },
+            bottom: { style: "thin" },
+            left: { style: "thin" },
+            right: { style: "thin" },
+          };
+
+          if ([1, 3, 4, 11, 12].includes(colNumber)) {
+            cell.alignment = { horizontal: "center", vertical: "middle" };
+          }
+        });
+      });
+
+      worksheet.getColumn("date").numFmt = "dd-mm-yyyy";
+      worksheet.getColumn("refDate").numFmt = "dd-mm-yyyy";
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+
+      const today = new Date();
+      const dateStr = `${today.getFullYear()}${String(
+        today.getMonth() + 1
+      ).padStart(2, "0")}${String(today.getDate()).padStart(2, "0")}`;
+
+      a.download = `Online_Learning_${dateStr}.xlsx`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+
+      showSuccess(
+        `Successfully exported ${selectedData.length} records to Excel`
+      );
+    } catch (error) {
+      console.error(error);
+      showError("Failed to export to Excel. Please try again.");
+    }
+  };
+
   return (
     <div className="w-full mx-auto p-6 bg-white">
-      <div className="flex items-center justify-between mb-6 gap-6">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
         <div className="flex items-center gap-6 flex-1 min-w-0">
           <div className="relative flex-1 min-w-0 max-w-md">
             <Search
@@ -217,26 +339,27 @@ export default function OnlineLearningView({ onlineLearning }) {
             ))}
           </select>
 
-          {/* <button
-            onClick={exportToPDF}
-            disabled={selectedEmployees.length === 0}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-green-500"
+          <button
+            onClick={handleExportExcel}
+            disabled={selectedOnlineLearning.length === 0}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-green-500 font-medium text-sm"
           >
-            <FileDown size={16} />
-            <span>Export PDF</span>
-            {selectedEmployees.length > 0 && (
+            <FileSpreadsheet size={16} />
+            <span>Export Excel</span>
+            {selectedOnlineLearning.length > 0 && (
               <span className="bg-white text-green-600 px-2 py-0.5 rounded-full text-xs font-semibold">
-                {selectedEmployees.length}
+                {selectedOnlineLearning.length}
               </span>
             )}
-          </button> */}
+          </button>
         </div>
       </div>
 
       {(selectedCompanyUnit ||
         selectedDepartment ||
-        selectedOnlineLearning ||
-        selectedStatus) && (
+        selectedCourse ||
+        selectedStatus ||
+        selectedDate) && (
         <div className="mb-4 flex items-center gap-2 flex-wrap">
           <span className="text-sm text-gray-600">Active filters:</span>
           {selectedCompanyUnit && (
@@ -265,7 +388,7 @@ export default function OnlineLearningView({ onlineLearning }) {
             <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm flex items-center gap-2">
               {selectedCourse}
               <button
-                onClick={() => selectedCourse("")}
+                onClick={() => setSelectedCourse("")}
                 className="hover:text-purple-900"
               >
                 ×
@@ -297,8 +420,8 @@ export default function OnlineLearningView({ onlineLearning }) {
         </div>
       )}
 
-      <div className="border border-gray-200 rounded-lg overflow-hidden">
-        <table className="w-full">
+      <div className="border border-gray-200 rounded-lg overflow-x-auto">
+        <table className="min-w-[1200px] w-full">
           <thead className="bg-gray-50">
             <tr>
               <th className="w-12 px-4 py-3">
@@ -329,19 +452,25 @@ export default function OnlineLearningView({ onlineLearning }) {
                 Company Unit
               </th>
               <th className="text-left px-4 py-3 font-medium text-gray-700">
-                Course
+                Course Name
+              </th>
+              <th className="text-left px-4 py-3 font-medium text-gray-700">
+                Pretest
+              </th>
+              <th className="text-left px-4 py-3 font-medium text-gray-700">
+                Posttest
               </th>
               <th className="text-left px-4 py-3 font-medium text-gray-700">
                 Status
               </th>
               <th className="text-left px-4 py-3 font-medium text-gray-700">
-                Score
+                Course Attempt
               </th>
               <th className="text-left px-4 py-3 font-medium text-gray-700">
                 Date
               </th>
               <th className="text-left px-4 py-3 font-medium text-gray-700">
-                Expire
+                Refreshment Date
               </th>
             </tr>
           </thead>
@@ -349,18 +478,18 @@ export default function OnlineLearningView({ onlineLearning }) {
             {paginatedOnlineLearning.length > 0 ? (
               paginatedOnlineLearning.map((onlineLearning) => (
                 <tr
-                  key={onlineLearning.id}
+                  key={onlineLearning.id_user_enrollment}
                   className="border-t border-gray-200 hover:bg-gray-50"
                 >
                   <td className="px-4 py-3">
                     <input
                       type="checkbox"
                       checked={selectedOnlineLearning.includes(
-                        onlineLearning.id
+                        onlineLearning.id_user_enrollment
                       )}
                       onChange={(e) =>
                         handleSelectOnlineLearning(
-                          onlineLearning.id,
+                          onlineLearning.id_user_enrollment,
                           e.target.checked
                         )
                       }
@@ -368,7 +497,7 @@ export default function OnlineLearningView({ onlineLearning }) {
                     />
                   </td>
                   <td className="px-4 py-3 text-gray-900 font-medium">
-                    {onlineLearning.nama}
+                    {onlineLearning.full_name}
                   </td>
                   <td className="px-4 py-3 text-gray-600">
                     {onlineLearning.no_ktp}
@@ -385,26 +514,31 @@ export default function OnlineLearningView({ onlineLearning }) {
                   <td className="px-4 py-3 text-gray-600">
                     {onlineLearning.course_title}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 text-gray-600">
+                    {onlineLearning.pretest}
+                  </td>
+                  <td className="px-4 py-3 text-gray-600">
+                    {onlineLearning.posttest}
+                  </td>
+                  <td className="px-5 py-3">
                     <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                        onlineLearning.status
-                      )}`}
+                      className={`inline-flex items-center justify-center 
+                                  px-3 py-1 min-w-[80px]
+                                  rounded-full text-xs font-medium
+                                  ${getStatusColor(onlineLearning.status)}`}
                     >
                       {onlineLearning.status}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-gray-600">
-                    {onlineLearning.score}
+                    {onlineLearning.course_attempt}
                   </td>
                   <td className="px-4 py-3 text-gray-600">
-                    {new Date(onlineLearning.issue_date).toLocaleDateString(
-                      "id-ID"
-                    )}
+                    {new Date(onlineLearning.date).toLocaleDateString("id-ID")}
                   </td>
                   <td className="px-4 py-3 text-gray-600">
                     {new Date(
-                      onlineLearning.expiration_date
+                      onlineLearning.refreshment_date
                     ).toLocaleDateString("id-ID")}
                   </td>
                 </tr>
@@ -423,7 +557,7 @@ export default function OnlineLearningView({ onlineLearning }) {
         </table>
       </div>
 
-      <div className="flex items-center justify-between mt-4">
+      <div className="flex flex-col sm:flex-row sm:justify-between gap-4 mt-4">
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-600 w-full">Rows per page:</span>
           <select
