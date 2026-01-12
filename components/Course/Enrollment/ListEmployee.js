@@ -270,123 +270,111 @@ export default function ListEmployee({ created_by }) {
     };
 
     const handleSaveGroupings = async () => {
-        const allEmployeeId = availableGroupings.find(g => isAllEmployeeGrouping(g))?.id;
-        
-        const groupingsToAdd = selectedGroupings.filter(id => 
-            !initialGroupings.includes(id) && id !== allEmployeeId
-        );
-        const groupingsToRemove = initialGroupings.filter(id => 
-            !selectedGroupings.includes(id) && id !== allEmployeeId
-        );
+    const allEmployeeId = availableGroupings.find(g => isAllEmployeeGrouping(g))?.id;
+    
+    const groupingsToAdd = selectedGroupings.filter(id => 
+        !initialGroupings.includes(id) && id !== allEmployeeId
+    );
+    const groupingsToRemove = initialGroupings.filter(id => 
+        !selectedGroupings.includes(id) && id !== allEmployeeId
+    );
 
-        if (groupingsToAdd.length === 0 && groupingsToRemove.length === 0) {
-            showWarning('No changes detected');
-            return;
-        }
+    if (groupingsToAdd.length === 0 && groupingsToRemove.length === 0) {
+        showWarning('No changes detected');
+        return;
+    }
 
-        let confirmHtml = '<div class="text-left">';
-        
-        if (selectedEmployees.length === 1) {
-            const emp = employees.find(e => e.no_ktp === selectedEmployees[0]);
-            confirmHtml += `<p class="mb-3">Update groupings for <strong>${emp?.nama}</strong>:</p>`;
-        } else {
-            confirmHtml += `<p class="mb-3">Update groupings for <strong>${selectedEmployees.length} employees</strong>:</p>`;
-        }
+    let confirmHtml = '<div class="text-left">';
+    
+    if (selectedEmployees.length === 1) {
+        const emp = employees.find(e => e.no_ktp === selectedEmployees[0]);
+        confirmHtml += `<p class="mb-3">Update groupings for <strong>${emp?.nama}</strong>:</p>`;
+    } else {
+        confirmHtml += `<p class="mb-3">Update groupings for <strong>${selectedEmployees.length} employees</strong>:</p>`;
+    }
 
-        confirmHtml += '<div class="space-y-2">';
-        
-        if (groupingsToAdd.length > 0) {
-            confirmHtml += '<div class="bg-green-50 border border-green-200 rounded p-2">';
-            confirmHtml += '<p class="text-sm font-semibold text-green-800 mb-1">✓ Add:</p>';
-            groupingsToAdd.forEach(id => {
-                const g = availableGroupings.find(gr => gr.id === id);
-                if (g) confirmHtml += `<span class="inline-block px-2 py-1 bg-green-100 text-green-800 text-xs rounded mr-1 mb-1">${g.name_group}</span>`;
-            });
-            confirmHtml += '</div>';
-        }
-        
-        if (groupingsToRemove.length > 0) {
-            confirmHtml += '<div class="bg-red-50 border border-red-200 rounded p-2">';
-            confirmHtml += '<p class="text-sm font-semibold text-red-800 mb-1">✗ Remove:</p>';
-            groupingsToRemove.forEach(id => {
-                const g = availableGroupings.find(gr => gr.id === id);
-                if (g) confirmHtml += `<span class="inline-block px-2 py-1 bg-red-100 text-red-800 text-xs rounded mr-1 mb-1">${g.name_group}</span>`;
-            });
-            confirmHtml += '</div>';
-        }
-        
-        confirmHtml += '</div></div>';
-
-        const result = await confirmAction({
-            title: 'Update Groupings?',
-            html: confirmHtml,
-            confirmButtonText: 'Yes, update!',
-            icon: 'question'
+    confirmHtml += '<div class="space-y-2">';
+    
+    if (groupingsToAdd.length > 0) {
+        confirmHtml += '<div class="bg-green-50 border border-green-200 rounded p-2">';
+        confirmHtml += '<p class="text-sm font-semibold text-green-800 mb-1">✓ Add:</p>';
+        groupingsToAdd.forEach(id => {
+            const g = availableGroupings.find(gr => gr.id === id);
+            if (g) confirmHtml += `<span class="inline-block px-2 py-1 bg-green-100 text-green-800 text-xs rounded mr-1 mb-1">${g.name_group}</span>`;
         });
+        confirmHtml += '</div>';
+    }
+    
+    if (groupingsToRemove.length > 0) {
+        confirmHtml += '<div class="bg-red-50 border border-red-200 rounded p-2">';
+        confirmHtml += '<p class="text-sm font-semibold text-red-800 mb-1">✗ Remove:</p>';
+        groupingsToRemove.forEach(id => {
+            const g = availableGroupings.find(gr => gr.id === id);
+            if (g) confirmHtml += `<span class="inline-block px-2 py-1 bg-red-100 text-red-800 text-xs rounded mr-1 mb-1">${g.name_group}</span>`;
+        });
+        confirmHtml += '</div>';
+    }
+    
+    confirmHtml += '</div></div>';
+
+    const result = await confirmAction({
+        title: 'Update Groupings?',
+        html: confirmHtml,
+        confirmButtonText: 'Yes, update!',
+        icon: 'question'
+    });
+    
+    if (!result.isConfirmed) return;
+
+    try {
+        showLoading('Updating groupings...');
         
-        if (!result.isConfirmed) return;
-
-        try {
-            showLoading('Updating groupings...');
-            
-            const payloadAdd = [];
-            const payloadRemove = [];
-
-            selectedEmployees.forEach(no_ktp => {
-                groupingsToAdd.forEach(id_grouping => {
-                    payloadAdd.push({
-                        no_ktp: no_ktp,
-                        id_grouping: id_grouping,
-                        assigned_by: created_by
-                    });
-                });
-            });
-
-            selectedEmployees.forEach(no_ktp => {
-                groupingsToRemove.forEach(id_grouping => {
-                    payloadRemove.push({
-                        no_ktp: no_ktp,
-                        id_grouping: id_grouping,
-                        deleted_by: created_by
-                    });
-                });
-            });
-
-            const fullPayload = {
-                add: payloadAdd,
-                remove: payloadRemove
+        // ✅ Build users array dengan full_name
+        const users = selectedEmployees.map(no_ktp => {
+            const emp = employees.find(e => e.no_ktp === no_ktp);
+            return {
+                no_ktp: no_ktp,
+                full_name: emp?.nama || ''
             };
+        });
 
-            await handleSaveAssignEmployeeGrouping(fullPayload);
-            
-            let successMsg = 'Groupings updated successfully';
-            if (groupingsToAdd.length > 0 && groupingsToRemove.length > 0) {
-                successMsg += ` (${groupingsToAdd.length} added, ${groupingsToRemove.length} removed)`;
-            } else if (groupingsToAdd.length > 0) {
-                successMsg += ` (${groupingsToAdd.length} added)`;
-            } else {
-                successMsg += ` (${groupingsToRemove.length} removed)`;
-            }
-            
-            showSuccess(successMsg);
-            
-            setShowGroupingModal(false);
-            setSelectedEmployees([]);
-            setSelectedGroupings([]);
-            setInitialGroupings([]);
-            
-            // Refresh
-            const filters = {
-                search: debouncedSearch,
-                company_id: selectedCompanies.map(name => companyMap[name]).filter(Boolean),
-                dept_id: selectedDepts.map(name => deptMap[name]).filter(Boolean),
-                grouping_id: selectedGroupingFilters
-            };
-            fetchEmployeeData(currentPage, pageSize, filters);
-        } catch (error) {
-            showError('Failed to update groupings: ' + error.message);
+        // ✅ NEW PAYLOAD FORMAT
+        const payload = {
+            users: users,
+            groups: [...groupingsToAdd, ...groupingsToRemove], // Gabung ADD dan REMOVE
+            assigned_by: created_by
+        };
+
+        await handleSaveAssignEmployeeGrouping(payload);
+        
+        let successMsg = 'Groupings updated successfully';
+        if (groupingsToAdd.length > 0 && groupingsToRemove.length > 0) {
+            successMsg += ` (${groupingsToAdd.length} added, ${groupingsToRemove.length} removed)`;
+        } else if (groupingsToAdd.length > 0) {
+            successMsg += ` (${groupingsToAdd.length} added)`;
+        } else {
+            successMsg += ` (${groupingsToRemove.length} removed)`;
         }
-    };
+        
+        showSuccess(successMsg);
+        
+        setShowGroupingModal(false);
+        setSelectedEmployees([]);
+        setSelectedGroupings([]);
+        setInitialGroupings([]);
+        
+        // ✅ Refresh
+        const filters = {
+            search: debouncedSearch,
+            company_id: selectedCompanies.map(name => companyMap[name]).filter(Boolean),
+            dept_id: selectedDepts.map(name => deptMap[name]).filter(Boolean),
+            grouping_id: selectedGroupingFilters
+        };
+        fetchEmployeeData(currentPage, pageSize, filters);
+    } catch (error) {
+        showError('Failed to update groupings: ' + error.message);
+    }
+};
 
     const handlePageSizeChange = (newSize) => {
         setPageSize(newSize);
