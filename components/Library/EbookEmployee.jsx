@@ -25,8 +25,6 @@ export default function EbookEmployee() {
     fetchEbookDetail,
   } = useEbookEmployee();
 
-  console.log("ebooks", ebooks);
-
   const [selectedEbooks, setSelectedEbooks] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [pageSize, setPageSize] = useState(10);
@@ -160,16 +158,16 @@ export default function EbookEmployee() {
         setShowReader(true);
 
         // Show notification if resuming
-        if (response.is_resume) {
-          console.log(`📖 Resuming from page ${response.last_page}`);
-        } else {
-          console.log(
-            `📖 Started new reading session with log ID: ${response.id_log}`
-          );
-        }
+        // if (response.is_resume) {
+        //   console.log(`📖 Resuming from page ${response.last_page}`);
+        // } else {
+        //   console.log(
+        //     `📖 Started new reading session with log ID: ${response.id_log}`
+        //   );
+        // }
       } else {
         // If API failed but we still want to open reader
-        console.warn("⚠️ No log ID received, but opening reader anyway");
+        // console.warn("⚠️ No log ID received, but opening reader anyway");
         setSelectedEbook({
           ...ebook,
           resumePage: 1,

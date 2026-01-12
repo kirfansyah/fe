@@ -72,7 +72,7 @@ export default function ViewEbook({ onBack, ebookId }) {
   };
 
   const toggleFullscreen = async () => {
-    console.log("🖥️ Toggle fullscreen clicked, current:", isFullscreen);
+    // console.log("🖥️ Toggle fullscreen clicked, current:", isFullscreen);
 
     if (!isFullscreen) {
       // Enter fullscreen
@@ -123,7 +123,7 @@ export default function ViewEbook({ onBack, ebookId }) {
       );
 
       setIsFullscreen(isCurrentlyFullscreen);
-      console.log("🖥️ Fullscreen changed:", isCurrentlyFullscreen);
+      //   console.log("🖥️ Fullscreen changed:", isCurrentlyFullscreen);
     };
 
     document.addEventListener("fullscreenchange", handleFullscreenChange);
@@ -529,11 +529,11 @@ export default function ViewEbook({ onBack, ebookId }) {
                     showControls={false}
                     onLoadSuccess={(numPages) => {
                       setTotalPages(numPages);
-                      console.log("✅ PDF loaded with", numPages, "pages");
+                      //   console.log("✅ PDF loaded with", numPages, "pages");
                     }}
                     onPageChange={(isLastPage) => {
                       if (isLastPage && currentPage >= totalPages) {
-                        console.log("✅ Reached last page of PDF");
+                        // console.log("✅ Reached last page of PDF");
                       }
                     }}
                     onError={(errorMsg) => {

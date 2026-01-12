@@ -27,17 +27,30 @@ export default function PdfViewer({
   const [page, setPage] = useState(initialPage);
   const [totalPages, setTotalPages] = useState(0);
   const [scale, setScale] = useState(1);
+  const [windowWidth, setWindowWidth] = useState(
+    typeof window !== "undefined" ? window.innerWidth : 0
+  );
   const containerRef = useRef(null);
 
   useEffect(() => {
-    console.log("📄 PDF FILE URL:", file);
+    // console.log("📄 PDF FILE URL:", file);
   }, [file]);
+
+  // Listen to window resize
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   // Sync with parent's currentPage
   useEffect(() => {
     if (currentPage !== null && currentPage !== page) {
       setPage(currentPage);
-      console.log("📄 Page synced from parent:", currentPage);
+      //   console.log("📄 Page synced from parent:", currentPage);
     }
   }, [currentPage]);
 
@@ -105,8 +118,15 @@ export default function PdfViewer({
         >
           <Page
             pageNumber={page}
+            width={
+              windowWidth < 531
+                ? containerRef.current?.clientWidth || window.innerWidth
+                : undefined
+            }
             height={
-              containerRef.current?.clientHeight || window.innerHeight - 200
+              windowWidth >= 531
+                ? containerRef.current?.clientHeight || window.innerHeight - 200
+                : undefined
             }
             renderTextLayer={false}
             renderAnnotationLayer={false}
