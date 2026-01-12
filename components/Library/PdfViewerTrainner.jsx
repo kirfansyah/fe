@@ -31,14 +31,14 @@ export default function PdfViewer({
   const containerRef = useRef(null);
 
   useEffect(() => {
-    console.log("📄 PDF FILE URL:", file);
+    // console.log("📄 PDF FILE URL:", file);
   }, [file]);
 
   // Sync with parent's currentPage
   useEffect(() => {
     if (currentPage !== null && currentPage !== page) {
       setPage(currentPage);
-      console.log("📄 Page synced from parent:", currentPage);
+      //   console.log("📄 Page synced from parent:", currentPage);
     }
   }, [currentPage]);
 

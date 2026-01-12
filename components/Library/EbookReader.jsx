@@ -29,6 +29,9 @@ export default function EbookReader({
   const [hoverRating, setHoverRating] = useState(0);
   const [comment, setComment] = useState("");
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [windowWidth, setWindowWidth] = useState(
+    typeof window !== "undefined" ? window.innerWidth : 0
+  );
 
   // Next button timer state
   const [isNextDisabled, setIsNextDisabled] = useState(true);
@@ -42,6 +45,26 @@ export default function EbookReader({
   const isIOS = () => {
     return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
   };
+
+  // Calculate responsive scale based on window width
+  const getResponsiveScale = () => {
+    // Responsive scaling untuk SEMUA mode (fullscreen dan normal)
+    // if (windowWidth < 360) return 0.7; // Extra small phones
+    // if (windowWidth < 375) return 0.75; // iPhone SE, etc
+    // if (windowWidth < 390) return 0.95; // iPhone 12 Mini, etc
+
+    return 1; // Desktop tetap 100%
+  };
+
+  // Listen to window resize
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   // Hide resume notification after 3 seconds
   useEffect(() => {
@@ -458,92 +481,118 @@ export default function EbookReader({
         )}
 
         {/* Reader Area */}
-        <div className="relative w-full h-full bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+        <div
+          className="relative w-full h-full"
+          style={{
+            background:
+              windowWidth < 585
+                ? "white"
+                : "linear-gradient(to bottom right, #111827, #1f2937, #111827)",
+          }}
+        >
           {/* Previous Button */}
           <button
             onClick={handlePrevPage}
             disabled={currentPage === 1}
-            className={`absolute left-4 md:left-8 top-1/2 -translate-y-1/2 w-10 h-10 md:w-12 md:h-12 rounded-full shadow-lg hover:shadow-xl disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center group z-20 ${
-              isFullscreen ? "bg-white/90 hover:bg-white" : "bg-white"
+            className={`absolute left-0 md:left-4 top-1/2 -translate-y-1/2 w-12 h-16 md:w-12 md:h-12 rounded-r-full md:rounded-full disabled:opacity-20 disabled:cursor-not-allowed transition-all flex items-center justify-center group z-20 ${
+              windowWidth < 585
+                ? "bg-gradient-to-r from-gray-900/5 to-gray-100/5 hover:from-gray-900/10 hover:to-gray-100/5"
+                : isFullscreen
+                ? "bg-white/90 hover:bg-white shadow-lg hover:shadow-xl"
+                : "bg-white shadow-lg hover:shadow-xl"
             }`}
             aria-label="Previous page"
           >
             <ChevronLeft
               size={20}
-              className="md:w-6 md:h-6 text-gray-700 group-hover:text-blue-600 transition-colors group-disabled:text-gray-400"
+              className={`md:w-6 md:h-6 transition-colors group-disabled:text-gray-400 ${
+                windowWidth < 585
+                  ? "text-gray-500 group-hover:text-blue-600 ml-1"
+                  : "text-gray-700 group-hover:text-blue-600"
+              }`}
             />
           </button>
 
           {/* eBook Display Area */}
           <div
-            className="w-full h-full bg-white flex items-center justify-center"
+            className="w-full h-full flex items-center justify-center"
             style={{
               overflow: "hidden",
               position: "relative",
+              backgroundColor: "transparent",
             }}
           >
             <div
-              className="w-full h-full"
+              className="w-full h-full flex items-center justify-center"
               style={{
                 overflow: "auto",
               }}
             >
-              {ebook.file_path_url ? (
-                <PdfViewer
-                  file={`/api/pdf-proxy?url=${encodeURIComponent(
-                    ebook.file_path_url
-                  )}`}
-                  currentPage={currentPage}
-                  initialPage={ebook.resumePage || 1}
-                  showControls={false}
-                  onPageChange={(isLastPage) => {
-                    if (isLastPage && currentPage >= totalPages) {
-                      // Reached last page
-                    }
-                  }}
-                  onError={(errorMsg) => {
-                    console.error("PDF Error:", errorMsg);
-                  }}
-                />
-              ) : ebook.cover_image_url ? (
-                <div
-                  className="w-full h-full flex items-center justify-center p-4 md:p-8"
-                  style={{ pointerEvents: "auto" }}
-                >
-                  <img
-                    src={ebook.cover_image_url}
-                    alt={ebook.title}
-                    className="max-w-full max-h-full object-contain"
+              <div
+                className="w-full h-full"
+                style={{
+                  transform: `scale(${getResponsiveScale()})`,
+                  transformOrigin: "center center",
+                  transition: "transform 0.3s ease",
+                }}
+              >
+                {ebook.file_path_url ? (
+                  <PdfViewer
+                    file={`/api/pdf-proxy?url=${encodeURIComponent(
+                      ebook.file_path_url
+                    )}`}
+                    currentPage={currentPage}
+                    initialPage={ebook.resumePage || 1}
+                    showControls={false}
+                    onPageChange={(isLastPage) => {
+                      if (isLastPage && currentPage >= totalPages) {
+                        // Reached last page
+                      }
+                    }}
+                    onError={(errorMsg) => {
+                      console.error("PDF Error:", errorMsg);
+                    }}
                   />
-                </div>
-              ) : (
-                <div
-                  className="w-full h-full flex items-center justify-center text-center text-gray-500 p-6 md:p-12"
-                  style={{ pointerEvents: "auto" }}
-                >
-                  <div>
-                    <div className="text-6xl md:text-8xl mb-4">📖</div>
-                    <h2 className="text-xl md:text-2xl font-bold mb-2">
-                      {ebook.title}
-                    </h2>
-                    <p className="text-base md:text-lg mb-4">
-                      Page{" "}
-                      <span className="font-bold text-blue-600">
-                        {currentPage}
-                      </span>{" "}
-                      of {totalPages}
-                    </p>
-                    {ebook.author && (
-                      <p className="text-gray-600 mb-4 text-sm md:text-base">
-                        by {ebook.author}
+                ) : ebook.cover_image_url ? (
+                  <div
+                    className="w-full h-full flex items-center justify-center p-4 md:p-8"
+                    style={{ pointerEvents: "auto" }}
+                  >
+                    <img
+                      src={ebook.cover_image_url}
+                      alt={ebook.title}
+                      className="max-w-full max-h-full object-contain"
+                    />
+                  </div>
+                ) : (
+                  <div
+                    className="w-full h-full flex items-center justify-center text-center text-gray-500 p-6 md:p-12"
+                    style={{ pointerEvents: "auto" }}
+                  >
+                    <div>
+                      <div className="text-6xl md:text-8xl mb-4">📖</div>
+                      <h2 className="text-xl md:text-2xl font-bold mb-2">
+                        {ebook.title}
+                      </h2>
+                      <p className="text-base md:text-lg mb-4">
+                        Page{" "}
+                        <span className="font-bold text-blue-600">
+                          {currentPage}
+                        </span>{" "}
+                        of {totalPages}
                       </p>
-                    )}
-                    <div className="mt-8 text-xs md:text-sm text-gray-400">
-                      Use arrow buttons or keyboard arrows (← →) to navigate
+                      {ebook.author && (
+                        <p className="text-gray-600 mb-4 text-sm md:text-base">
+                          by {ebook.author}
+                        </p>
+                      )}
+                      <div className="mt-8 text-xs md:text-sm text-gray-400">
+                        Use arrow buttons or keyboard arrows (← →) to navigate
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
 
@@ -551,14 +600,22 @@ export default function EbookReader({
           <button
             onClick={handleNextPage}
             disabled={currentPage === totalPages || isNextDisabled}
-            className={`absolute right-4 md:right-8 top-1/2 -translate-y-1/2 w-10 h-10 md:w-12 md:h-12 rounded-full shadow-lg hover:shadow-xl disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center group z-20 ${
-              isFullscreen ? "bg-white/90 hover:bg-white" : "bg-white"
+            className={`absolute right-0 md:right-4 top-1/2 -translate-y-1/2 w-12 h-16 md:w-12 md:h-12 rounded-l-full md:rounded-full disabled:opacity-20 disabled:cursor-not-allowed transition-all flex items-center justify-center group z-20 ${
+              windowWidth < 585
+                ? "bg-gradient-to-l from-gray-900/5 to-gray-100/5 hover:from-gray-900/10 hover:to-gray-100/5"
+                : isFullscreen
+                ? "bg-white/90 hover:bg-white shadow-lg hover:shadow-xl"
+                : "bg-white shadow-lg hover:shadow-xl"
             }`}
             aria-label="Next page"
           >
             <ChevronRight
               size={20}
-              className="md:w-6 md:h-6 text-gray-700 group-hover:text-blue-600 transition-colors group-disabled:text-gray-400"
+              className={`md:w-6 md:h-6 transition-colors group-disabled:text-gray-400 ${
+                windowWidth < 585
+                  ? "text-gray-500 group-hover:text-blue-600 mr-1"
+                  : "text-gray-700 group-hover:text-blue-600"
+              }`}
             />
           </button>
 
@@ -598,7 +655,9 @@ export default function EbookReader({
           {/* Page Counter */}
           <div
             className={`absolute bottom-2 md:bottom-4 left-1/2 -translate-x-1/2 backdrop-blur-sm px-4 md:px-6 py-2 md:py-2.5 rounded-full shadow-lg z-20 ${
-              isFullscreen
+              isFullscreen && windowWidth < 480
+                ? "bg-black/20 text-white"
+                : isFullscreen
                 ? "bg-black/70 text-white"
                 : "bg-white/95 text-gray-600"
             }`}
@@ -607,7 +666,11 @@ export default function EbookReader({
               Page{" "}
               <span
                 className={`font-bold ${
-                  isFullscreen ? "text-blue-400" : "text-blue-600"
+                  isFullscreen && windowWidth < 480
+                    ? "text-blue-300"
+                    : isFullscreen
+                    ? "text-blue-400"
+                    : "text-blue-600"
                 }`}
               >
                 {currentPage}
