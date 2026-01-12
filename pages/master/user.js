@@ -18,9 +18,10 @@ import { useRoles } from "../../hooks/useRoles";
 import { ProfileContext } from '@/contexts/profile/ProfileContext';
 import { getDeviceInfo } from '@/lib/deviceHelper';
 import { useMenuPermissions } from '@/hooks/useMenuPermissions';
+import { useDebounce } from '@/hooks/useDebounce'; // ✅ Add debounce
+import API from '@/services/api'; // ✅ Add API import
 
 export default function UserManagement() {
-    // ✅ ALL HOOKS FIRST (before any conditional returns)
     const { employeeData, fetchEmployeeData, loading: apiLoading } = useCourses();
     const { roles: masterRoles, handleUpdateUser } = useRoles();
     const { showLoading, showSuccess, showError, confirmAction } = useSweetAlert();
@@ -28,12 +29,15 @@ export default function UserManagement() {
     const permissions = useMenuPermissions();
     
     const [loading, setLoading] = useState(true);
-    const [entriesPerPage, setEntriesPerPage] = useState(10);
+    const [pageSize, setPageSize] = useState(10);
     const [currentPage, setCurrentPage] = useState(1);
-    const [searchTerm, setSearchTerm] = useState('');
+    const [searchQuery, setSearchQuery] = useState('');
+    const debouncedSearch = useDebounce(searchQuery, 500); // ✅ Debounce search
+    
     const [filterRole, setFilterRole] = useState('all');
     const [filterStatus, setFilterStatus] = useState('all');
     const [filterCompany, setFilterCompany] = useState('all');
+    
     const [showModal, setShowModal] = useState(false);
     const [modalMode, setModalMode] = useState('view');
     const [selectedUser, setSelectedUser] = useState(null);
@@ -45,29 +49,82 @@ export default function UserManagement() {
         user_is_active: true,
     });
 
+    // ✅ Fetch all employees untuk filter options
+    const [allEmployees, setAllEmployees] = useState([]);
+    const [companyMap, setCompanyMap] = useState({});
+    
+    useEffect(() => {
+        const fetchAllForFilters = async () => {
+            try {
+                const response = await API.post('/employee/search', { 
+                    page: 1, 
+                    limit: 99999,
+                    employment_status: '1'
+                });
+                const data = response.data?.data || [];
+                setAllEmployees(data);
+                
+                // Build company map
+                const compMap = {};
+                data.forEach(emp => {
+                    if (emp.company_name && emp.company_id) {
+                        compMap[emp.company_name] = emp.company_id;
+                    }
+                });
+                setCompanyMap(compMap);
+            } catch (err) {
+                console.error('Error fetching all employees:', err);
+            }
+        };
+        fetchAllForFilters();
+    }, []);
+
+    const employees = employeeData?.data || [];
+    const pagination = employeeData?.pagination || {
+        totalCount: 0,
+        pageSize: 10,
+        currentPage: 1,
+        totalPages: 1
+    };
+
     const availableRoles = masterRoles || [];
 
-    // ✅ ALL useEffect hooks
+    // ✅ Fetch dengan server-side filters
+    useEffect(() => {
+        const filters = {
+            search: debouncedSearch,
+            company_id: filterCompany === 'all' ? [] : [parseInt(filterCompany)],
+            // ✅ Backend belum support role & status filter, jadi tetap client-side dulu
+        };
+        
+        fetchEmployeeData(currentPage, pageSize, filters);
+    }, [currentPage, pageSize, debouncedSearch, filterCompany]);
+
+    // ✅ Reset page on filter change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [debouncedSearch, filterRole, filterCompany, filterStatus]);
+
     useEffect(() => {
         if (employeeData) {
             setLoading(false);
         }
     }, [employeeData]);
 
-    // ✅ ALL FUNCTIONS
+    // ✅ Get unique values dari ALL employees
     const getUniqueRoles = () => {
-        if (!employeeData?.data) return [];
+        if (!allEmployees.length) return [];
         const roles = new Set();
-        employeeData.data.forEach(emp => {
+        allEmployees.forEach(emp => {
             emp.roles?.forEach(role => roles.add(role.role_name));
         });
         return Array.from(roles);
     };
 
     const getUniqueCompanies = () => {
-        if (!employeeData?.data) return [];
+        if (!allEmployees.length) return [];
         const companies = new Map();
-        employeeData.data.forEach(emp => {
+        allEmployees.forEach(emp => {
             if (emp.company_id && emp.company_name) {
                 companies.set(emp.company_id, emp.company_name);
             }
@@ -75,31 +132,16 @@ export default function UserManagement() {
         return Array.from(companies, ([id, name]) => ({ id, name }));
     };
 
-    const filteredData = (employeeData?.data || []).filter(user => {
-        const matchesSearch = 
-            user.nama?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            user.employee_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            user.no_ktp?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            user.dept_abbr?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            user.company_name?.toLowerCase().includes(searchTerm.toLowerCase());
-        
+    // ✅ Client-side filtering untuk Role & Status (karena backend belum support)
+    const filteredData = employees.filter(user => {
         const matchesRole = filterRole === 'all' || 
             user.roles?.some(r => r.role_name === filterRole);
         
         const matchesStatus = filterStatus === 'all' || 
             (filterStatus === 'active' ? user.user_is_active : !user.user_is_active);
         
-        const matchesCompany = filterCompany === 'all' || 
-            user.company_id?.toString() === filterCompany;
-        
-        return matchesSearch && matchesRole && matchesStatus && matchesCompany;
+        return matchesRole && matchesStatus;
     });
-
-    const totalEntries = filteredData.length;
-    const totalPages = Math.ceil(totalEntries / entriesPerPage);
-    const startIndex = (currentPage - 1) * entriesPerPage;
-    const endIndex = Math.min(startIndex + entriesPerPage, totalEntries);
-    const currentData = filteredData.slice(startIndex, endIndex);
 
     const formatDateTime = (dateTimeString) => {
         if (!dateTimeString) return '-';
@@ -145,7 +187,11 @@ export default function UserManagement() {
     const handleRefresh = async () => {
         try {
             showLoading('Refreshing data...');
-            await fetchEmployeeData();
+            const filters = {
+                search: debouncedSearch,
+                company_id: filterCompany === 'all' ? [] : [parseInt(filterCompany)]
+            };
+            await fetchEmployeeData(currentPage, pageSize, filters);
             showSuccess('Data refreshed successfully');
         } catch (error) {
             showError('Failed to refresh data');
@@ -178,7 +224,7 @@ export default function UserManagement() {
             showLoading('Updating user...');
             
             const updateData = {
-                id_role: [formData.id_role],
+                id_role: formData.id_role,
                 no_ktp: formData.no_ktp,
                 is_active: formData.user_is_active,
                 updated_by: dataKaryawan.nama || 'System',
@@ -190,11 +236,34 @@ export default function UserManagement() {
             
             setShowModal(false);
             setSelectedUser(null);
-            await fetchEmployeeData();
+            
+            // ✅ Refresh with current filters
+            const filters = {
+                search: debouncedSearch,
+                company_id: filterCompany === 'all' ? [] : [parseInt(filterCompany)]
+            };
+            await fetchEmployeeData(currentPage, pageSize, filters);
             
         } catch (error) {
             console.error('Error:', error);
             showError(error.message || 'Failed to update user');
+        }
+    };
+
+    const handlePageSizeChange = (newSize) => {
+        setPageSize(newSize);
+        setCurrentPage(1);
+    };
+
+    const handleNextPage = () => {
+        if (currentPage < pagination.totalPages) {
+            setCurrentPage(currentPage + 1);
+        }
+    };
+
+    const handlePrevPage = () => {
+        if (currentPage > 1) {
+            setCurrentPage(currentPage - 1);
         }
     };
 
@@ -248,7 +317,6 @@ export default function UserManagement() {
         );
     };
 
-    // ✅ NOW do conditional return AFTER all hooks
     if (!permissions.can_view) {
         return (
             <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -279,7 +347,6 @@ export default function UserManagement() {
                     <div>
                         <div className="flex items-center gap-3">
                             <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
-                            {/* ✅ Read-Only Badge */}
                             {!permissions.can_edit && (
                                 <span className="px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded-full flex items-center gap-1">
                                     <Lock className="w-3 h-3" />
@@ -306,7 +373,6 @@ export default function UserManagement() {
                 </div>
             </div>
 
-            {/* ✅ Permission Warning Banner */}
             {!permissions.can_edit && (
                 <div className="mb-6 bg-blue-50 border-2 border-blue-200 rounded-xl p-5">
                     <div className="flex items-center gap-3">
@@ -333,11 +399,8 @@ export default function UserManagement() {
                                 <span className="text-sm text-gray-600">Show</span>
                                 <select 
                                     className="py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                    value={entriesPerPage}
-                                    onChange={(e) => {
-                                        setEntriesPerPage(Number(e.target.value));
-                                        setCurrentPage(1);
-                                    }}
+                                    value={pageSize}
+                                    onChange={(e) => handlePageSizeChange(Number(e.target.value))}
                                 >
                                     <option value="10">10</option>
                                     <option value="25">25</option>
@@ -351,10 +414,7 @@ export default function UserManagement() {
                             <select
                                 className="py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                                 value={filterRole}
-                                onChange={(e) => {
-                                    setFilterRole(e.target.value);
-                                    setCurrentPage(1);
-                                }}
+                                onChange={(e) => setFilterRole(e.target.value)}
                             >
                                 <option value="all">All Roles</option>
                                 {getUniqueRoles().map(role => (
@@ -365,10 +425,7 @@ export default function UserManagement() {
                             <select
                                 className="py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                                 value={filterCompany}
-                                onChange={(e) => {
-                                    setFilterCompany(e.target.value);
-                                    setCurrentPage(1);
-                                }}
+                                onChange={(e) => setFilterCompany(e.target.value)}
                             >
                                 <option value="all">All Companies</option>
                                 {getUniqueCompanies().map(company => (
@@ -379,10 +436,7 @@ export default function UserManagement() {
                             <select
                                 className="py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                                 value={filterStatus}
-                                onChange={(e) => {
-                                    setFilterStatus(e.target.value);
-                                    setCurrentPage(1);
-                                }}
+                                onChange={(e) => setFilterStatus(e.target.value)}
                             >
                                 <option value="all">All Status</option>
                                 <option value="active">Active</option>
@@ -400,19 +454,22 @@ export default function UserManagement() {
                                 <RefreshCw className="w-4 h-4" />
                             </button>
 
-                            {/* Search */}
+                            {/* ✅ Search with debounce indicator */}
                             <div className="relative">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                                 <input
                                     type="text"
                                     placeholder="Search name, ID, KTP..."
                                     className="w-64 pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                    value={searchTerm}
-                                    onChange={(e) => {
-                                        setSearchTerm(e.target.value);
-                                        setCurrentPage(1);
-                                    }}
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
                                 />
+                                {/* ✅ Loading indicator */}
+                                {searchQuery !== debouncedSearch && (
+                                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -455,7 +512,7 @@ export default function UserManagement() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-200">
-                                        {currentData.map((user) => (
+                                        {filteredData.map((user) => (
                                             <tr key={user.employee_id} className="hover:bg-gray-50">
                                                 <td className="px-4 py-3">
                                                     <div className="flex items-center">
@@ -508,7 +565,6 @@ export default function UserManagement() {
                                                 </td>
                                                 <td className="px-4 py-3 text-center">
                                                     <div className="flex items-center justify-center gap-1">
-                                                        {/* ✅ View Button - Always visible */}
                                                         <button
                                                             onClick={() => handleView(user)}
                                                             className="p-1.5 text-gray-600 hover:text-green-600 transition-colors"
@@ -517,7 +573,6 @@ export default function UserManagement() {
                                                             <Eye className="w-4 h-4" />
                                                         </button>
                                                         
-                                                        {/* ✅ Edit Button - Conditional */}
                                                         {permissions.can_edit ? (
                                                             <button
                                                                 onClick={() => handleEdit(user)}
@@ -539,7 +594,7 @@ export default function UserManagement() {
                                                 </td>
                                             </tr>
                                         ))}
-                                        {currentData.length === 0 && (
+                                        {filteredData.length === 0 && (
                                             <tr>
                                                 <td colSpan="8" className="px-4 py-8 text-center text-gray-500">
                                                     No data available
@@ -550,51 +605,28 @@ export default function UserManagement() {
                                 </table>
                             </div>
 
-                            {/* Pagination Controls */}
-                             <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-6">
+                            {/* ✅ Updated Pagination */}
+                            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-6">
                                 <div className="text-sm text-gray-600">
-                                    Showing {totalEntries > 0 ? startIndex + 1 : 0} to {endIndex} of {totalEntries} entries
+                                    Showing {pagination.totalCount > 0 ? ((pagination.currentPage - 1) * pagination.pageSize) + 1 : 0} to {Math.min(pagination.currentPage * pagination.pageSize, pagination.totalCount)} of {pagination.totalCount} entries
                                 </div>
                                 
                                 <div className="flex items-center gap-2">
                                     <button
-                                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                        onClick={handlePrevPage}
                                         disabled={currentPage === 1}
                                         className="px-3 py-1 border border-gray-300 rounded-md text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                     >
                                         Previous
                                     </button>
                                     
-                                    {[...Array(Math.min(totalPages, 5))].map((_, index) => {
-                                        let pageNum;
-                                        if (totalPages <= 5) {
-                                            pageNum = index + 1;
-                                        } else if (currentPage <= 3) {
-                                            pageNum = index + 1;
-                                        } else if (currentPage >= totalPages - 2) {
-                                            pageNum = totalPages - 4 + index;
-                                        } else {
-                                            pageNum = currentPage - 2 + index;
-                                        }
-                                        
-                                        return (
-                                            <button
-                                                key={pageNum}
-                                                onClick={() => setCurrentPage(pageNum)}
-                                                className={`px-3 py-1 rounded-md text-sm transition-colors ${
-                                                    currentPage === pageNum
-                                                        ? 'bg-blue-600 text-white'
-                                                        : 'border border-gray-300 hover:bg-gray-50'
-                                                }`}
-                                            >
-                                                {pageNum}
-                                            </button>
-                                        );
-                                    })}
+                                    <span className="text-sm text-gray-600">
+                                        Page {pagination.currentPage} of {pagination.totalPages || 1}
+                                    </span>
                                     
                                     <button
-                                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                                        disabled={currentPage === totalPages || totalPages === 0}
+                                        onClick={handleNextPage}
+                                        disabled={currentPage >= pagination.totalPages}
                                         className="px-3 py-1 border border-gray-300 rounded-md text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                     >
                                         Next

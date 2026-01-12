@@ -110,12 +110,16 @@ export default function CourseCard({
                 </div>
             `,
             icon: 'warning',
+            showCloseButton: true,
             showCancelButton: true,
-            confirmButtonColor: '#ef4444',
-            cancelButtonColor: '#6b7280',
-            confirmButtonText: 'Yes, Delete',
-            cancelButtonText: 'Cancel',
-            reverseButtons: true
+            confirmButtonText: "Yes, Delete",
+            cancelButtonText: "Cancel",
+            confirmButtonColor: "#941d05",
+            cancelButtonColor: "#1e3a8a",
+            customClass: {
+                cancelButton: "swal-cancel-style",
+                confirmButton: "swal-confirm-style",
+            }
         });
 
         if (!result.isConfirmed) return;
@@ -130,6 +134,8 @@ export default function CourseCard({
         if (deleteResult.success) {
             await Swal.fire({
                 icon: 'success',
+                toast: true,
+                position: 'top-end',
                 title: isExisting ? 'Deleted!' : 'Removed!',
                 text: deleteResult.message,
                 showConfirmButton: false,
