@@ -65,7 +65,7 @@ export default function EnrollmentForm({
     const endDate = enrollment.end_date ? 
                    new Date(enrollment.end_date).toISOString().split('T')[0] : '';
     const remedialAllowed = enrollment.remedial_allowed !== undefined ? 
-                          (enrollment.remedial_allowed ? 'Yes' : 'No') : 'Yes';
+                      enrollment.remedial_allowed : true; // default true
     const remedial_limit = enrollment.remedial_limit || 1;
     
     useEffect(() => {
@@ -543,20 +543,21 @@ export default function EnrollmentForm({
                                         Remedial Allowed
                                     </label>
                                     <div className="grid grid-cols-2 gap-3">
+                                        {/* YES BUTTON */}
                                         <button
                                             type="button"
                                             onClick={() => {
                                                 if (!isReadOnly) {
-                                                    onUpdateField(courseId, enrollmentIndex, 'remedial_allowed', 'Yes');
-                                                    // ✅ Set default remedial_limit to 1 when enabling remedial
-                                                    if (remedial_limit === 0) {
+                                                    onUpdateField(courseId, enrollmentIndex, 'remedial_allowed', true); // ✅ boolean
+                                                    // Set default remedial_limit to 1 when enabling remedial
+                                                    if (enrollment.remedial_limit === 0) {
                                                         onUpdateField(courseId, enrollmentIndex, 'remedial_limit', 1);
                                                     }
                                                 }
                                             }}
                                             disabled={isReadOnly}
                                             className={`p-4 rounded-xl border-2 transition-all ${
-                                                remedialAllowed === 'Yes'
+                                                remedialAllowed === true // ✅ compare dengan boolean
                                                     ? 'border-green-500 bg-green-50'
                                                     : 'border-gray-200 hover:border-gray-300'
                                             } ${isReadOnly ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
@@ -564,18 +565,20 @@ export default function EnrollmentForm({
                                             <div className="font-bold text-gray-900 mb-1">Yes</div>
                                             <div className="text-xs text-gray-600">Allow retakes</div>
                                         </button>
+
+                                        {/* NO BUTTON */}
                                         <button
                                             type="button"
                                             onClick={() => {
                                                 if (!isReadOnly) {
-                                                    onUpdateField(courseId, enrollmentIndex, 'remedial_allowed', 'No');
-                                                    // ✅ Set remedial_limit to 0 when disabling remedial
+                                                    onUpdateField(courseId, enrollmentIndex, 'remedial_allowed', false); // ✅ boolean
+                                                    // Set remedial_limit to 0 when disabling remedial
                                                     onUpdateField(courseId, enrollmentIndex, 'remedial_limit', 0);
                                                 }
                                             }}
                                             disabled={isReadOnly}
                                             className={`p-4 rounded-xl border-2 transition-all ${
-                                                remedialAllowed === 'No'
+                                                remedialAllowed === false // ✅ compare dengan boolean
                                                     ? 'border-red-500 bg-red-50'
                                                     : 'border-gray-200 hover:border-gray-300'
                                             } ${isReadOnly ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
@@ -586,29 +589,29 @@ export default function EnrollmentForm({
                                     </div>
                                 </div>
 
-                                {/* Maximum Attempts */}
+                                {/* Maximum Attempts Input */}
                                 <div>
                                     <label className="block text-sm font-bold text-gray-700 mb-2">
                                         Maximum Attempts
                                     </label>
                                     <input
                                         type="number"
-                                        value={remedialAllowed === 'No' ? 0 : remedial_limit}
+                                        value={remedialAllowed === false ? 0 : (enrollment.remedial_limit || 1)} // ✅ boolean check
                                         onChange={(e) => {
                                             let value = parseInt(e.target.value, 10);
-                                            if (isNaN(value) || value < 1) value = 0;
+                                            if (isNaN(value) || value < 1) value = 1;
                                             if (value > 10) value = 10;
                                             onUpdateField(courseId, enrollmentIndex, 'remedial_limit', value);
                                         }}
-                                        min="0"
+                                        min="1"
                                         max="10"
-                                        disabled={isReadOnly || remedialAllowed === 'No'} // ✅ Disable when remedial not allowed
+                                        disabled={isReadOnly || remedialAllowed === false} // ✅ boolean check
                                         className={`w-full px-4 py-3 border-2 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                                            isReadOnly || remedialAllowed === 'No' ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'
+                                            isReadOnly || remedialAllowed === false ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'
                                         }`}
                                     />
                                     <p className="text-xs text-gray-500 mt-2">
-                                        {remedialAllowed === 'No' 
+                                        {remedialAllowed === false // ✅ boolean check
                                             ? 'Remedial not allowed - Only one attempt available'
                                             : 'Number of times employee can attempt this course'
                                         }

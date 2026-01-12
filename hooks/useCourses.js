@@ -107,15 +107,25 @@ export function useCourses(contentId = null) {
     }, [fetchGroupEnroll]);
 
     // ✅ GET employees
-    const fetchEmployeeData = useCallback(async (page = 1, pageSize = 10) => {
+    const fetchEmployeeData = useCallback(async (page = 1, pageSize = 10,  filters = {}) => {
         setError(null);
         
-        const result = await ManagementService.getAllEmployees(page, pageSize);
+        const params = {
+            page,
+            limit: pageSize, 
+            search: filters.search || '',
+            company_id: filters.company_id || [], 
+            dept_id: filters.dept_id || [], 
+            grouping_id: filters.grouping_id || []
+        };
+        
+        const result = await ManagementService.getAllEmployees(params);
         
         if (result.success) {
             setEmployeeData(result);
         } else {
             setError(result.message);
+            setEmployeeData({ data: [], pagination: null });
         }
     }, []);
 
