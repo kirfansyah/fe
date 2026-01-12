@@ -74,6 +74,57 @@ class ReportService {
     }
   }
 
+  /**
+   * Update ebook
+   * @param {number} id - Ebook ID
+   * @param {Object} data - Ebook data
+   * @returns {Promise} API response
+   */
+  static async updateOfflineLearning(id, data) {
+    try {
+      const formData = new FormData();
+
+      formData.append("id_training_certificate", data.id_training_certificate);
+      formData.append("employee_id", data.employee_id);
+      formData.append("full_name", data.full_name);
+      formData.append("position_id", data.position_id);
+      formData.append("department_id", data.department_id);
+      formData.append("company_id", data.company_id);
+      formData.append("training_title", data.training_title);
+      formData.append("issuing_organization", data.issuing_organization);
+      formData.append("issue_date", data.issue_date);
+      formData.append("expiration_date", data.expiration_date);
+      formData.append("credential_id", data.credential_id);
+      formData.append("credential_url", data.credential_url);
+
+      // Hanya append file jika ada file baru
+      if (data.certificate && typeof data.certificate !== "string") {
+        formData.append("certificate", data.certificate);
+      }
+
+      const response = await API.put(
+        `/report/offline-learning/${id}`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
+      return {
+        success: response.data.success,
+        data: response.data.data,
+        message: response.data.message,
+      };
+    } catch (error) {
+      console.error("ReportService.updateOfflineLearning Error:", error);
+      throw new Error(
+        error.response?.data?.message || "Failed to update certificate"
+      );
+    }
+  }
+
   static async getAllDept() {
     try {
       const response = await API.get("/master/dept");
@@ -142,6 +193,33 @@ class ReportService {
 
       throw new Error(
         error.response?.data?.message || "Failed to fetch company unit"
+      );
+    }
+  }
+
+  static async getEmployee(companyId, employeeId) {
+    try {
+      const response = await API.get("/employee/source", {
+        params: {
+          site_id: companyId,
+          nik: employeeId,
+        },
+      });
+
+      return {
+        success: response.data.success,
+        data: response.data.data || null,
+        message: response.data.message,
+        pagination: response.data.pagination,
+      };
+    } catch (error) {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        console.error("⚠️ No token found in localStorage");
+      }
+
+      throw new Error(
+        error.response?.data?.message || "Failed to fetch employee"
       );
     }
   }

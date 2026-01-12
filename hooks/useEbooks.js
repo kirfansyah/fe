@@ -10,6 +10,7 @@ const DUMMY_EBOOKS = [
     description: "Belajar React dari dasar",
     category_id: 1,
     subcategory_id: 1,
+    company_id: 1,
     contents: [
       { id_ebook_content: 1, content_type_name: "Introduction to React" },
       { id_ebook_content: 2, content_type_name: "Components & Props" },
@@ -22,6 +23,7 @@ const DUMMY_EBOOKS = [
     description: "HTML untuk pemula",
     category_id: 2,
     subcategory_id: 3,
+    company_id: 1,
     contents: [
       {
         id_ebook_content: 3,
@@ -32,6 +34,7 @@ const DUMMY_EBOOKS = [
   {
     id_ebook: 3,
     title: "Belajar Next.js (dummy data)",
+    company_id: 2,
     contents: [
       { id_ebook_content: 4, content_type_name: "Introduction to Next.js" },
       { id_ebook_content: 5, content_type_name: "Components" },
@@ -46,6 +49,7 @@ export function useEbooks() {
   const [categorys, setCategorys] = useState([]);
   const [subCategorys, setSubCategorys] = useState([]);
   const [employees, setEmployees] = useState([]);
+  const [companys, setCompanys] = useState([]);
 
   // get semua data ebook
   const fetchEbooks = useCallback(async () => {
@@ -232,7 +236,7 @@ export function useEbooks() {
     }
   }, []);
 
-  //  get all data Sub Category
+  //  get all data Employee
   const fetchEmployee = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -248,14 +252,38 @@ export function useEbooks() {
     }
   }, []);
 
+  // get all data Company
+  const fetchCompany = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const res = await API.getAllCompany();
+      setCompanys(res.data);
+    } catch (err) {
+      setError(err.message || "Failed to fetch companys");
+      console.error("Error fetching Company:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     Promise.all([
       fetchEbooks(),
       fetchCategory(),
       fetchSubCategory(),
       fetchEmployee(),
+      fetchCompany(),
     ]);
-  }, [fetchEbooks, fetchCategory, fetchSubCategory, fetchEmployee]);
+  }, [
+    fetchEbooks,
+    fetchCategory,
+    fetchSubCategory,
+    fetchEmployee,
+    fetchCompany,
+  ]);
+
   return {
     ebooks,
     categorys,
@@ -263,6 +291,7 @@ export function useEbooks() {
     loading,
     error,
     employees,
+    companys,
     fetchEbooks,
     getEbookById,
     getEbookDetailById,
@@ -272,5 +301,6 @@ export function useEbooks() {
     fetchCategory,
     fetchSubCategory,
     fetchEmployee,
+    fetchCompany,
   };
 }
