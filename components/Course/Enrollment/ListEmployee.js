@@ -46,10 +46,11 @@ export default function ListEmployee({ created_by }) {
     useEffect(() => {
         const fetchAllForFilters = async () => {
             try {
-                const response = await API.get('/employee', { 
+                const response = await API.post('/employee', { 
                     params: { page: 1, limit: 99999 } 
                 });
                 const data = response.data?.data || [];
+                console.log('All employees for filters:', data);
                 setAllEmployees(data);
                 
                 // ✅ Build maps: name → id

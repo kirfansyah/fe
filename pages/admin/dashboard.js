@@ -20,7 +20,7 @@ import { useRoles } from "@/hooks/useRoles";
 import { useCourses } from "@/hooks/useCourses";
 
 export default function DashboardAnalytics() {
-    const { fetchAnalytics, fetchEmployeeCourseResult  } = useRoles();
+    const { fetchAnalytics, fetchEmployeeCourseResult,fetchOverallPassPercentage  } = useRoles();
     const { companies } = useCourses();
     
     const [employeeCourseData, setEmployeeCourseData] = useState(null);
@@ -30,6 +30,63 @@ export default function DashboardAnalytics() {
     const [showCourseEmployeeDropdown, setShowCourseEmployeeDropdown] = useState(false);
     const courseEmployeeDropdownRef = useRef(null);
 
+    const [passPercentageData, setPassPercentageData] = useState(null);
+    const [loadingPassPercentage, setLoadingPassPercentage] = useState(false);
+
+    const [coursesList, setCoursesList] = useState([]);
+    const [coursesListWithId, setCoursesListWithId] = useState([]);
+
+    
+    const loadPassPercentage = async () => {
+        try {
+            setLoadingPassPercentage(true);
+            
+            const filters = {};
+            
+            if (companyFilter !== 'All') {
+                filters.company_id = companyFilter;
+            }
+            
+            // ✅ Kirim id_course kalau bukan "All"
+            if (courseFilterPassPercentage !== 'All') {
+                filters.id_course = courseFilterPassPercentage; // Ini sudah ID, bukan name
+            }
+            
+            if (yearFilter !== 'All') {
+                filters.year = yearFilter;
+            }
+            
+            if (monthFilter !== 'All') {
+                const monthIndex = monthOptions.indexOf(monthFilter);
+                if (monthIndex > 0) {
+                    filters.month = monthIndex;
+                }
+            }
+            
+            console.log('Sending filters:', filters); // ✅ Debug
+            
+            const result = await fetchOverallPassPercentage(filters);
+            console.log('Pass Percentage Result:', result);
+            
+            if (result?.data && Array.isArray(result.data) && result.data.length > 0) {
+                // Aggregate semua data dari array
+                const totals = result.data.reduce((acc, course) => ({
+                    in_progress: acc.in_progress + (course.in_progress || 0),
+                    passed: acc.passed + (course.passed || 0),
+                    failed: acc.failed + (course.failed || 0)
+                }), { in_progress: 0, passed: 0, failed: 0 });
+                
+                setPassPercentageData(totals);
+            } else {
+                setPassPercentageData({ in_progress: 0, passed: 0, failed: 0 });
+            }
+        } catch (err) {
+            console.error('Error fetching pass percentage:', err);
+            setPassPercentageData({ in_progress: 0, passed: 0, failed: 0 });
+        } finally {
+            setLoadingPassPercentage(false);
+        }
+    };
     
     // Get current year and month
     const currentDate = new Date();
@@ -46,7 +103,7 @@ export default function DashboardAnalytics() {
     const [courseFilterPassPercentage, setCourseFilterPassPercentage] = useState('All');
     
     // Lists for dropdowns
-    const [coursesList, setCoursesList] = useState([]);
+    
     const [companiesList, setCompaniesList] = useState([{ id: 'All', company_name: 'All' }]);
     
     // Dropdown states
@@ -98,6 +155,10 @@ export default function DashboardAnalytics() {
         }
     }, [companies]);
 
+    useEffect(() => {
+        loadPassPercentage();
+    }, [companyFilter, courseFilterPassPercentage, yearFilter, monthFilter]);
+
     // Fetch data when filters change
     useEffect(() => {
         loadAnalyticsData();
@@ -131,15 +192,32 @@ export default function DashboardAnalytics() {
             setLoadingEmployeeCourse(true);
             
             const filters = {};
+            
             if (companyFilter !== 'All') {
                 filters.company_id = companyFilter;
             }
+            
             if (courseFilterEmployee !== 'All') {
-                // Cari course ID dari coursesList jika diperlukan
                 filters.id_course = courseFilterEmployee;
             }
             
+            // ✅ TAMBAH YEAR FILTER
+            if (yearFilter !== 'All') {
+                filters.year = yearFilter;
+            }
+            
+            // ✅ TAMBAH MONTH FILTER
+            if (monthFilter !== 'All') {
+                const monthIndex = monthOptions.indexOf(monthFilter);
+                if (monthIndex > 0) {
+                    filters.month = monthIndex;
+                }
+            }
+            
+            console.log('Employee Course Filters:', filters); // Debug
+            
             const result = await fetchEmployeeCourseResult(filters);
+            console.log('Employee Course Result:', result);
             
             if (result?.data) {
                 setEmployeeCourseData(result.data);
@@ -156,7 +234,7 @@ export default function DashboardAnalytics() {
     
     useEffect(() => {
         loadEmployeeCourseResult();
-    }, [companyFilter, courseFilterEmployee]);
+    }, [companyFilter, courseFilterEmployee, yearFilter, monthFilter]); // ✅ TAMBAH yearFilter & monthFilter
 
     const handleCourseEmployeeSelect = (courseId) => {
         setCourseFilterEmployee(courseId);
@@ -168,38 +246,38 @@ export default function DashboardAnalytics() {
             setLoading(true);
             setError(null);
             
-            
-            // Pass filters to API
             const filters = {};
             if (yearFilter !== 'All') {
                 filters.year = yearFilter;
             }
             if (monthFilter !== 'All') {
-                // Convert month name to number
                 const monthIndex = monthOptions.indexOf(monthFilter);
                 if (monthIndex > 0) {
-                    filters.month = monthIndex; // 1-12
+                    filters.month = monthIndex;
                 }
             }
             if (companyFilter !== 'All') {
-                filters.company_id = companyFilter; // Assuming this will be company ID
+                filters.company_id = companyFilter;
             }
             
             const result = await fetchAnalytics(filters);
             
-            
-            
-            if (!result) {
-                throw new Error('No response from server');
-            }
-            
             if (result.data) {
                 const apiData = result.data;
                 
-                // Extract courses list for dropdown
+                // ✅ Extract courses list dengan ID untuk dropdown
                 if (apiData.most_accessed_courses && Array.isArray(apiData.most_accessed_courses)) {
-                    const courses = apiData.most_accessed_courses.map(c => c.course_title);
-                    setCoursesList(['All', ...courses]);
+                    const coursesWithId = apiData.most_accessed_courses.map(c => ({
+                        id: c.id_course,
+                        name: c.course_title
+                    }));
+                    
+                    // Untuk dropdown yang butuh ID
+                    setCoursesListWithId([{ id: 'All', name: 'All' }, ...coursesWithId]);
+                    
+                    // Untuk dropdown yang cuma butuh name (Employee x Course)
+                    const courseNames = apiData.most_accessed_courses.map(c => c.course_title);
+                    setCoursesList(['All', ...courseNames]);
                 }
                 
                 const transformed = transformApiData(apiData);
@@ -275,15 +353,8 @@ export default function DashboardAnalytics() {
                     iconBg: 'bg-red-300'
                 }
             ],
-            passPercentage: { 
-                in_progress: 0, 
-                passed: 0, 
-                failed: 0, 
-                total_percentage: 0 
-            },
             mostAccessedCourses: [],
             averageResults: [],
-            employeeCourseResults: [],
             ebookStats: {
                 total_ebook_on_library: 0,
                 total_ebook_read: 0,
@@ -295,12 +366,6 @@ export default function DashboardAnalytics() {
 
     const transformApiData = (apiData) => {
         const summary = apiData?.summary || {};
-        const passPercentage = apiData?.overall_pass_percentage || { 
-            in_progress: 0, 
-            passed: 0, 
-            failed: 0, 
-            total_percentage: 0 
-        };
         const mostAccessed = apiData?.most_accessed_courses || [];
         const avgResults = apiData?.average_course_result || [];
         const ebookStats = apiData?.statistik_ebook || {
@@ -310,20 +375,41 @@ export default function DashboardAnalytics() {
             average_ebook_read_month: 0
         };
 
-        const calculateTrend = (current, previous = 0) => {
-            if (current > previous) return 'up';
-            if (current < previous) return 'down';
+        // ✅ Helper to get trend from direction
+        const getTrend = (direction) => {
+            if (direction === 'up') return 'up';
+            if (direction === 'down') return 'down';
             return 'neutral';
         };
 
+        // ✅ Helper to format growth text
+        const formatGrowth = (growth) => {
+            if (!growth) return '0% this month';
+            
+            const { percentage, direction, is_new } = growth;
+            
+            if (is_new) {
+                return '+100% (new)';
+            }
+            
+            if (direction === 'up') {
+                return `+${percentage}% this month`;
+            } else if (direction === 'down') {
+                return `-${percentage}% this month`;
+            } else {
+                return `${percentage}% this month`;
+            }
+        };
+
+        // ✅ Build stats from API data
         const stats = [
             {
                 id: 1,
                 title: 'Total Course Active',
-                value: summary.course_active || 0,
-                change: '+40.1% this month',
-                changeValue: summary.course_active || 0,
-                trend: calculateTrend(summary.course_active || 0),
+                value: summary.course_active?.value || 0,
+                change: formatGrowth(summary.course_active?.growth),
+                changeValue: summary.course_active?.value || 0,
+                trend: getTrend(summary.course_active?.growth?.direction),
                 color: 'from-slate-700 to-slate-800',
                 icon: BookOpen,
                 iconBg: 'bg-slate-600'
@@ -331,10 +417,10 @@ export default function DashboardAnalytics() {
             {
                 id: 2,
                 title: 'Total Course Inactive',
-                value: summary.course_inactive || 0,
-                change: '0.0% this month',
-                changeValue: 0,
-                trend: 'neutral',
+                value: summary.course_inactive?.value || 0,
+                change: formatGrowth(summary.course_inactive?.growth),
+                changeValue: summary.course_inactive?.value || 0,
+                trend: getTrend(summary.course_inactive?.growth?.direction),
                 color: 'from-blue-500 to-blue-600',
                 icon: XCircle,
                 iconBg: 'bg-blue-400'
@@ -342,10 +428,10 @@ export default function DashboardAnalytics() {
             {
                 id: 3,
                 title: 'Total Employee Enrolled',
-                value: summary.employee_enrolled || 0,
-                change: '+14.1% this month',
-                changeValue: summary.employee_enrolled || 0,
-                trend: calculateTrend(summary.employee_enrolled || 0),
+                value: summary.employee_enrolled?.value || 0,
+                change: formatGrowth(summary.employee_enrolled?.growth),
+                changeValue: summary.employee_enrolled?.value || 0,
+                trend: getTrend(summary.employee_enrolled?.growth?.direction),
                 color: 'from-teal-500 to-teal-600',
                 icon: Users,
                 iconBg: 'bg-teal-400'
@@ -353,10 +439,10 @@ export default function DashboardAnalytics() {
             {
                 id: 4,
                 title: 'Total Finished',
-                value: summary.finished || 0,
-                change: '37.1% this month',
-                changeValue: summary.finished || 0,
-                trend: calculateTrend(summary.finished || 0),
+                value: summary.finished?.value || 0,
+                change: formatGrowth(summary.finished?.growth),
+                changeValue: summary.finished?.value || 0,
+                trend: getTrend(summary.finished?.growth?.direction),
                 color: 'from-amber-400 to-amber-500',
                 icon: CheckCircle2,
                 iconBg: 'bg-amber-300'
@@ -364,65 +450,39 @@ export default function DashboardAnalytics() {
             {
                 id: 5,
                 title: 'Total Unfinished',
-                value: summary.unfinished || 0,
-                change: '-28.3% this month',
-                changeValue: summary.unfinished || 0,
-                trend: (summary.unfinished || 0) < (summary.finished || 0) ? 'down' : 'up',
+                value: summary.unfinished?.value || 0,
+                change: formatGrowth(summary.unfinished?.growth),
+                changeValue: summary.unfinished?.value || 0,
+                trend: getTrend(summary.unfinished?.growth?.direction),
                 color: 'from-red-400 to-red-500',
                 icon: XCircle,
                 iconBg: 'bg-red-300'
             }
         ];
 
-        // Filter pass percentage by course if selected
-        let filteredPassPercentage = passPercentage;
-        if (courseFilterPassPercentage !== 'All') {
-            // You would need to implement course-specific pass percentage from API
-            // For now, using the overall data
-            filteredPassPercentage = passPercentage;
-        }
-
-        const transformedPassPercentage = {
-            in_progress: filteredPassPercentage.in_progress || 0,
-            passed: filteredPassPercentage.passed || 0,
-            failed: filteredPassPercentage.failed || 0,
-            total: (filteredPassPercentage.in_progress || 0) + 
-                   (filteredPassPercentage.passed || 0) + 
-                   (filteredPassPercentage.failed || 0)
-        };
-
+        // ✅ Transform Most Accessed Courses
         const colors = ['bg-teal-600', 'bg-amber-500', 'bg-blue-500', 'bg-purple-500', 'bg-pink-500'];
         const transformedMostAccessed = mostAccessed
             .filter(course => course && course.percentage > 0)
             .map((course, index) => ({
+                id: course.id_course,
                 name: course.course_title || 'Unknown',
                 percentage: course.percentage || 0,
                 color: colors[index % colors.length]
             }));
 
+        // ✅ Transform Average Results
         const transformedAvgResults = avgResults
             .filter(result => result && result.avg_score !== null && result.avg_score !== undefined)
             .map(result => ({
-                course: result.name || result.course_title || 'Unknown',
+                course: result.course_title || 'Unknown',
                 score: Math.round(result.avg_score || 0)
             }));
 
-        // Mock employee course results (replace with actual API data if available)
-        const employeeCourseResults = Array.from({ length: 23 }, (_, i) => ({
-            score: 95 - i,
-            courses: [
-                Math.floor(Math.random() * 15) + 5,
-                Math.floor(Math.random() * 15) + 5,
-                Math.floor(Math.random() * 15) + 5
-            ]
-        }));
-
         return {
             stats,
-            passPercentage: transformedPassPercentage,
             mostAccessedCourses: transformedMostAccessed,
             averageResults: transformedAvgResults,
-            employeeCourseResults,
             ebookStats
         };
     };
@@ -442,8 +502,8 @@ export default function DashboardAnalytics() {
         setShowCompanyDropdown(false);
     };
 
-    const handleCoursePassSelect = (course) => {
-        setCourseFilterPassPercentage(course);
+    const handleCoursePassSelect = (courseId) => {
+        setCourseFilterPassPercentage(courseId); // Simpan ID, bukan name
         setShowCoursePassDropdown(false);
     };
 
@@ -706,7 +766,13 @@ export default function DashboardAnalytics() {
                         <div className="flex items-center gap-2 text-xs">
                             {stat.trend === 'up' && <TrendingUp className="w-3 h-3" />}
                             {stat.trend === 'down' && <TrendingDown className="w-3 h-3" />}
-                            <span className="font-semibold">{stat.changeValue}</span>
+                            <span className={`font-semibold ${
+                                stat.trend === 'up' ? 'text-green-200' : 
+                                stat.trend === 'down' ? 'text-red-200' : 
+                                'text-white'
+                            }`}>
+                                {stat.changeValue}
+                            </span>
                             <span className="opacity-80">{stat.change}</span>
                         </div>
                     </div>
@@ -731,24 +797,26 @@ export default function DashboardAnalytics() {
                             >
                                 <Filter className="w-3 h-3 text-gray-600" />
                                 <span className="text-gray-700 font-medium max-w-[100px] truncate">
-                                    {courseFilterPassPercentage === 'All' ? 'All' : courseFilterPassPercentage}
+                                    {courseFilterPassPercentage === 'All' 
+                                        ? 'All' 
+                                        : coursesListWithId.find(c => c.id === courseFilterPassPercentage)?.name || 'Select'}
                                 </span>
                                 <ChevronDown className={`w-3 h-3 text-gray-600 transition-transform ${showCoursePassDropdown ? 'rotate-180' : ''}`} />
                             </button>
                             
                             {showCoursePassDropdown && (
                                 <div className="absolute top-full right-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
-                                    {coursesList.length > 0 ? (
-                                        coursesList.map((course) => (
+                                    {coursesListWithId.length > 0 ? (
+                                        coursesListWithId.map((course) => (
                                             <button
-                                                key={course}
-                                                onClick={() => handleCoursePassSelect(course)}
+                                                key={course.id}
+                                                onClick={() => handleCoursePassSelect(course.id)}
                                                 className={`w-full text-left px-3 py-2 hover:bg-gray-50 transition-colors text-xs ${
-                                                    courseFilterPassPercentage === course ? 'bg-indigo-50 text-indigo-600 font-medium' : 'text-gray-700'
+                                                    courseFilterPassPercentage === course.id ? 'bg-indigo-50 text-indigo-600 font-medium' : 'text-gray-700'
                                                 }`}
-                                                title={course}
+                                                title={course.name}
                                             >
-                                                <span className="line-clamp-2">{course}</span>
+                                                <span className="line-clamp-2">{course.name}</span>
                                             </button>
                                         ))
                                     ) : (
@@ -761,83 +829,117 @@ export default function DashboardAnalytics() {
                         </div>
                     </div>
                     
-                    <div className="flex items-center justify-center mb-6">
-                        <div className="relative w-56 h-56">
-                            <svg className="w-full h-full transform -rotate-90">
-                                <circle cx="112" cy="112" r="90" stroke="#f3f4f6" strokeWidth="30" fill="none" />
-                                {analyticsData.passPercentage.total > 0 && (
-                                    <>
-                                        {/* Passed segment */}
-                                        {analyticsData.passPercentage.passed > 0 && (
-                                            <circle
-                                                cx="112" cy="112" r="90"
-                                                stroke="#22c55e" strokeWidth="30" fill="none"
-                                                strokeDasharray={`${(analyticsData.passPercentage.passed / analyticsData.passPercentage.total) * 565} 565`}
-                                                strokeLinecap="round"
-                                                className="transition-all duration-1000"
-                                            />
-                                        )}
-                                        {/* In Progress segment */}
-                                        {analyticsData.passPercentage.in_progress > 0 && (
-                                            <circle
-                                                cx="112" cy="112" r="90"
-                                                stroke="#eab308" strokeWidth="30" fill="none"
-                                                strokeDasharray={`${(analyticsData.passPercentage.in_progress / analyticsData.passPercentage.total) * 565} 565`}
-                                                strokeDashoffset={`-${(analyticsData.passPercentage.passed / analyticsData.passPercentage.total) * 565}`}
-                                                strokeLinecap="round"
-                                                className="transition-all duration-1000"
-                                            />
-                                        )}
-                                        {/* Failed segment */}
-                                        {analyticsData.passPercentage.failed > 0 && (
-                                            <circle
-                                                cx="112" cy="112" r="90"
-                                                stroke="#ef4444" strokeWidth="30" fill="none"
-                                                strokeDasharray={`${(analyticsData.passPercentage.failed / analyticsData.passPercentage.total) * 565} 565`}
-                                                strokeDashoffset={`-${((analyticsData.passPercentage.passed + analyticsData.passPercentage.in_progress) / analyticsData.passPercentage.total) * 565}`}
-                                                strokeLinecap="round"
-                                                className="transition-all duration-1000"
-                                            />
-                                        )}
-                                    </>
-                                )}
-                            </svg>
-                            <div className="absolute inset-0 flex items-center justify-center flex-col">
-                                <span className="text-5xl font-bold text-gray-900">{analyticsData.passPercentage.total}</span>
-                                <span className="text-sm text-gray-600 mt-1">Total</span>
-                            </div>
+                    {/* ✅ Loading State */}
+                    {loadingPassPercentage ? (
+                        <div className="flex items-center justify-center h-64">
+                            <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
                         </div>
-                    </div>
+                    ) : passPercentageData ? (
+                        <>
+                            {/* ✅ Use passPercentageData instead of analyticsData.passPercentage */}
+                            <div className="flex items-center justify-center mb-6">
+                                <div className="relative w-56 h-56">
+                                    {(() => {
+                                        const total = (passPercentageData.in_progress || 0) + 
+                                                     (passPercentageData.passed || 0) + 
+                                                     (passPercentageData.failed || 0);
+                                        
+                                        return (
+                                            <>
+                                                <svg className="w-full h-full transform -rotate-90">
+                                                    <circle cx="112" cy="112" r="90" stroke="#f3f4f6" strokeWidth="30" fill="none" />
+                                                    {total > 0 && (
+                                                        <>
+                                                            {/* Passed segment */}
+                                                            {passPercentageData.passed > 0 && (
+                                                                <circle
+                                                                    cx="112" cy="112" r="90"
+                                                                    stroke="#22c55e" strokeWidth="30" fill="none"
+                                                                    strokeDasharray={`${(passPercentageData.passed / total) * 565} 565`}
+                                                                    strokeLinecap="round"
+                                                                    className="transition-all duration-1000"
+                                                                />
+                                                            )}
+                                                            {/* In Progress segment */}
+                                                            {passPercentageData.in_progress > 0 && (
+                                                                <circle
+                                                                    cx="112" cy="112" r="90"
+                                                                    stroke="#eab308" strokeWidth="30" fill="none"
+                                                                    strokeDasharray={`${(passPercentageData.in_progress / total) * 565} 565`}
+                                                                    strokeDashoffset={`-${(passPercentageData.passed / total) * 565}`}
+                                                                    strokeLinecap="round"
+                                                                    className="transition-all duration-1000"
+                                                                />
+                                                            )}
+                                                            {/* Failed segment */}
+                                                            {passPercentageData.failed > 0 && (
+                                                                <circle
+                                                                    cx="112" cy="112" r="90"
+                                                                    stroke="#ef4444" strokeWidth="30" fill="none"
+                                                                    strokeDasharray={`${(passPercentageData.failed / total) * 565} 565`}
+                                                                    strokeDashoffset={`-${((passPercentageData.passed + passPercentageData.in_progress) / total) * 565}`}
+                                                                    strokeLinecap="round"
+                                                                    className="transition-all duration-1000"
+                                                                />
+                                                            )}
+                                                        </>
+                                                    )}
+                                                </svg>
+                                                <div className="absolute inset-0 flex items-center justify-center flex-col">
+                                                    <span className="text-5xl font-bold text-gray-900">{total}</span>
+                                                    <span className="text-sm text-gray-600 mt-1">Total</span>
+                                                </div>
+                                            </>
+                                        );
+                                    })()}
+                                </div>
+                            </div>
 
-                    <div className="flex flex-col gap-2">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                                <span className="text-sm text-gray-600">Passed</span>
+                            <div className="flex flex-col gap-2">
+                                {(() => {
+                                    const total = (passPercentageData.in_progress || 0) + 
+                                                 (passPercentageData.passed || 0) + 
+                                                 (passPercentageData.failed || 0);
+                                    
+                                    return (
+                                        <>
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                                                    <span className="text-sm text-gray-600">Passed</span>
+                                                </div>
+                                                <span className="text-sm font-semibold text-gray-900">
+                                                    {passPercentageData.passed} ({total > 0 ? Math.round((passPercentageData.passed / total) * 100) : 0}%)
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                                                    <span className="text-sm text-gray-600">In Progress</span>
+                                                </div>
+                                                <span className="text-sm font-semibold text-gray-900">
+                                                    {passPercentageData.in_progress} ({total > 0 ? Math.round((passPercentageData.in_progress / total) * 100) : 0}%)
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                                                    <span className="text-sm text-gray-600">Failed</span>
+                                                </div>
+                                                <span className="text-sm font-semibold text-gray-900">
+                                                    {passPercentageData.failed} ({total > 0 ? Math.round((passPercentageData.failed / total) * 100) : 0}%)
+                                                </span>
+                                            </div>
+                                        </>
+                                    );
+                                })()}
                             </div>
-                            <span className="text-sm font-semibold text-gray-900">
-                                {analyticsData.passPercentage.passed} ({analyticsData.passPercentage.total > 0 ? Math.round((analyticsData.passPercentage.passed / analyticsData.passPercentage.total) * 100) : 0}%)
-                            </span>
+                        </>
+                    ) : (
+                        <div className="flex items-center justify-center h-64">
+                            <p className="text-gray-400 text-sm">No pass percentage data available</p>
                         </div>
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                                <span className="text-sm text-gray-600">In Progress</span>
-                            </div>
-                            <span className="text-sm font-semibold text-gray-900">
-                                {analyticsData.passPercentage.in_progress} ({analyticsData.passPercentage.total > 0 ? Math.round((analyticsData.passPercentage.in_progress / analyticsData.passPercentage.total) * 100) : 0}%)
-                            </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                                <span className="text-sm text-gray-600">Failed</span>
-                            </div>
-                            <span className="text-sm font-semibold text-gray-900">
-                                {analyticsData.passPercentage.failed} ({analyticsData.passPercentage.total > 0 ? Math.round((analyticsData.passPercentage.failed / analyticsData.passPercentage.total) * 100) : 0}%)
-                            </span>
-                        </div>
-                    </div>
+                    )}
                 </div>
 
                 {/* Most Accessed Courses */}
@@ -1011,24 +1113,26 @@ export default function DashboardAnalytics() {
                         >
                             <Filter className="w-3 h-3 text-gray-600" />
                             <span className="text-gray-700 font-medium max-w-[150px] truncate">
-                                {courseFilterEmployee === 'All' ? 'All Courses' : courseFilterEmployee}
+                                {courseFilterEmployee === 'All' 
+                                    ? 'All Courses' 
+                                    : coursesListWithId.find(c => c.id === courseFilterEmployee)?.name || 'Select'}
                             </span>
                             <ChevronDown className={`w-3 h-3 text-gray-600 transition-transform ${showCourseEmployeeDropdown ? 'rotate-180' : ''}`} />
                         </button>
                         
                         {showCourseEmployeeDropdown && (
                             <div className="absolute top-full right-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
-                                {coursesList.length > 0 ? (
-                                    coursesList.map((course) => (
+                                {coursesListWithId.length > 0 ? (
+                                    coursesListWithId.map((course) => (
                                         <button
-                                            key={course}
-                                            onClick={() => handleCourseEmployeeSelect(course)}
+                                            key={course.id}
+                                            onClick={() => handleCourseEmployeeSelect(course.id)}
                                             className={`w-full text-left px-3 py-2 hover:bg-gray-50 transition-colors text-xs ${
-                                                courseFilterEmployee === course ? 'bg-indigo-50 text-indigo-600 font-medium' : 'text-gray-700'
+                                                courseFilterEmployee === course.id ? 'bg-indigo-50 text-indigo-600 font-medium' : 'text-gray-700'
                                             }`}
-                                            title={course}
+                                            title={course.name}
                                         >
-                                            <span className="line-clamp-2">{course}</span>
+                                            <span className="line-clamp-2">{course.name}</span>
                                         </button>
                                     ))
                                 ) : (

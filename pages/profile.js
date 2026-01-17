@@ -896,6 +896,8 @@ export default function CompleteModernProfile() {
       <ChangePasswordModal 
         isOpen={showChangePassword}
         onClose={() => setShowChangePassword(false)}
+        isForced={false}   // ✅ Voluntary
+        canClose={true}    // ✅ Can close
       />
     </WebLayout>
   );

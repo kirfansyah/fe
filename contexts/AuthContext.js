@@ -1,4 +1,4 @@
-import React, { createContext, useReducer } from "react";
+import React, { createContext, useReducer, useState } from "react";
 import { authReducer } from "../reducers/AuthReducer";
 import { useRouter } from "next/router";
 import API from "./api";
@@ -19,11 +19,15 @@ const AuthContextProvider = (props) => {
     id: null,
     stateAuth: false,
   };
+  
   const [stateAuth, dispatch] = useReducer(authReducer, initialState);
+  const [mustChangePassword, setMustChangePassword] = useState(false);
+  const [isFirstLogin, setIsFirstLogin] = useState(false);
+  
   const router = useRouter();
   
   const Register = async ({ email, password, passwordConfirm, tc }) => {
-    dispatch({ type: "loading" }); // loading
+    dispatch({ type: "loading" });
     if (tc) {
       if (password.length < 8) {
         Swal.fire({
@@ -68,7 +72,7 @@ const AuthContextProvider = (props) => {
   };
 
   const Forgot = async ({ email }) => {
-    dispatch({ type: "loading" }); // loading
+    dispatch({ type: "loading" });
     try {
       const response = await API.post("/pelamar/forgotPassword", { email });
       var { data, meta } = response.data;
@@ -103,19 +107,27 @@ const AuthContextProvider = (props) => {
   };
 
   const Login = async ({ nik, password, site_id, is_karyawan }) => {
-    dispatch({ type: "loading" }); // loading
+    dispatch({ type: "loading" });
 
- 
     try {
       const response = await API.post("/auth/login", { nik, password, site_id, is_karyawan });
-      const { success,statusCode , message, data } = response.data;
+      const { success, statusCode, message, data } = response.data;
 
-      if (statusCode  === 200 && data) {
+      if (statusCode === 200 && data) {
         const user = data;
         
         document.cookie = `token=${user.token}; path=/`;
         document.cookie = `username=${user.nik}; path=/`;
         document.cookie = `nama=${user.nama}; path=/`;
+
+        // ✅ FIX: Sesuaikan dengan backend response (snake_case)
+        const mustChange = user.must_change_password || false;
+        setMustChangePassword(mustChange);
+        setIsFirstLogin(mustChange);
+        
+        // ✅ Simpan ke localStorage
+        localStorage.setItem('mustChangePassword', mustChange.toString());
+        localStorage.setItem('isFirstLogin', mustChange.toString());
 
         dispatch({
           type: "loginSuccess",
@@ -130,40 +142,65 @@ const AuthContextProvider = (props) => {
           },
         });
 
-        // Alert sukses
-        Swal.fire({
-          toast: true,
-          position: 'top-end',
-          icon: "success",
-          title: "Berhasil Login",
-          text: `Selamat datang ${user.nama}`,
-          confirmButtonColor: "#1e3a8a",
-          showConfirmButton: false,
-          timer: 1000,
-        }).then((result) => {
-          router.push("/dashboard");
-        });
+        // ✅ KONDISI: Jika harus ganti password
+        if (mustChange) {
+          Swal.fire({
+            icon: "warning",
+            title: "Ganti Password Diperlukan",
+            html: `
+              <div style="text-align: left;">
+                <p style="margin-bottom: 10px;">Hai <strong>${user.nama}</strong>,</p>
+                <p style="margin-bottom: 10px;">Ini adalah login pertama Anda atau password Anda sudah kadaluarsa.</p>
+                <p style="margin-bottom: 10px;"><strong>Untuk keamanan akun Anda, silakan ganti password sebelum melanjutkan.</strong></p>
+              </div>
+            `,
+            confirmButtonColor: "#1e3a8a",
+            confirmButtonText: "OK, Saya Mengerti",
+            allowOutsideClick: false,
+            customClass: {
+              cancelButton: "swal-cancel-style",
+              confirmButton: "swal-confirm-style",
+            },
+            allowEscapeKey: false,
+            
+          }).then((result) => {
+            router.push("/dashboard");
+          });
+        } else {
+          // Alert sukses normal
+          Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: "success",
+            title: "Berhasil Login",
+            text: `Selamat datang ${user.nama}`,
+            confirmButtonColor: "#1e3a8a",
+            showConfirmButton: false,
+            timer: 1500,
+          }).then((result) => {
+            router.push("/dashboard");
+          });
+        }
       } else {
         throw new Error("Login gagal");
       }
     } catch (err) {
-      // ✅ Ambil message dari API response
-        const errorMessage = err.response?.data?.message || err.message || 'Username atau password anda tidak sesuai';
-        
-        Swal.fire({
-          toast: true,
-          position: 'top-end',
-            icon: "error",
-            title: "Login Gagal",
-            text: errorMessage,  // ✅ Message dari API
-            showCloseButton: true,
-            confirmButtonColor: "#1e3a8a",
-        });
+      const errorMessage = err.response?.data?.message || err.message || 'Username atau password anda tidak sesuai';
+      
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: "error",
+        title: "Login Gagal",
+        text: errorMessage,
+        showCloseButton: true,
+        confirmButtonColor: "#1e3a8a",
+      });
 
-        dispatch({
-            type: "loginFailed",  // ✅ Ganti type yang lebih sesuai
-            data: { message: errorMessage, status: false },
-        });
+      dispatch({
+        type: "loginFailed",
+        data: { message: errorMessage, status: false },
+      });
     }
   };
 
@@ -171,6 +208,12 @@ const AuthContextProvider = (props) => {
     let cookie = `; ${document.cookie}`.match(`;\\s*token=([^;]+)`);
     let token = cookie ? cookie[1] : "";
     
+    // ✅ Load flag dari localStorage
+    const mustChange = localStorage.getItem('mustChangePassword') === 'true';
+    const firstLogin = localStorage.getItem('isFirstLogin') === 'true';
+    
+    setMustChangePassword(mustChange);
+    setIsFirstLogin(firstLogin);
 
     dispatch({
       type: "checkAuth",
@@ -185,7 +228,6 @@ const AuthContextProvider = (props) => {
   function getId(n) {
     let profile = `; ${document.cookie}`.match(`;\\s*username=([^;]+)`);
     let profil = profile ? profile[1] : "kosong username";
-    
 
     dispatch({
       type: "checkId",
@@ -225,11 +267,17 @@ const AuthContextProvider = (props) => {
         confirmButton: "swal-confirm-style",
       }
     }).then((result) => {
-      /* Read more about isConfirmed, isDenied below */
       if (result.isConfirmed) {
         document.cookie = `token=; path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;`;
         document.cookie = `profil=; path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;`;
         document.cookie = `email=; path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;`;
+        
+        // ✅ Clear localStorage flags
+        localStorage.removeItem('mustChangePassword');
+        localStorage.removeItem('isFirstLogin');
+        setMustChangePassword(false);
+        setIsFirstLogin(false);
+        
         dispatch({
           type: "logout",
           data: { message: "berhasil logout", status: false, token: null },
@@ -248,6 +296,7 @@ const AuthContextProvider = (props) => {
     let cookie = `; ${document.cookie}`.match(`;\\s*token=([^;]+)`);
     let token = cookie ? cookie[1] : "";
     dispatch({ type: "loading" });
+    
     if (new_password === confirm_new_password) {
       try {
         await API.post("/auth/account", {
@@ -261,9 +310,13 @@ const AuthContextProvider = (props) => {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'multipart/form-data'
           }
-        }
-      
-      );
+        });
+
+        // ✅ Clear force change password flags
+        setMustChangePassword(false);
+        setIsFirstLogin(false);
+        localStorage.setItem('mustChangePassword', 'false');
+        localStorage.setItem('isFirstLogin', 'false');
 
         dispatch({
           type: "changePassword",
@@ -272,9 +325,13 @@ const AuthContextProvider = (props) => {
             status: true,
           },
         });
+        
         AlertSuccess({
-          message: "Update success",
+          message: "Password berhasil diubah!",
         });
+        
+        return { success: true };
+        
       } catch (err) {
         var { data } = err.response;
         AlertFailed({
@@ -284,6 +341,8 @@ const AuthContextProvider = (props) => {
           type: "loginFailed",
           data: { message: data.message, status: false },
         });
+        
+        return { success: false };
       }
     } else {
       AlertFailed({
@@ -293,17 +352,18 @@ const AuthContextProvider = (props) => {
         type: "loginFailed",
         data: { message: "Password confirm is incorrect!", status: false },
       });
+      
+      return { success: false };
     }
   };
 
   const Reset = async ({ email, key, password, passwordConfirm }) => {
-    dispatch({ type: "loading" }); // loading
+    dispatch({ type: "loading" });
     try {
       const response = await API.post("/pelamar/resetPassword", { email, key });
       var { data, meta } = response.data;
 
       if (meta.code == 200) {
-        // reset password lama
         if (password != passwordConfirm) {
           Swal.fire({
             icon: "error",
@@ -413,6 +473,9 @@ const AuthContextProvider = (props) => {
         Register,
         getEmail,
         changePassword,
+        mustChangePassword,
+        isFirstLogin,
+        setMustChangePassword,
       }}
     >
       {props.children}

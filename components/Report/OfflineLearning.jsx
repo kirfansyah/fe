@@ -1,131 +1,60 @@
-import { useState, useEffect, useCallback } from "react";
-import { Search, ChevronLeft, ChevronRight } from "lucide-react";
-import { CirclePlus, AlertCircle, CheckCircle, Edit } from "lucide-react";
-import { useReport } from "../../hooks/useReport";
+import { useState, useEffect } from "react";
+import {
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  FileSpreadsheet,
+  X,
+  Calendar,
+  CirclePlus,
+  AlertCircle,
+  CheckCircle,
+  Edit,
+  Trash2,
+  Users,
+  GraduationCap
+} from "lucide-react";
 import ExcelJS from "exceljs";
-import { useMenuPermissions } from "@/hooks/useMenuPermissions";
+import { useDebounce } from "@/hooks/useDebounce";
+import { useSweetAlert } from "@/hooks/useSweetAlert";
+import { ReportTableSkeleton } from "@/components/Loading/Skeleton";
 
 export default function OfflineLearningView({
-  offlineLearning,
+  offlineLearning = [],
+  pagination,
+  loading,
+  error,
   onSave,
   onUpdate,
+  onDelete,
+  onFetch,
   position,
   dept,
   company,
+  fetchEmployee
 }) {
-  const permissions = useMenuPermissions();
-  const [selectedOfflineLearning, setSelectedOfflineLearning] = useState([]);
+  const { showWarning, showSuccess, showError, confirmAction } = useSweetAlert();
+  
+  const [selectedItems, setSelectedItems] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearch = useDebounce(searchQuery, 500);
+  
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
 
-  const [selectedCompanyUnit, setSelectedCompanyUnit] = useState("");
+  // ✅ Filters
+  const [selectedCompany, setSelectedCompany] = useState("");
   const [selectedDepartment, setSelectedDepartment] = useState("");
-  const [selectedCourse, setSelectedCourse] = useState("");
-  const [selectedStatus, setSelectedStatus] = useState("");
-  const [selectedDate, setSelectedDate] = useState("");
-  const company_names = [
-    ...new Set(offlineLearning.map((e) => e.company_name)),
-  ];
-  const dept_abbrs = [...new Set(offlineLearning.map((e) => e.dept_abbr))];
-  const courses = [...new Set(offlineLearning.map((e) => e.training_title))];
-  const statuses = [
-    ...new Set(offlineLearning.map((e) => e.issuing_organization)),
-  ];
-  const start_times = [
-    ...new Set(
-      offlineLearning.map((e) =>
-        new Date(e.issue_date).toLocaleDateString("id-ID")
-      )
-    ),
-  ].sort();
+  const [selectedTraining, setSelectedTraining] = useState("");
+  const [selectedProvider, setSelectedProvider] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
-  const filteredOfflineLearning = offlineLearning.filter((offlineLearning) => {
-    const matchSearch =
-      (offlineLearning.nama?.toLowerCase() || "").includes(
-        searchQuery.toLowerCase()
-      ) ||
-      (offlineLearning.employee_id || "").includes(searchQuery) ||
-      (offlineLearning.position_name?.toLowerCase() || "").includes(
-        searchQuery.toLowerCase()
-      ) ||
-      (offlineLearning.dept_abbr?.toLowerCase() || "").includes(
-        searchQuery.toLowerCase()
-      );
-
-    const matchCompanyUnit =
-      !selectedCompanyUnit ||
-      offlineLearning.company_name === selectedCompanyUnit;
-    const matchDepartment =
-      !selectedDepartment || offlineLearning.dept_abbr === selectedDepartment;
-    const matchCourse =
-      !selectedCourse || offlineLearning.training_title === selectedCourse;
-    const matchStatus =
-      !selectedStatus ||
-      offlineLearning.issuing_organization === selectedStatus;
-    const matchDate =
-      !selectedDate ||
-      new Date(offlineLearning.issue_date).toLocaleDateString("id-ID") ===
-        selectedDate;
-
-    return (
-      matchSearch &&
-      matchCompanyUnit &&
-      matchDepartment &&
-      matchCourse &&
-      matchStatus &&
-      matchDate
-    );
-  });
-
-  const totalPages = Math.ceil(filteredOfflineLearning.length / pageSize);
-  const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = startIndex + pageSize;
-  const paginatedOfflineLearning = filteredOfflineLearning.slice(
-    startIndex,
-    endIndex
-  );
-
-  const handleFilterChange = () => {
-    setCurrentPage(1);
-  };
-
-  const handleSelectAll = (checked) => {
-    if (checked) {
-      setSelectedOfflineLearning(
-        paginatedOfflineLearning.map((emp) => emp.id_training_certificate)
-      );
-    } else {
-      setSelectedOfflineLearning([]);
-    }
-  };
-
-  const handleSelectOfflineLearning = (id, checked) => {
-    if (checked) {
-      setSelectedOfflineLearning([...selectedOfflineLearning, id]);
-    } else {
-      setSelectedOfflineLearning(
-        selectedOfflineLearning.filter((empId) => empId !== id)
-      );
-    }
-  };
-
-  const handlePageChange = (newPage) => {
-    if (newPage >= 1 && newPage <= totalPages) {
-      setCurrentPage(newPage);
-    }
-  };
-
-  const handlePageSizeChange = (newSize) => {
-    setPageSize(Number(newSize));
-    setCurrentPage(1); // Reset to first page
-  };
-
-  const { fetchEmployee } = useReport();
-
+  // ✅ Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [currentCertificateId, setCurrentCertificateId] = useState(null);
+  
   const [employeeId, setemployeeId] = useState("");
   const [employeeName, setemployeeName] = useState("");
   const [employeePosition, setemployeePosition] = useState("");
@@ -170,6 +99,135 @@ export default function OfflineLearningView({
     uploadCertificate: false,
   });
 
+  // ✅ Get unique values from ALL data (untuk dropdown options)
+  const [allData, setAllData] = useState([]);
+  
+  useEffect(() => {
+    if (offlineLearning.length > 0) {
+      setAllData(offlineLearning);
+    }
+  }, [offlineLearning]);
+
+  const companies = [...new Set(allData.map((e) => e.company_name))].filter(Boolean);
+  const departments = [...new Set(allData.map((e) => e.dept_abbr))].filter(Boolean);
+  const trainings = [...new Set(allData.map((e) => e.training_title))].filter(Boolean);
+  const providers = [...new Set(allData.map((e) => e.issuing_organization))].filter(Boolean);
+
+  // ✅ Fetch data with server-side filters
+  useEffect(() => {
+    const filters = {
+      search: debouncedSearch,
+      company_name: selectedCompany,
+      dept_abbr: selectedDepartment,
+      training_title: selectedTraining,
+      provider: selectedProvider,
+      date_from: dateFrom,
+      date_to: dateTo
+    };
+    
+    onFetch(currentPage, pageSize, filters);
+  }, [currentPage, pageSize, debouncedSearch, selectedCompany, selectedDepartment, selectedTraining, selectedProvider, dateFrom, dateTo]);
+
+  // ✅ Reset page on filter change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearch, selectedCompany, selectedDepartment, selectedTraining, selectedProvider, dateFrom, dateTo]);
+
+  // ✅ Auto-fetch employee data
+  useEffect(() => {
+    if (!employeeComp || employeeId.length < 5) return;
+
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetchEmployee(employeeComp, employeeId);
+
+        if (res?.success && res.data) {
+          setemployeeName(res.data.nama || "");
+          setemployeePosition(res.data.position_name || "");
+          setemployeeDept(res.data.department_id || "");
+        }
+      } catch (err) {
+        console.warn("Employee not found");
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [employeeComp, employeeId, fetchEmployee]);
+
+  const clearAllFilters = () => {
+    setSelectedCompany("");
+    setSelectedDepartment("");
+    setSelectedTraining("");
+    setSelectedProvider("");
+    setDateFrom("");
+    setDateTo("");
+    setSearchQuery("");
+  };
+
+  const activeFiltersCount = [
+    selectedCompany,
+    selectedDepartment,
+    selectedTraining,
+    selectedProvider,
+    dateFrom,
+    dateTo
+  ].filter(Boolean).length;
+
+  const formatDateDisplay = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('id-ID', { 
+      day: '2-digit', 
+      month: 'short', 
+      year: 'numeric' 
+    });
+  };
+
+  const handleSelectAll = (checked) => {
+    if (checked) {
+      setSelectedItems(offlineLearning.map((item) => item.id_training_certificate));
+    } else {
+      setSelectedItems([]);
+    }
+  };
+
+  const handleSelectItem = (id, checked) => {
+    if (checked) {
+      setSelectedItems([...selectedItems, id]);
+    } else {
+      setSelectedItems(selectedItems.filter((itemId) => itemId !== id));
+    }
+  };
+
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= (pagination?.totalPages || 1)) {
+      setCurrentPage(newPage);
+    }
+  };
+
+  const handlePageSizeChange = (newSize) => {
+    setPageSize(Number(newSize));
+    setCurrentPage(1);
+  };
+
+  const handleDelete = async (id) => {
+    const result = await confirmAction({
+      title: 'Delete Certificate?',
+      html: 'This action cannot be undone. Are you sure you want to delete this certificate?',
+      confirmButtonText: 'Yes, delete!',
+      icon: 'warning'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await onDelete(id);
+        showSuccess('Certificate deleted successfully');
+      } catch (error) {
+        showError('Failed to delete certificate: ' + error.message);
+      }
+    }
+  };
+
   const handleOpenAddModal = () => {
     setIsEditMode(false);
     setCurrentCertificateId(null);
@@ -177,23 +235,22 @@ export default function OfflineLearningView({
     setIsModalOpen(true);
   };
 
-  const handleOpenEditModal = (offlineLearning) => {
+  const handleOpenEditModal = (item) => {
     setIsEditMode(true);
-    setCurrentCertificateId(offlineLearning.id_training_certificate);
+    setCurrentCertificateId(item.id_training_certificate);
 
-    // Populate form with existing data
-    setemployeeId(offlineLearning.employee_id || "");
-    setemployeeName(offlineLearning.full_name || "");
-    setemployeePosition(offlineLearning.position_id?.toString() || "");
-    setemployeeDept(offlineLearning.department_id?.toString() || "");
-    setemployeeComp(offlineLearning.company_id?.toString() || "");
-    settrainingTitle(offlineLearning.training_title || "");
-    setprovider(offlineLearning.issuing_organization || "");
-    setcertificateId(offlineLearning.credential_id || "");
-    setcertificateUrl(offlineLearning.credential_url || "");
-    setissueDate(offlineLearning.issue_date || "");
-    setexpiredDate(offlineLearning.expiration_date || "");
-    setExistingCertificate(offlineLearning.certificate_url || "");
+    setemployeeId(item.employee_id || "");
+    setemployeeName(item.full_name || "");
+    setemployeePosition(item.position_id?.toString() || "");
+    setemployeeDept(item.department_id?.toString() || "");
+    setemployeeComp(item.company_id?.toString() || "");
+    settrainingTitle(item.training_title || "");
+    setprovider(item.issuing_organization || "");
+    setcertificateId(item.credential_id || "");
+    setcertificateUrl(item.credential_url || "");
+    setissueDate(item.issue_date || "");
+    setexpiredDate(item.expiration_date || "");
+    setExistingCertificate(item.certificate_url || "");
     setuploadCertificate(null);
     setIsModalOpen(true);
   };
@@ -203,77 +260,41 @@ export default function OfflineLearningView({
 
     switch (fieldName) {
       case "employeeId":
-        if (!value || value.trim() === "") {
-          error = "Employee ID is required";
-        }
+        if (!value || value.trim() === "") error = "Employee ID is required";
         break;
-
       case "employeeName":
-        if (!value || value.trim() === "") {
-          error = "Employee name is required";
-        }
+        if (!value || value.trim() === "") error = "Employee name is required";
         break;
-
       case "employeePosition":
-        if (!value) {
-          error = "Employee position is required";
-        }
+        if (!value) error = "Employee position is required";
         break;
-
       case "employeeDept":
-        if (!value) {
-          error = "Employee department is required";
-        }
+        if (!value) error = "Employee department is required";
         break;
-
       case "employeeComp":
-        if (!value) {
-          error = "Company is required";
-        }
+        if (!value) error = "Company is required";
         break;
-
       case "trainingTitle":
-        if (!value || value.trim() === "") {
-          error = "Training title is required";
-        }
+        if (!value || value.trim() === "") error = "Training title is required";
         break;
-
       case "provider":
-        if (!value || value.trim() === "") {
-          error = "Provider is required";
-        }
+        if (!value || value.trim() === "") error = "Provider is required";
         break;
-
       case "certificateUrl":
-        if (!value || value.trim() === "") {
-          error = "Credential URL is required";
-        }
+        if (!value || value.trim() === "") error = "Credential URL is required";
         break;
-
       case "certificateId":
-        if (!value || value.trim() === "") {
-          error = "Credential ID is required";
-        }
+        if (!value || value.trim() === "") error = "Credential ID is required";
         break;
-
       case "issueDate":
-        if (!value) {
-          error = "Issue date is required";
-        }
+        if (!value) error = "Issue date is required";
         break;
-
       case "expiredDate":
-        if (!value) {
-          error = "Expired date is required";
-        }
+        if (!value) error = "Expired date is required";
         break;
-
       case "uploadCertificate":
-        if (!isEditMode && !value) {
-          error = "Certificate file is required";
-        }
+        if (!isEditMode && !value) error = "Certificate file is required";
         break;
-
       default:
         break;
     }
@@ -285,46 +306,20 @@ export default function OfflineLearningView({
     setTouched((prev) => ({ ...prev, [fieldName]: true }));
 
     let value = "";
-
     switch (fieldName) {
-      case "employeeId":
-        value = employeeId;
-        break;
-      case "employeeName":
-        value = employeeName;
-        break;
-      case "employeePosition":
-        value = employeePosition;
-        break;
-      case "employeeDept":
-        value = employeeDept;
-        break;
-      case "employeeComp":
-        value = employeeComp;
-        break;
-      case "trainingTitle":
-        value = trainingTitle;
-        break;
-      case "provider":
-        value = provider;
-        break;
-      case "certificateId":
-        value = certificateId;
-        break;
-      case "certificateUrl":
-        value = certificateUrl;
-        break;
-      case "issueDate":
-        value = issueDate;
-        break;
-      case "expiredDate":
-        value = expiredDate;
-        break;
-      case "uploadCertificate":
-        value = uploadCertificate;
-        break;
-      default:
-        break;
+      case "employeeId": value = employeeId; break;
+      case "employeeName": value = employeeName; break;
+      case "employeePosition": value = employeePosition; break;
+      case "employeeDept": value = employeeDept; break;
+      case "employeeComp": value = employeeComp; break;
+      case "trainingTitle": value = trainingTitle; break;
+      case "provider": value = provider; break;
+      case "certificateId": value = certificateId; break;
+      case "certificateUrl": value = certificateUrl; break;
+      case "issueDate": value = issueDate; break;
+      case "expiredDate": value = expiredDate; break;
+      case "uploadCertificate": value = uploadCertificate; break;
+      default: break;
     }
 
     const error = validateField(fieldName, value);
@@ -334,7 +329,6 @@ export default function OfflineLearningView({
   const handleEmployeeIdChange = (e) => {
     const value = e.target.value;
     setemployeeId(value);
-
     if (touched.employeeId) {
       const error = validateField("employeeId", value);
       setErrors((prev) => ({ ...prev, employeeId: error }));
@@ -344,7 +338,6 @@ export default function OfflineLearningView({
   const handleEmployeeNameChange = (e) => {
     const value = e.target.value;
     setemployeeName(value);
-
     if (touched.employeeName) {
       const error = validateField("employeeName", value);
       setErrors((prev) => ({ ...prev, employeeName: error }));
@@ -354,7 +347,6 @@ export default function OfflineLearningView({
   const handleEmployeePositionChange = (e) => {
     const value = e.target.value;
     setemployeePosition(value);
-
     if (touched.employeePosition) {
       const error = validateField("employeePosition", value);
       setErrors((prev) => ({ ...prev, employeePosition: error }));
@@ -364,7 +356,6 @@ export default function OfflineLearningView({
   const handleEmployeeDeptChange = (e) => {
     const value = e.target.value;
     setemployeeDept(value);
-
     if (touched.employeeDept) {
       const error = validateField("employeeDept", value);
       setErrors((prev) => ({ ...prev, employeeDept: error }));
@@ -374,7 +365,6 @@ export default function OfflineLearningView({
   const handleEmployeeCompChange = (e) => {
     const value = e.target.value;
     setemployeeComp(value);
-
     if (touched.employeeComp) {
       const error = validateField("employeeComp", value);
       setErrors((prev) => ({ ...prev, employeeComp: error }));
@@ -384,7 +374,6 @@ export default function OfflineLearningView({
   const handleTrainingTitleChange = (e) => {
     const value = e.target.value;
     settrainingTitle(value);
-
     if (touched.trainingTitle) {
       const error = validateField("trainingTitle", value);
       setErrors((prev) => ({ ...prev, trainingTitle: error }));
@@ -394,7 +383,6 @@ export default function OfflineLearningView({
   const handleProviderChange = (e) => {
     const value = e.target.value;
     setprovider(value);
-
     if (touched.provider) {
       const error = validateField("provider", value);
       setErrors((prev) => ({ ...prev, provider: error }));
@@ -404,7 +392,6 @@ export default function OfflineLearningView({
   const handleCertificateIdChange = (e) => {
     const value = e.target.value;
     setcertificateId(value);
-
     if (touched.certificateId) {
       const error = validateField("certificateId", value);
       setErrors((prev) => ({ ...prev, certificateId: error }));
@@ -414,7 +401,6 @@ export default function OfflineLearningView({
   const handleCertificateUrlChange = (e) => {
     const value = e.target.value;
     setcertificateUrl(value);
-
     if (touched.certificateUrl) {
       const error = validateField("certificateUrl", value);
       setErrors((prev) => ({ ...prev, certificateUrl: error }));
@@ -424,7 +410,6 @@ export default function OfflineLearningView({
   const handleIssueDateChange = (e) => {
     const value = e.target.value;
     setissueDate(value);
-
     if (touched.issueDate) {
       const error = validateField("issueDate", value);
       setErrors((prev) => ({ ...prev, issueDate: error }));
@@ -434,7 +419,6 @@ export default function OfflineLearningView({
   const handleExpiredDateChange = (e) => {
     const value = e.target.value;
     setexpiredDate(value);
-
     if (touched.expiredDate) {
       const error = validateField("expiredDate", value);
       setErrors((prev) => ({ ...prev, expiredDate: error }));
@@ -444,7 +428,6 @@ export default function OfflineLearningView({
   const handleUploadCertificateChange = (e) => {
     const file = e.target.files[0];
     setuploadCertificate(file);
-    console.log(file);
 
     if (touched.uploadCertificate) {
       const error = validateField("uploadCertificate", file);
@@ -455,10 +438,7 @@ export default function OfflineLearningView({
   const validateAll = () => {
     const employeeIdError = validateField("employeeId", employeeId);
     const employeeNameError = validateField("employeeName", employeeName);
-    const employeePositionError = validateField(
-      "employeePosition",
-      employeePosition
-    );
+    const employeePositionError = validateField("employeePosition", employeePosition);
     const employeeDeptError = validateField("employeeDept", employeeDept);
     const employeeCompError = validateField("employeeComp", employeeComp);
     const trainingTitleError = validateField("trainingTitle", trainingTitle);
@@ -467,12 +447,8 @@ export default function OfflineLearningView({
     const certificateUrlError = validateField("certificateUrl", certificateUrl);
     const issueDateError = validateField("issueDate", issueDate);
     const expiredDateError = validateField("expiredDate", expiredDate);
-    const uploadCertificateError = validateField(
-      "uploadCertificate",
-      uploadCertificate
-    );
+    const uploadCertificateError = validateField("uploadCertificate", uploadCertificate);
 
-    // set all errors
     setErrors({
       employeeId: employeeIdError,
       employeeName: employeeNameError,
@@ -482,12 +458,12 @@ export default function OfflineLearningView({
       trainingTitle: trainingTitleError,
       provider: providerError,
       certificateId: certificateIdError,
+      certificateUrl: certificateUrlError,
       issueDate: issueDateError,
       expiredDate: expiredDateError,
       uploadCertificate: uploadCertificateError,
     });
 
-    // mark all fields touched
     setTouched({
       employeeId: true,
       employeeName: true,
@@ -497,6 +473,7 @@ export default function OfflineLearningView({
       trainingTitle: true,
       provider: true,
       certificateId: true,
+      certificateUrl: true,
       issueDate: true,
       expiredDate: true,
       uploadCertificate: true,
@@ -511,6 +488,7 @@ export default function OfflineLearningView({
       !trainingTitleError &&
       !providerError &&
       !certificateIdError &&
+      !certificateUrlError &&
       !issueDateError &&
       !expiredDateError &&
       !uploadCertificateError
@@ -531,6 +509,7 @@ export default function OfflineLearningView({
 
   const handleSave = async () => {
     if (!validateAll()) {
+      showWarning('Please fill in all required fields correctly');
       return;
     }
 
@@ -548,8 +527,10 @@ export default function OfflineLearningView({
       issue_date: issueDate,
       expiration_date: expiredDate,
       certificate: uploadCertificate,
-      created_by: "Rahul",
-      created_device: "PC Rahul",
+      created_by: "Admin",
+      created_device: "Web",
+      updated_by: "Admin",
+      updated_device: "Web"
     };
 
     try {
@@ -560,7 +541,7 @@ export default function OfflineLearningView({
       }
       handleCancel();
     } catch (error) {
-      console.error("Error saving ebook:", error);
+      console.error("Error saving certificate:", error);
     }
   };
 
@@ -618,488 +599,505 @@ export default function OfflineLearningView({
   };
 
   const handleExportExcel = async () => {
-    if (!filteredOfflineLearning.length) {
-      alert("Data tidak ada!");
+    if (selectedItems.length === 0) {
+      showWarning("Please select at least one record to export");
       return;
     }
 
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet("Offline Training", {
-      views: [{ state: "frozen", ySplit: 1 }],
-    });
+    try {
+      const selectedData = offlineLearning.filter((item) =>
+        selectedItems.includes(item.id_training_certificate)
+      );
 
-    worksheet.columns = [
-      { header: "No", key: "no", width: 6 },
-      { header: "Company Unit", key: "company", width: 28 },
-      { header: "Department", key: "dept", width: 12 },
-      { header: "Employee ID", key: "empId", width: 14 },
-      { header: "Employee Name", key: "name", width: 28 },
-      { header: "Position", key: "position", width: 18 },
-      { header: "Training Title", key: "training", width: 30 },
-      { header: "Provider", key: "provider", width: 20 },
-      { header: "Credential ID", key: "credentialId", width: 22 },
-      { header: "Credential URL", key: "credentialUrl", width: 30 },
-      { header: "Issue Date", key: "issueDate", width: 14 },
-      { header: "Expired Date", key: "expDate", width: 14 },
-      { header: "Certificate URL", key: "certificateUrl", width: 40 },
-    ];
+      if (!selectedData.length) {
+        showWarning("Selected data not found");
+        return;
+      }
 
-    worksheet.getRow(1).eachCell((cell) => {
-      cell.font = { bold: true };
-      cell.alignment = { vertical: "middle", horizontal: "center" };
-      cell.border = {
-        top: { style: "thin" },
-        bottom: { style: "thin" },
-        left: { style: "thin" },
-        right: { style: "thin" },
-      };
-    });
-
-    filteredOfflineLearning.forEach((item, index) => {
-      worksheet.addRow({
-        no: index + 1,
-        company: item.company_name,
-        dept: item.dept_abbr,
-        empId: item.employee_id,
-        name: item.full_name,
-        position: item.position_name || "-",
-        training: item.training_title,
-        provider: item.issuing_organization,
-        credentialId: item.credential_id,
-        credentialUrl: item.credential_url,
-        issueDate: new Date(item.issue_date),
-        expDate: new Date(item.expiration_date),
-        certificateUrl: item.certificate_url,
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Offline Learning Report", {
+        views: [{ state: "frozen", ySplit: 1 }],
       });
-    });
 
-    worksheet.eachRow((row, rowNumber) => {
-      if (rowNumber === 1) return;
+      worksheet.columns = [
+        { header: "No", key: "no", width: 6 },
+        { header: "Company Unit", key: "company", width: 28 },
+        { header: "Department", key: "dept", width: 12 },
+        { header: "Employee ID", key: "empId", width: 14 },
+        { header: "Employee Name", key: "name", width: 28 },
+        { header: "Position", key: "position", width: 18 },
+        { header: "Training Title", key: "training", width: 35 },
+        { header: "Provider", key: "provider", width: 25 },
+        { header: "Credential ID", key: "credentialId", width: 22 },
+        { header: "Credential URL", key: "credentialUrl", width: 35 },
+        { header: "Issue Date", key: "issueDate", width: 14 },
+        { header: "Expiration Date", key: "expDate", width: 14 },
+        { header: "Certificate URL", key: "certificateUrl", width: 40 },
+      ];
 
-      row.eachCell((cell, colNumber) => {
+      const headerRow = worksheet.getRow(1);
+      headerRow.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 11 };
+      headerRow.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FF4472C4" },
+      };
+      headerRow.alignment = { vertical: "middle", horizontal: "center" };
+      headerRow.height = 25;
+      headerRow.eachCell((cell) => {
         cell.border = {
           top: { style: "thin" },
           bottom: { style: "thin" },
           left: { style: "thin" },
           right: { style: "thin" },
         };
+      });
 
-        if ([1, 3, 4, 11, 12].includes(colNumber)) {
-          cell.alignment = { horizontal: "center", vertical: "middle" };
+      selectedData.forEach((item, index) => {
+        worksheet.addRow({
+          no: index + 1,
+          company: item.company_name || "-",
+          dept: item.dept_abbr || "-",
+          empId: item.employee_id || "-",
+          name: item.full_name || "-",
+          position: item.position_name || "-",
+          training: item.training_title || "-",
+          provider: item.issuing_organization || "-",
+          credentialId: item.credential_id || "-",
+          credentialUrl: item.credential_url || "-",
+          issueDate: item.issue_date ? new Date(item.issue_date) : "-",
+          expDate: item.expiration_date ? new Date(item.expiration_date) : "-",
+          certificateUrl: item.certificate_url || "-",
+        });
+      });
+
+      worksheet.eachRow((row, rowNumber) => {
+        if (rowNumber === 1) return;
+
+        row.eachCell((cell, colNumber) => {
+          cell.border = {
+            top: { style: "thin" },
+            bottom: { style: "thin" },
+            left: { style: "thin" },
+            right: { style: "thin" },
+          };
+
+          if ([1, 3, 4, 11, 12].includes(colNumber)) {
+            cell.alignment = { horizontal: "center", vertical: "middle" };
+          }
+        });
+
+        const certCell = row.getCell("certificateUrl");
+        if (certCell.value && certCell.value !== "-") {
+          certCell.value = {
+            text: "View Certificate",
+            hyperlink: certCell.value,
+          };
+          certCell.font = { color: { argb: "FF0000FF" }, underline: true };
         }
       });
-    });
 
-    worksheet.getColumn("issueDate").numFmt = "dd-mm-yyyy";
-    worksheet.getColumn("expDate").numFmt = "dd-mm-yyyy";
+      worksheet.getColumn("issueDate").numFmt = "dd-mm-yyyy";
+      worksheet.getColumn("expDate").numFmt = "dd-mm-yyyy";
 
-    worksheet.eachRow((row, rowNumber) => {
-      if (rowNumber === 1) return;
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
 
-      const certCell = row.getCell("certificateUrl");
-      if (certCell.value) {
-        certCell.value = {
-          text: "Open Certificate",
-          hyperlink: certCell.value,
-        };
-        certCell.font = { color: { argb: "FF0000FF" }, underline: true };
-      }
-    });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
 
-    const buffer = await workbook.xlsx.writeBuffer();
-    const blob = new Blob([buffer], {
-      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    });
+      const today = new Date();
+      const dateStr = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, "0")}${String(today.getDate()).padStart(2, "0")}`;
 
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `Offline Learning_${new Date()
-      .toISOString()
-      .slice(0, 10)}.xlsx`;
-    a.click();
-    window.URL.revokeObjectURL(url);
+      a.download = `Offline_Learning_Report_${dateStr}.xlsx`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+
+      showSuccess(`Successfully exported ${selectedData.length} records to Excel`);
+      setSelectedItems([]);
+    } catch (error) {
+      console.error("Export error:", error);
+      showError("Failed to export to Excel. Please try again.");
+    }
   };
 
-  useEffect(() => {
-    if (!employeeComp || employeeId.length < 5) return;
+  // ✅ Loading State
+  if (loading) {
+    return <ReportTableSkeleton />;
+  }
 
-    const timer = setTimeout(async () => {
-      try {
-        const res = await fetchEmployee(employeeComp, employeeId);
-
-        if (res?.success && res.data) {
-          setemployeeName(res.data.nama || "");
-          setemployeePosition(res.data.position_name || "");
-          setemployeeDept(res.data.department_id || "");
-        }
-      } catch (err) {
-        console.warn("Employee not found");
-      }
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [employeeComp, employeeId, fetchEmployee]);
+  // // ✅ Error State
+  // if (error) {
+  //   return (
+  //     <div className="text-center py-12">
+  //       <div className="text-red-600 mb-4">{error}</div>
+  //       <button
+  //         onClick={() => onFetch(1, 10)}
+  //         className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+  //       >
+  //         Retry
+  //       </button>
+  //     </div>
+  //   );
+  // }
 
   return (
-    <div className="w-full mx-auto p-6 bg-white">
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
-        <button
-          onClick={handleOpenAddModal}
-          className="flex-shrink-0 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500"
-        >
-          + Add Data
-        </button>
+    <div className="w-full mx-auto bg-white rounded-lg">
+      {/* Header with Search and Actions */}
+      <div className="mb-6 space-y-4">
+        {/* Top Row: Add Button + Search + Export */}
+        <div className="flex items-center justify-between gap-4">
+          <button
+            onClick={handleOpenAddModal}
+            className="flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+          >
+            <CirclePlus size={18} />
+            Add Certificate
+          </button>
 
-        <div className="flex items-center gap-6 flex-1 min-w-0">
-          <div className="relative flex-1 min-w-0 max-w-md">
-            <Search
-              className="absolute left-3 top-1/4 transform -translate-y-1/2 text-gray-400"
-              size={20}
-            />
-            <input
-              type="text"
-              placeholder="Search name, ID, or position..."
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                handleFilterChange();
-              }}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg 
-                   focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
+          <button
+            onClick={handleExportExcel}
+            disabled={selectedItems.length === 0}
+            className="flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+          >
+            <FileSpreadsheet size={16} />
+            <span>Export Excel</span>
+            {selectedItems.length > 0 && (
+              <span className="ml-1 px-2 py-0.5 bg-green-700 rounded-full text-xs">
+                {selectedItems.length}
+              </span>
+            )}
+          </button>
         </div>
 
-        <div className="flex items-center gap-3 flex-wrap">
+        {/* Filters Row */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+            <input
+              type="text"
+              placeholder="Search name, employee ID, training..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+            />
+            {searchQuery !== debouncedSearch && (
+              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+              </div>
+            )}
+          </div>
           <select
-            value={selectedCompanyUnit}
-            onChange={(e) => {
-              setSelectedCompanyUnit(e.target.value);
-              handleFilterChange();
-            }}
-            className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg 
-                 hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+            value={selectedCompany}
+            onChange={(e) => setSelectedCompany(e.target.value)}
+            className="py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
           >
-            <option value="">All Company Unit</option>
-            {company_names.map((unit) => (
-              <option key={unit} value={unit}>
-                {unit}
-              </option>
+            <option value="">All Companies</option>
+            {companies.map((company) => (
+              <option key={company} value={company}>{company}</option>
             ))}
           </select>
 
           <select
             value={selectedDepartment}
-            onChange={(e) => {
-              setSelectedDepartment(e.target.value);
-              handleFilterChange();
-            }}
-            className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg 
-                 hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 
-                 focus:ring-blue-500"
+            onChange={(e) => setSelectedDepartment(e.target.value)}
+            className="py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
           >
-            <option value="">All Department</option>
-            {dept_abbrs.map((dept) => (
-              <option key={dept} value={dept}>
-                {dept}
-              </option>
+            <option value="">All Departments</option>
+            {departments.map((dept) => (
+              <option key={dept} value={dept}>{dept}</option>
             ))}
           </select>
 
           <select
-            value={selectedCourse}
-            onChange={(e) => {
-              setSelectedCourse(e.target.value);
-              handleFilterChange();
-            }}
-            className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg 
-                 hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 
-                 focus:ring-blue-500"
+            value={selectedTraining}
+            onChange={(e) => setSelectedTraining(e.target.value)}
+            className="py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
           >
-            <option value="">All Training</option>
-            {courses.map((course) => (
-              <option key={course} value={course}>
-                {course}
-              </option>
+            <option value="">All Trainings</option>
+            {trainings.map((training) => (
+              <option key={training} value={training}>{training}</option>
             ))}
           </select>
 
           <select
-            value={selectedStatus}
-            onChange={(e) => {
-              setSelectedStatus(e.target.value);
-              handleFilterChange();
-            }}
-            className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg 
-                 hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 
-                 focus:ring-blue-500"
+            value={selectedProvider}
+            onChange={(e) => setSelectedProvider(e.target.value)}
+            className="py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
           >
-            <option value="">All Provider</option>
-            {statuses.map((status) => (
-              <option key={status} value={status}>
-                {status}
-              </option>
+            <option value="">All Providers</option>
+            {providers.map((provider) => (
+              <option key={provider} value={provider}>{provider}</option>
             ))}
           </select>
 
-          <select
-            value={selectedDate}
-            onChange={(e) => {
-              setSelectedDate(e.target.value);
-              handleFilterChange();
-            }}
-            className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg 
-                 hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 
-                 focus:ring-blue-500"
-          >
-            <option value="">All Date</option>
-            {start_times.map((issue_date) => (
-              <option key={issue_date} value={issue_date}>
-                {issue_date}
-              </option>
-            ))}
-          </select>
+          {/* ✅ Date Range Picker */}
+          <div className="flex items-center gap-2 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+            <Calendar size={16} className="text-gray-500" />
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="text-sm focus:outline-none bg-transparent"
+              placeholder="From"
+            />
+            <span className="text-gray-500">-</span>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="text-sm focus:outline-none bg-transparent"
+              placeholder="To"
+            />
+          </div>
 
-          <button
-            onClick={handleExportExcel}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white 
-               rounded-lg hover:bg-green-700 transition-colors"
-          >
-            Export Excel
-          </button>
+          {activeFiltersCount > 0 && (
+            <button
+              onClick={clearAllFilters}
+              className="px-3 py-2 text-sm text-red-600 hover:text-red-800 font-medium hover:underline"
+            >
+              Clear all ({activeFiltersCount})
+            </button>
+          )}
         </div>
       </div>
 
-      {(selectedCompanyUnit ||
-        selectedDepartment ||
-        selectedCourse ||
-        selectedStatus ||
-        selectedDate) && (
+      {/* Active Filters Badges */}
+      {activeFiltersCount > 0 && (
         <div className="mb-4 flex items-center gap-2 flex-wrap">
-          <span className="text-sm text-gray-600">Active filters:</span>
-          {selectedCompanyUnit && (
-            <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm flex items-center gap-2">
-              {selectedCompanyUnit}
-              <button
-                onClick={() => setSelectedCompanyUnit("")}
-                className="hover:text-blue-900"
-              >
-                ×
+          <span className="text-sm font-medium text-gray-600">Active filters:</span>
+          {selectedCompany && (
+            <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
+              Company: {selectedCompany}
+              <button onClick={() => setSelectedCompany("")} className="hover:text-blue-900">
+                <X size={14} />
               </button>
             </span>
           )}
           {selectedDepartment && (
-            <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm flex items-center gap-2">
-              {selectedDepartment}
-              <button
-                onClick={() => setSelectedDepartment("")}
-                className="hover:text-green-900"
-              >
-                ×
+            <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
+              Dept: {selectedDepartment}
+              <button onClick={() => setSelectedDepartment("")} className="hover:text-green-900">
+                <X size={14} />
               </button>
             </span>
           )}
-          {selectedCourse && (
-            <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm flex items-center gap-2">
-              {selectedCourse}
-              <button
-                onClick={() => setSelectedCourse("")}
-                className="hover:text-purple-900"
-              >
-                ×
+          {selectedTraining && (
+            <span className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm">
+              Training: {selectedTraining}
+              <button onClick={() => setSelectedTraining("")} className="hover:text-purple-900">
+                <X size={14} />
               </button>
             </span>
           )}
-          {selectedStatus && (
-            <span className="px-3 py-1 bg-orange-100 text-orange-800 rounded-full text-sm flex items-center gap-2">
-              {selectedStatus}
-              <button
-                onClick={() => setSelectedStatus("")}
-                className="hover:text-orange-900"
-              >
-                ×
+          {selectedProvider && (
+            <span className="inline-flex items-center gap-1 px-3 py-1 bg-orange-100 text-orange-800 rounded-full text-sm">
+              Provider: {selectedProvider}
+              <button onClick={() => setSelectedProvider("")} className="hover:text-orange-900">
+                <X size={14} />
               </button>
             </span>
           )}
-          {selectedDate && (
-            <span className="px-3 py-1 bg-pink-100 text-pink-800 rounded-full text-sm flex items-center gap-2">
-              {selectedDate}
-              <button
-                onClick={() => setSelectedDate("")}
-                className="hover:text-pink-900"
-              >
-                ×
+          {(dateFrom || dateTo) && (
+            <span className="inline-flex items-center gap-1 px-3 py-1 bg-pink-100 text-pink-800 rounded-full text-sm">
+              <Calendar size={12} />
+              {dateFrom && formatDateDisplay(dateFrom)}
+              {dateFrom && dateTo && ' - '}
+              {dateTo && formatDateDisplay(dateTo)}
+              <button onClick={() => { setDateFrom(""); setDateTo(""); }} className="hover:text-pink-900">
+                <X size={14} />
               </button>
             </span>
           )}
         </div>
       )}
 
-      <div className="border border-gray-200 rounded-lg overflow-x-auto">
-        <table className="min-w-[1200px] w-full">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="text-left px-4 py-3 font-medium text-gray-700">
-                Action
-              </th>
-              <th className="text-left px-4 py-3 font-medium text-gray-700">
-                Name
-              </th>
-              <th className="text-left px-4 py-3 font-medium text-gray-700">
-                Employee ID
-              </th>
-              <th className="text-left px-4 py-3 font-medium text-gray-700">
-                Position
-              </th>
-              <th className="text-left px-4 py-3 font-medium text-gray-700">
-                Department
-              </th>
-              <th className="text-left px-4 py-3 font-medium text-gray-700">
-                Company Unit
-              </th>
-              <th className="text-left px-4 py-3 font-medium text-gray-700">
-                Training Title
-              </th>
-              <th className="text-left px-4 py-3 font-medium text-gray-700">
-                Provider
-              </th>
-              <th className="text-left px-4 py-3 font-medium text-gray-700">
-                Certificate ID
-              </th>
-              <th className="text-left px-4 py-3 font-medium text-gray-700">
-                Issued Date
-              </th>
-              <th className="text-left px-4 py-3 font-medium text-gray-700">
-                Refreshment Date
-              </th>
-              <th className="text-left px-4 py-3 font-medium text-gray-700">
-                *Download lampiran
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {paginatedOfflineLearning.length > 0 ? (
-              paginatedOfflineLearning.map((offlineLearning) => (
-                <tr
-                  key={offlineLearning.id_training_certificate}
-                  className="border-t border-gray-200 hover:bg-gray-50"
-                >
-                  <td className="px-4 py-3 text-gray-900">
-                    <div className="flex items-center gap-2">
-                      {/* Tombol Edit */}
-                      <button
-                        onClick={() => handleOpenEditModal(offlineLearning)}
-                        className="flex items-center space-x-2 px-3 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded"
-                      >
-                        <Edit className="w-4 h-4 text-gray-400" />
-                      </button>
+      {/* Table with Checkbox */}
+      <div className="border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="min-w-[1600px] w-full">
+            <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
+              <tr className="border-b border-gray-200">
+                <th className="w-12 px-4 py-3">
+                  <input
+                    type="checkbox"
+                    checked={selectedItems.length === offlineLearning.length && offlineLearning.length > 0}
+                    onChange={(e) => handleSelectAll(e.target.checked)}
+                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                </th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">Action</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">Employee Name</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">Employee ID</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">Position</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">Department</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">Company</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">Training Title</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">Provider</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">Credential ID</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">Issue Date</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">Expiration</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">Certificate</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {offlineLearning.length > 0 ? (
+                offlineLearning.map((item, index) => (
+                  <tr
+                    key={item.id_training_certificate}
+                    className={`hover:bg-blue-50 transition-colors ${
+                      selectedItems.includes(item.id_training_certificate) ? 'bg-blue-50' : index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+                    }`}
+                  >
+                    <td className="px-4 py-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedItems.includes(item.id_training_certificate)}
+                        onChange={(e) => handleSelectItem(item.id_training_certificate, e.target.checked)}
+                        className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleOpenEditModal(item)}
+                          className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                          title="Edit"
+                        >
+                          <Edit size={16} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(item.id_training_certificate)}
+                          className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
+                          title="Delete"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="text-sm font-semibold text-gray-900">{item.full_name}</div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="text-sm text-gray-600">{item.employee_id}</div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="text-sm text-gray-900">{item.position_name}</div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="inline-flex px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded">
+                        {item.dept_abbr}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="text-sm text-gray-600 max-w-[180px] truncate" title={item.company_name}>
+                        {item.company_name}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="text-sm font-medium text-gray-900 max-w-[250px] truncate" title={item.training_title}>
+                        {item.training_title}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="text-sm text-gray-600">{item.issuing_organization}</div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="text-sm text-gray-600">{item.credential_id}</div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="text-sm text-gray-600">
+                        {item.issue_date ? new Date(item.issue_date).toLocaleDateString("id-ID") : '-'}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="text-sm text-gray-600">
+                        {item.expiration_date ? new Date(item.expiration_date).toLocaleDateString("id-ID") : '-'}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      {item.certificate_url ? (
+                        <a
+                          href={item.certificate_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1"
+                        >
+                          📥 View
+                        </a>
+                      ) : (
+                        <span className="text-gray-400 text-sm">No file</span>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="13" className="px-4 py-12 text-center">
+                    <div className="flex flex-col items-center justify-center">
+                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                        <Search className="w-8 h-8 text-gray-400" />
+                      </div>
+                      <p className="text-gray-500 font-medium mb-1">
+                        {activeFiltersCount > 0 || searchQuery ? "No results found" : "No offline learning data"}
+                      </p>
+                      <p className="text-sm text-gray-400">
+                        {activeFiltersCount > 0 || searchQuery 
+                          ? "Try adjusting your filters or search query"
+                          : "Click 'Add Certificate' to get started"
+                        }
+                      </p>
                     </div>
                   </td>
-
-                  <td className="px-4 py-3 text-gray-900">
-                    {offlineLearning.full_name}
-                  </td>
-                  <td className="px-4 py-3 text-gray-900">
-                    {offlineLearning.employee_id}
-                  </td>
-                  <td className="px-4 py-3 text-gray-900">
-                    {offlineLearning.position_name}
-                  </td>
-                  <td className="px-4 py-3 text-gray-900">
-                    {offlineLearning.dept_abbr}
-                  </td>
-                  <td className="px-4 py-3 text-gray-900">
-                    {offlineLearning.company_name}
-                  </td>
-                  <td className="px-4 py-3 text-gray-900">
-                    {offlineLearning.training_title}
-                  </td>
-                  <td className="px-4 py-3 text-gray-900">
-                    {offlineLearning.issuing_organization}
-                  </td>
-                  <td className="px-4 py-3 text-gray-900">
-                    {offlineLearning.credential_id}
-                  </td>
-                  <td className="px-4 py-3 text-gray-900">
-                    {new Date(offlineLearning.issue_date).toLocaleDateString(
-                      "id-ID"
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-gray-900">
-                    {new Date(
-                      offlineLearning.expiration_date
-                    ).toLocaleDateString("id-ID")}
-                  </td>
-                  <td className="px-4 py-3 text-left">
-                    {offlineLearning.certificate ? (
-                      <button
-                        onClick={() =>
-                          window.open(offlineLearning.certificate, "_blank")
-                        }
-                        className="flex items-center gap-2 text-blue-600 hover:text-blue-800"
-                      >
-                        📥 Download
-                      </button>
-                    ) : (
-                      <span className="text-gray-400">Tidak ada</span>
-                    )}
-                  </td>
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td
-                  colSpan="10"
-                  className="px-4 py-8 text-center text-gray-500"
-                >
-                  No Offline Learning found
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row sm:justify-between gap-4 mt-4">
+      {/* Pagination */}
+      <div className="flex items-center justify-between mt-4 flex-wrap gap-4">
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-600 w-full">Rows per page:</span>
+          <span className="text-sm text-gray-600">Rows per page:</span>
           <select
             value={pageSize}
             onChange={(e) => handlePageSizeChange(e.target.value)}
-            className="rounded border border-gray-300 text-gray-600 focus:ring-blue-500 focus:outline-none py-1 px-2 w-full"
+            className="py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-blue-500 focus:outline-none"
           >
             <option value={5}>5</option>
             <option value={10}>10</option>
             <option value={25}>25</option>
             <option value={50}>50</option>
+            <option value={100}>100</option>
           </select>
         </div>
 
         <div className="flex items-center gap-4">
           <div className="text-sm text-gray-600">
-            Showing {startIndex + 1} to{" "}
-            {Math.min(endIndex, filteredOfflineLearning.length)} of{" "}
-            {filteredOfflineLearning.length}
+            Showing <span className="font-semibold text-gray-900">{pagination?.totalCount > 0 ? ((pagination.currentPage - 1) * pagination.pageSize) + 1 : 0}</span> to{" "}
+            <span className="font-semibold text-gray-900">{Math.min(pagination?.currentPage * pagination?.pageSize, pagination?.totalCount)}</span> of{" "}
+            <span className="font-semibold text-gray-900">{pagination?.totalCount || 0}</span> entries
           </div>
 
           <div className="flex items-center gap-2">
             <button
               onClick={() => handlePageChange(currentPage - 1)}
               disabled={currentPage === 1}
-              className="p-2 rounded border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <ChevronLeft size={16} />
             </button>
-
-            <span className="text-sm text-gray-600">
-              Page {currentPage} of {totalPages || 1}
+            <span className="px-3 py-1 text-sm font-medium text-gray-700">
+              Page {pagination?.currentPage || 1} of {pagination?.totalPages || 1}
             </span>
-
             <button
               onClick={() => handlePageChange(currentPage + 1)}
-              disabled={currentPage === totalPages || totalPages === 0}
-              className="p-2 rounded border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              disabled={currentPage >= (pagination?.totalPages || 1)}
+              className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <ChevronRight size={16} />
             </button>
@@ -1108,375 +1106,295 @@ export default function OfflineLearningView({
       </div>
 
       {isModalOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+  <div
+    className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+    onClick={handleCancel}
+  >
+    <div
+      className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col"
+      onClick={(e) => e.stopPropagation()}
+    >
+      {/* ✅ Header */}
+      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-blue-100 rounded-t-xl">
+        <div className="flex items-center gap-3">
+          {isEditMode ? (
+            <Edit className="w-6 h-6 text-blue-600" />
+          ) : (
+            <CirclePlus className="w-6 h-6 text-green-600" />
+          )}
+          <div>
+            <h3 className="text-lg font-bold text-gray-900">
+              {isEditMode ? "Edit Training Certificate" : "Add New Training Certificate"}
+            </h3>
+            <p className="text-xs text-gray-600 mt-0.5">
+              {isEditMode ? "Update certificate information" : "Fill in the form below to add a new certificate"}
+            </p>
+          </div>
+        </div>
+        <button
           onClick={handleCancel}
+          className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
         >
-          <div
-            className="rounded-xl border border-gray-200 bg-white shadow-xl w-full max-w-4xl mx-4 max-h-[90vh] flex flex-col"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="flex items-center gap-2 rounded-t-xl border-b bg-gradient-to-b from-gray-50 to-white px-6 py-4 flex-shrink-0">
-              <CirclePlus className="h-6 w-6 text-green-600" />
-              <h3 className="text-base font-semibold text-gray-900">
-                {isEditMode
-                  ? "Edit Training Certificate"
-                  : "Add Training Certificate"}
-              </h3>
-            </div>
+          <X size={20} className="text-gray-600" />
+        </button>
+      </div>
 
-            {/* Body */}
-            <div className="overflow-y-auto px-6 py-4 flex-1">
-              <div className="space-y-4">
-                <input
-                  type="hidden"
-                  value={currentCertificateId}
+      {/* ✅ Body - Scrollable */}
+      <div className="overflow-y-auto px-6 py-6 flex-1">
+        <div className="space-y-6">
+          {/* ✅ Section 1: Employee Lookup */}
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border-2 border-blue-200">
+            <h4 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+              <Users size={16} className="text-blue-600" />
+              Employee Lookup
+              <span className="text-xs font-normal text-gray-500">(Enter Company & NIK to auto-fill employee data)</span>
+            </h4>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Company Unit */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Company Unit <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={employeeComp}
+                  onChange={handleEmployeeCompChange}
+                  onBlur={() => handleBlur("employeeComp")}
+                  disabled={isEditMode}
                   className={getInputClass(
-                    "w-full rounded-md border px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-opacity-30 transition-colors"
+                    "employeeComp",
+                    "w-full rounded-lg border px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
                   )}
-                  placeholder="Type Employee Name..."
+                >
+                  <option value="">Select Company...</option>
+                  {company?.map((comp) => (
+                    <option key={comp.id} value={comp.id}>
+                      {comp.company_name}
+                    </option>
+                  ))}
+                </select>
+                {touched.employeeComp && errors.employeeComp && (
+                  <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    {errors.employeeComp}
+                  </p>
+                )}
+              </div>
+
+              {/* NIK */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  NIK (Employee ID) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={employeeId}
+                  onChange={handleEmployeeIdChange}
+                  onBlur={() => handleBlur("employeeId")}
+                  disabled={isEditMode}
+                  placeholder="Enter NIK"
+                  className={getInputClass(
+                    "employeeId",
+                    "w-full rounded-lg border px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  )}
                 />
-                {/* Company Unit */}
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
-                  <label className="col-span-3 text-sm font-medium text-gray-700 pt-2">
-                    Company Unit <span className="text-red-500">*</span>
-                  </label>
-                  <div className="col-span-7">
-                    <select
-                      value={employeeComp}
-                      onChange={(e) => setemployeeComp(e.target.value)}
-                      className={getInputClass(
-                        "employeeComp",
-                        "w-full rounded-md border px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-opacity-30 transition-colors"
-                      )}
-                    >
-                      <option value="">Select Company...</option>
-                      {company?.map((company) => (
-                        <option key={company.id} value={company.id}>
-                          {company.company_name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="col-span-2 flex items-center pt-2">
-                    {touched.employeeComp && errors.employeeComp && (
-                      <span className="text-xs text-red-600 flex items-center gap-1">
-                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                        <span className="truncate">{errors.employeeComp}</span>
-                      </span>
-                    )}
-                    {touched.employeeComp &&
-                      !errors.employeeComp &&
-                      employeeDept && (
-                        <span className="text-xs text-green-600 flex items-center gap-1">
-                          <CheckCircle className="w-4 h-4 flex-shrink-0" />
-                          <span>Valid</span>
-                        </span>
-                      )}
-                  </div>
-                </div>
+                {touched.employeeId && errors.employeeId && (
+                  <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    {errors.employeeId}
+                  </p>
+                )}
+                {!isEditMode && employeeComp && employeeId.length >= 3 && (
+                  <p className="text-xs text-blue-600 mt-1 flex items-center gap-1">
+                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+                    Fetching employee data...
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
 
-                {/* Employee Id */}
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
-                  <label className="col-span-3 text-sm font-medium text-gray-700 pt-2">
-                    Employee ID <span className="text-red-500">*</span>
-                  </label>
-                  <div className="col-span-7">
-                    <input
-                      type="text"
-                      value={employeeId}
-                      onChange={(e) => setemployeeId(e.target.value)}
-                      placeholder="Employee ID"
-                      className={getInputClass(
-                        "employeeId",
-                        "w-full rounded-md border px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-opacity-30 transition-colors"
-                      )}
-                    />
-                  </div>
-                  <div className="col-span-2 flex items-center pt-2">
-                    {touched.employeeId && errors.employeeId && (
-                      <span className="text-xs text-red-600 flex items-center gap-1">
-                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                        <span className="truncate">{errors.employeeId}</span>
-                      </span>
-                    )}
-                    {touched.employeeId && !errors.employeeId && employeeId && (
-                      <span className="text-xs text-green-600 flex items-center gap-1">
-                        <CheckCircle className="w-4 h-4 flex-shrink-0" />
-                        <span>Valid</span>
-                      </span>
-                    )}
-                  </div>
-                </div>
-
+          {/* ✅ Section 2: Employee Information (Read-only) */}
+          {employeeName && (
+            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+              <h4 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                <Users size={16} className="text-blue-600" />
+                Employee Information
+                <span className="text-xs font-normal text-green-600">(Auto-filled)</span>
+              </h4>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Employee Name */}
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
-                  <label className="col-span-3 text-sm font-medium text-gray-700 pt-2">
-                    Employee Name <span className="text-red-500">*</span>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Full Name
                   </label>
-                  <div className="col-span-7">
-                    <input
-                      type="text"
-                      value={employeeName}
-                      onChange={handleEmployeeNameChange}
-                      onBlur={() => handleBlur("employeeName")}
-                      className={getInputClass(
-                        "employeeName",
-                        "w-full rounded-md border px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-opacity-30 transition-colors"
-                      )}
-                      placeholder="Type Employee Name..."
-                      readOnly
-                    />
-                  </div>
-                  <div className="col-span-2 flex items-center pt-2">
-                    {touched.employeeName && errors.employeeName && (
-                      <span className="text-xs text-red-600 flex items-center gap-1">
-                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                        <span className="truncate">{errors.employeeName}</span>
-                      </span>
-                    )}
-                    {touched.employeeName &&
-                      !errors.employeeName &&
-                      employeeName && (
-                        <span className="text-xs text-green-600 flex items-center gap-1">
-                          <CheckCircle className="w-4 h-4 flex-shrink-0" />
-                          <span>Valid</span>
-                        </span>
-                      )}
-                  </div>
+                  <input
+                    type="text"
+                    value={employeeName}
+                    readOnly
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-900 bg-gray-50 cursor-not-allowed"
+                  />
                 </div>
 
                 {/* Position */}
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
-                  <label className="col-span-3 text-sm font-medium text-gray-700 pt-2">
-                    Position <span className="text-red-500">*</span>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Position
                   </label>
-                  <div className="col-span-7">
-                    <input
-                      type="text"
-                      value={employeePosition}
-                      onChange={handleEmployeePositionChange}
-                      onBlur={() => handleBlur("employeePosition")}
-                      className={getInputClass(
-                        "employeePosition",
-                        "w-full rounded-md border px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-opacity-30 transition-colors"
-                      )}
-                      placeholder="Type Employee Position..."
-                      readOnly
-                    />
-                  </div>
-                  <div classPosition="col-span-2 flex items-center pt-2">
-                    {touched.employeePosition && errors.employeePosition && (
-                      <span classPosition="text-xs text-red-600 flex items-center gap-1">
-                        <AlertCircle classPosition="w-4 h-4 flex-shrink-0" />
-                        <span classPosition="truncate">
-                          {errors.employeePosition}
-                        </span>
-                      </span>
-                    )}
-                    {touched.employeePosition &&
-                      !errors.employeePosition &&
-                      employeePosition && (
-                        <span className="text-xs text-green-600 flex items-center gap-1">
-                          <CheckCircle className="w-4 h-4 flex-shrink-0" />
-                          <span>Valid</span>
-                        </span>
-                      )}
-                  </div>
+                  <input
+                    type="text"
+                    value={employeePosition}
+                    readOnly
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-900 bg-gray-50 cursor-not-allowed"
+                  />
                 </div>
 
                 {/* Department */}
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
-                  <label className="col-span-3 text-sm font-medium text-gray-700 pt-2">
-                    Department <span className="text-red-500">*</span>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Department
                   </label>
-                  <div className="col-span-7">
-                    <select
-                      value={employeeDept}
-                      onChange={handleEmployeeDeptChange}
-                      onBlur={() => handleBlur("employeeDept")}
-                      className={getInputClass(
-                        "employeeDept",
-                        "w-full rounded-md border px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-opacity-30 transition-colors"
-                      )}
-                    >
-                      <option value="">Select Dept...</option>
-                      {dept?.map((dept) => (
-                        <option key={dept.id} value={dept.id}>
-                          {dept.dept_abbr}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="col-span-2 flex items-center pt-2">
-                    {touched.employeeDept && errors.employeeDept && (
-                      <span className="text-xs text-red-600 flex items-center gap-1">
-                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                        <span className="truncate">{errors.employeeDept}</span>
-                      </span>
-                    )}
-                    {touched.employeeDept &&
-                      !errors.employeeDept &&
-                      employeeDept && (
-                        <span className="text-xs text-green-600 flex items-center gap-1">
-                          <CheckCircle className="w-4 h-4 flex-shrink-0" />
-                          <span>Valid</span>
-                        </span>
-                      )}
-                  </div>
+                  <input
+                    type="text"
+                    value={dept?.find(d => d.id === parseInt(employeeDept))?.dept_abbr || employeeDept}
+                    readOnly
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-900 bg-gray-50 cursor-not-allowed"
+                  />
                 </div>
 
-                {/* Training Title */}
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
-                  <label className="col-span-3 text-sm font-medium text-gray-700 pt-2">
-                    Training Title <span className="text-red-500">*</span>
+                {/* Company */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Company
                   </label>
-                  <div className="col-span-7">
-                    <input
-                      type="text"
-                      value={trainingTitle}
-                      onChange={handleTrainingTitleChange}
-                      onBlur={() => handleBlur("trainingTitle")}
-                      className={getInputClass(
-                        "trainingTitle",
-                        "w-full rounded-md border px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-opacity-30 transition-colors"
-                      )}
-                      placeholder="Type Training Title..."
-                    />
-                  </div>
-                  <div className="col-span-2 flex items-center pt-2">
-                    {touched.trainingTitle && errors.trainingTitle && (
-                      <span className="text-xs text-red-600 flex items-center gap-1">
-                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                        <span className="truncate">{errors.trainingTitle}</span>
-                      </span>
-                    )}
-                    {touched.trainingTitle &&
-                      !errors.trainingTitle &&
-                      trainingTitle && (
-                        <span className="text-xs text-green-600 flex items-center gap-1">
-                          <CheckCircle className="w-4 h-4 flex-shrink-0" />
-                          <span>Valid</span>
-                        </span>
-                      )}
-                  </div>
+                  <input
+                    type="text"
+                    value={company?.find(c => c.id === parseInt(employeeComp))?.company_name || ''}
+                    readOnly
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-900 bg-gray-50 cursor-not-allowed"
+                  />
                 </div>
+              </div>
+            </div>
+          )}
 
-                {/* Provider */}
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
-                  <label className="col-span-3 text-sm font-medium text-gray-700 pt-2">
-                    Provider <span className="text-red-500">*</span>
-                  </label>
-                  <div className="col-span-7">
-                    <input
-                      type="text"
-                      value={provider}
-                      onChange={handleProviderChange}
-                      onBlur={() => handleBlur("provider")}
-                      className={getInputClass(
-                        "provider",
-                        "w-full rounded-md border px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-opacity-30 transition-colors"
-                      )}
-                      placeholder="Type Provider..."
-                    />
-                  </div>
-                  <div className="col-span-2 flex items-center pt-2">
-                    {touched.provider && errors.provider && (
-                      <span className="text-xs text-red-600 flex items-center gap-1">
-                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                        <span className="truncate">{errors.provider}</span>
-                      </span>
-                    )}
-                    {touched.provider && !errors.provider && provider && (
-                      <span className="text-xs text-green-600 flex items-center gap-1">
-                        <CheckCircle className="w-4 h-4 flex-shrink-0" />
-                        <span>Valid</span>
-                      </span>
-                    )}
-                  </div>
-                </div>
+          {/* ✅ Section 3: Training Information */}
+          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+            <h4 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+              <GraduationCap size={16} className="text-green-600" />
+              Training & Certificate Details
+            </h4>
+            
+            <div className="space-y-4">
+              {/* Training Title */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Training Title <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={trainingTitle}
+                  onChange={handleTrainingTitleChange}
+                  onBlur={() => handleBlur("trainingTitle")}
+                  placeholder="e.g., ISO 9001:2015 Internal Auditor"
+                  className={getInputClass(
+                    "trainingTitle",
+                    "w-full rounded-lg border px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+                  )}
+                />
+                {touched.trainingTitle && errors.trainingTitle && (
+                  <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    {errors.trainingTitle}
+                  </p>
+                )}
+              </div>
 
+              {/* Provider */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Issuing Organization <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={provider}
+                  onChange={handleProviderChange}
+                  onBlur={() => handleBlur("provider")}
+                  placeholder="e.g., BSI Group, TÜV SÜD, SAI Global"
+                  className={getInputClass(
+                    "provider",
+                    "w-full rounded-lg border px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+                  )}
+                />
+                {touched.provider && errors.provider && (
+                  <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    {errors.provider}
+                  </p>
+                )}
+              </div>
+
+              {/* Credential ID & URL - Side by Side */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Credential ID */}
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
-                  <label className="col-span-3 text-sm font-medium text-gray-700 pt-2">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Credential ID <span className="text-red-500">*</span>
                   </label>
-                  <div className="col-span-7">
-                    <input
-                      type="text"
-                      value={certificateId}
-                      onChange={handleCertificateIdChange}
-                      onBlur={() => handleBlur("certificateId")}
-                      className={getInputClass(
-                        "certificateId",
-                        "w-full rounded-md border px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-opacity-30 transition-colors"
-                      )}
-                      placeholder="Type Credential ID..."
-                    />
-                  </div>
-                  <div className="col-span-2 flex items-center pt-2">
-                    {touched.certificateId && errors.certificateId && (
-                      <span className="text-xs text-red-600 flex items-center gap-1">
-                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                        <span className="truncate">{errors.certificateId}</span>
-                      </span>
+                  <input
+                    type="text"
+                    value={certificateId}
+                    onChange={handleCertificateIdChange}
+                    onBlur={() => handleBlur("certificateId")}
+                    placeholder="e.g., CERT-2024-12345"
+                    className={getInputClass(
+                      "certificateId",
+                      "w-full rounded-lg border px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
                     )}
-                    {touched.certificateId &&
-                      !errors.certificateId &&
-                      certificateId && (
-                        <span className="text-xs text-green-600 flex items-center gap-1">
-                          <CheckCircle className="w-4 h-4 flex-shrink-0" />
-                          <span>Valid</span>
-                        </span>
-                      )}
-                  </div>
+                  />
+                  {touched.certificateId && errors.certificateId && (
+                    <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      {errors.certificateId}
+                    </p>
+                  )}
                 </div>
 
                 {/* Credential URL */}
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
-                  <label className="col-span-3 text-sm font-medium text-gray-700 pt-2">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Credential URL <span className="text-red-500">*</span>
                   </label>
-                  <div className="col-span-7">
-                    <input
-                      type="text"
-                      value={certificateUrl}
-                      onChange={handleCertificateUrlChange}
-                      onBlur={() => handleBlur("certificateUrl")}
-                      className={getInputClass(
-                        "certificateUrl",
-                        "w-full rounded-md border px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-opacity-30 transition-colors"
-                      )}
-                      placeholder="Type Credential URL..."
-                    />
-                  </div>
-                  <div className="col-span-2 flex items-center pt-2">
-                    {touched.certificateUrl && errors.certificateUrl && (
-                      <span className="text-xs text-red-600 flex items-center gap-1">
-                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                        <span className="truncate">
-                          {errors.certificateUrl}
-                        </span>
-                      </span>
+                  <input
+                    type="url"
+                    value={certificateUrl}
+                    onChange={handleCertificateUrlChange}
+                    onBlur={() => handleBlur("certificateUrl")}
+                    placeholder="https://verify.example.com/cert/12345"
+                    className={getInputClass(
+                      "certificateUrl",
+                      "w-full rounded-lg border px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
                     )}
-                    {touched.certificateUrl &&
-                      !errors.certificateUrl &&
-                      certificateUrl && (
-                        <span className="text-xs text-green-600 flex items-center gap-1">
-                          <CheckCircle className="w-4 h-4 flex-shrink-0" />
-                          <span>Valid</span>
-                        </span>
-                      )}
-                  </div>
+                  />
+                  {touched.certificateUrl && errors.certificateUrl && (
+                    <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      {errors.certificateUrl}
+                    </p>
+                  )}
                 </div>
+              </div>
 
-                {/* Issued Date */}
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
-                  <label className="col-span-3 text-sm font-medium text-gray-700 pt-2">
-                    Issued Date <span className="text-red-500">*</span>
+              {/* Issue Date & Expiration Date - Side by Side */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Issue Date */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Issue Date <span className="text-red-500">*</span>
                   </label>
-                  <div className="col-span-7">
+                  <div className="relative">
+                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
                     <input
                       type="date"
                       value={issueDate}
@@ -1484,33 +1402,25 @@ export default function OfflineLearningView({
                       onBlur={() => handleBlur("issueDate")}
                       className={getInputClass(
                         "issueDate",
-                        "w-full rounded-md border px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-opacity-30 transition-colors"
+                        "w-full rounded-lg border pl-10 pr-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
                       )}
-                      placeholder="Type Issued Date..."
                     />
                   </div>
-                  <div className="col-span-2 flex items-center pt-2">
-                    {touched.issueDate && errors.issueDate && (
-                      <span className="text-xs text-red-600 flex items-center gap-1">
-                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                        <span className="truncate">{errors.issueDate}</span>
-                      </span>
-                    )}
-                    {touched.issueDate && !errors.issueDate && issueDate && (
-                      <span className="text-xs text-green-600 flex items-center gap-1">
-                        <CheckCircle className="w-4 h-4 flex-shrink-0" />
-                        <span>Valid</span>
-                      </span>
-                    )}
-                  </div>
+                  {touched.issueDate && errors.issueDate && (
+                    <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      {errors.issueDate}
+                    </p>
+                  )}
                 </div>
 
-                {/* Expired Date */}
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
-                  <label className="col-span-3 text-sm font-medium text-gray-700 pt-2">
-                    Expired Date <span className="text-red-500">*</span>
+                {/* Expiration Date */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Expiration Date <span className="text-red-500">*</span>
                   </label>
-                  <div className="col-span-7">
+                  <div className="relative">
+                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
                     <input
                       type="date"
                       value={expiredDate}
@@ -1518,116 +1428,117 @@ export default function OfflineLearningView({
                       onBlur={() => handleBlur("expiredDate")}
                       className={getInputClass(
                         "expiredDate",
-                        "w-full rounded-md border px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-opacity-30 transition-colors"
-                      )}
-                      placeholder="Type Expired Date..."
-                    />
-                  </div>
-                  <div className="col-span-2 flex items-center pt-2">
-                    {touched.expiredDate && errors.expiredDate && (
-                      <span className="text-xs text-red-600 flex items-center gap-1">
-                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                        <span className="truncate">{errors.expiredDate}</span>
-                      </span>
-                    )}
-                    {touched.expiredDate &&
-                      !errors.expiredDate &&
-                      expiredDate && (
-                        <span className="text-xs text-green-600 flex items-center gap-1">
-                          <CheckCircle className="w-4 h-4 flex-shrink-0" />
-                          <span>Valid</span>
-                        </span>
-                      )}
-                  </div>
-                </div>
-
-                {/* Upload Certficate */}
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
-                  <label className="col-span-3 text-sm font-medium text-gray-700 pt-2">
-                    Upload Certificate <span className="text-red-500">*</span>
-                  </label>
-                  <div className="col-span-7">
-                    <input
-                      type="file"
-                      accept="application/pdf"
-                      onChange={handleUploadCertificateChange}
-                      onBlur={() => handleBlur("uploadCertificate")}
-                      className={getInputClass(
-                        "uploadCertificate",
-                        "w-full rounded-md border px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-opacity-30 transition-colors"
+                        "w-full rounded-lg border pl-10 pr-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
                       )}
                     />
-                    {isEditMode &&
-                      existingCertificate &&
-                      !uploadCertificate && (
-                        <p className="text-xs text-gray-600 mt-1">
-                          Current:{" "}
-                          <a
-                            href={existingCertificate}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:underline"
-                          >
-                            View existing certificate
-                          </a>
-                        </p>
-                      )}
-                    {uploadCertificate && (
-                      <p className="text-xs text-gray-600 mt-1">
-                        New file selected: {uploadCertificate.name}
-                      </p>
-                    )}
                   </div>
-                  <div className="col-span-2 flex items-center pt-2">
-                    {touched.uploadCertificate && errors.uploadCertificate && (
-                      <span className="text-xs text-red-600 flex items-center gap-1">
-                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                        <span className="truncate">
-                          {errors.uploadCertificate}
-                        </span>
-                      </span>
-                    )}
-
-                    {touched.uploadCertificate &&
-                      !errors.uploadCertificate &&
-                      (uploadCertificate ? (
-                        <span className="text-xs text-green-600 flex items-center gap-1">
-                          <CheckCircle className="w-4 h-4 flex-shrink-0" />
-                          <span>
-                            {uploadCertificate.name
-                              ? `File: ${uploadCertificate.name}`
-                              : "Valid"}
-                          </span>
-                        </span>
-                      ) : isEditMode && existingCertificate ? (
-                        <span className="text-xs text-green-600 flex items-center gap-1">
-                          <CheckCircle className="w-4 h-4 flex-shrink-0" />
-                          <span>Valid</span>
-                        </span>
-                      ) : null)}
-                  </div>
+                  {touched.expiredDate && errors.expiredDate && (
+                    <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      {errors.expiredDate}
+                    </p>
+                  )}
                 </div>
               </div>
-            </div>
 
-            {/* Footer */}
-            <div className="flex items-center justify-center gap-6 px-6 py-4 border-t bg-gray-50 rounded-b-xl flex-shrink-0">
-              <button
-                onClick={handleSave}
-                className="rounded-full bg-green-600 px-8 py-2 text-sm font-semibold text-white shadow hover:bg-green-700 transition-colors"
-              >
-                Save
-              </button>
-              <button
-                onClick={handleCancel}
-                className="rounded-full bg-red-600 px-8 py-2 text-sm font-semibold text-white shadow hover:bg-red-700 transition-colors"
-              >
-                Cancel
-              </button>
+              {/* Upload Certificate */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Certificate File <span className="text-red-500">*</span>
+                </label>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-400 transition-colors">
+                  <input
+                    type="file"
+                    accept="application/pdf"
+                    onChange={handleUploadCertificateChange}
+                    onBlur={() => handleBlur("uploadCertificate")}
+                    className="hidden"
+                    id="certificate-upload"
+                  />
+                  <label
+                    htmlFor="certificate-upload"
+                    className="flex flex-col items-center justify-center cursor-pointer"
+                  >
+                    <FileSpreadsheet className="w-10 h-10 text-gray-400 mb-2" />
+                    <p className="text-sm text-gray-600 mb-1">
+                      <span className="text-blue-600 font-medium">Click to upload</span> or drag and drop
+                    </p>
+                    <p className="text-xs text-gray-500">PDF only (Max 5MB)</p>
+                  </label>
+                </div>
+
+                {/* File Info */}
+                {uploadCertificate && (
+                  <div className="mt-2 flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded-lg">
+                    <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
+                    <span className="text-sm text-green-800 truncate flex-1">
+                      {uploadCertificate.name}
+                    </span>
+                    <button
+                      onClick={() => setuploadCertificate(null)}
+                      className="text-red-600 hover:text-red-800"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                )}
+
+                {isEditMode && existingCertificate && !uploadCertificate && (
+                  <div className="mt-2 flex items-center gap-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+                    <CheckCircle className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                    <span className="text-sm text-blue-800 flex-1">Current certificate uploaded</span>
+                    <a
+                      href={existingCertificate}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                    >
+                      View
+                    </a>
+                  </div>
+                )}
+
+                {touched.uploadCertificate && errors.uploadCertificate && (
+                  <p className="text-xs text-red-600 mt-2 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    {errors.uploadCertificate}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
         </div>
-      )}
+      </div>
+
+      {/* ✅ Footer */}
+      <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-xl">
+        <button
+          onClick={handleCancel}
+          className="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors font-medium text-sm"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handleSave}
+          disabled={!employeeName}
+          className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isEditMode ? (
+            <>
+              <Edit size={16} />
+              Update Certificate
+            </>
+          ) : (
+            <>
+              <CheckCircle size={16} />
+              Save Certificate
+            </>
+          )}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 }

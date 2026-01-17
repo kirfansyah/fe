@@ -26,7 +26,7 @@ const Header = () => {
     const router = useRouter();
     const { pathname } = router;
     const { listLanguage } = stateLanguage;
-    const { fetchNotification } = useRoles();
+    const { fetchNotification,handleNotificationRead } = useRoles();
 
     const onLanguageChange = (checked) => {
         changeLanguage(checked ? "id" : "en");
@@ -152,7 +152,7 @@ const Header = () => {
     // Handle mark all as read
     const handleMarkAllAsRead = async () => {
         try {
-          // Call API to mark all as read if available
+          await handleNotificationRead();
           setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
           setUnreadCount(0);
         } catch (error) {
@@ -292,7 +292,10 @@ const Header = () => {
                                       {notifications.length > 0 && (
                                         <div className="px-4 py-3 border-t border-gray-100 bg-gray-50">
                                           <button
-                                            onClick={() => router.push('/notifications')}
+                                            onClick={() => {
+                                              setShowNotificationDropdown(false); // ✅ Close dropdown
+                                              router.push('/notifications'); // ✅ Navigate ke halaman notifications
+                                            }}
                                             className="w-full flex items-center justify-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
                                           >
                                             {listLanguage.view_all_notifications || 'Lihat semua notifikasi'}
