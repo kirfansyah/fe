@@ -236,6 +236,8 @@ import {
 const ReactPlayer = dynamic(() => import("react-player"), { ssr: false });
 
 export default function VideoPlayer({ url, videoId, onVideoEnd, active }) {
+  //   console.log(url);
+
   const isLocal = typeof url === "string" && url.endsWith(".mp4");
   const videoRef = useRef(null);
   const containerRef = useRef(null);

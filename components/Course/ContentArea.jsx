@@ -437,9 +437,7 @@ export default function ContentArea({ exitCourse }) {
               {step.content_title}
             </h2>
             <VideoPlayer
-              url={`/api/video-proxy?url=${encodeURIComponent(
-                step.content_url_full
-              )}`}
+              url={step.content_url_full}
               videoId={`${step.id}`}
               active={step.type === "video"}
               onVideoEnd={() => setVideoFinished(true)}

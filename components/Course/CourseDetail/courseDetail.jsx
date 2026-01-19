@@ -54,6 +54,8 @@ export default function CourseDetail({ ...props }) {
   const [openConfirm, setOpenConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [createdBy, setCreatedBy] = useState("system");
+  const [createdDevice, setCreatedDevice] = useState("web");
 
   const orderedKeys = [
     "courseGuide",
@@ -62,6 +64,20 @@ export default function CourseDetail({ ...props }) {
     "courseContent",
     "postTest",
   ];
+
+  const getCookie = (name) => {
+    if (typeof document === "undefined") return null;
+    const match = document.cookie.match(
+      new RegExp("(^| )" + name + "=([^;]+)")
+    );
+    return match ? decodeURIComponent(match[2]) : null;
+  };
+
+  const getDeviceType = () => {
+    if (typeof navigator === "undefined") return "web";
+    const ua = navigator.userAgent.toLowerCase();
+    return /mobile|android|iphone|ipad/.test(ua) ? "mobile" : "web";
+  };
 
   const formatDate = (dateStr) => {
     if (!dateStr) return "-";
@@ -75,6 +91,15 @@ export default function CourseDetail({ ...props }) {
 
     return `${day}-${month}-${year}`;
   };
+
+  useEffect(() => {
+    const nama = getCookie("nama");
+    if (nama) {
+      setCreatedBy(nama);
+    }
+
+    setCreatedDevice(getDeviceType());
+  }, []);
 
   useEffect(() => {
     if (typeof document !== "undefined") {
@@ -111,6 +136,7 @@ export default function CourseDetail({ ...props }) {
   }, [getCourseById, id, hasFeedback, userFeedback]);
 
   const sections = courseData?.sections || {};
+  //   console.log("coursedata a:", courseData);
 
   const handleStartCourse = async () => {
     try {
@@ -141,15 +167,18 @@ export default function CourseDetail({ ...props }) {
       //   toast.warning(error);
     }
   };
+  //   console.log(createdBy, createdDevice);
 
   const handleSendFeedback = async () => {
     if (!rating) {
-      alert("Silakan beri rating terlebih dahulu.");
+      //   alert("Silakan beri rating terlebih dahulu.");
+      toast.warning("Silakan beri rating terlebih dahulu.");
       return;
     }
 
     if (!reviewText.trim()) {
-      alert("Silakan isi komentar atau masukan Anda.");
+      toast.warning("Silakan isi komentar atau masukan Anda.");
+      //   alert("Silakan isi komentar atau masukan Anda.");
       return;
     }
     setIsSubmitting(true);
@@ -157,10 +186,13 @@ export default function CourseDetail({ ...props }) {
     try {
       const payload = {
         id_course: courseData.id_course,
+        id_course_enrollment: courseData.id_course_enrollment,
         rating: rating,
         feedback: reviewText,
-        created_by: "system", // nanti bisa diganti user login
-        created_device: "web",
+        // created_by: "system", // nanti bisa diganti user login
+        // created_device: "web",
+        created_by: createdBy,
+        created_device: createdDevice,
       };
 
       const result = await sendFeedback(payload);

@@ -18,7 +18,7 @@ class CalendarService {
         }
       );
 
-      console.log("✅ CalendarService.getSchedule response.data:", response);
+      //   console.log("✅ CalendarService.getSchedule response.data:", response);
       // jika 404 / tidak ada data
       if (response.status === 404) {
         return {
@@ -28,7 +28,7 @@ class CalendarService {
           pagination: { totalCount: 0 },
         };
       }
-      console.log("CalendarService : ", response);
+      //   console.log("CalendarService : ", response);
 
       return {
         success: response.data.success,
@@ -66,6 +66,48 @@ class CalendarService {
       return {
         success: false,
         data: [],
+      };
+    }
+  }
+
+  static async getKaryawan() {
+    try {
+      const response = await API.get(`/auth/me`, {
+        validateStatus: (status) => status >= 200 && status < 500,
+      });
+
+      //   console.log(
+      //     "✅ CalendarService.getKaryawan response.data:",
+      //     response.data.data
+      //   );
+
+      const content = response.data?.data;
+      if (
+        response.status === 404 ||
+        !content ||
+        Object.keys(content).length === 0
+      ) {
+        return {
+          success: false,
+          data: [],
+          message: "No data found",
+        };
+      }
+      //   console.log("content :", content);
+
+      return {
+        success: response.data.success,
+        data: content,
+        message: response.data.message,
+      };
+    } catch (error) {
+      console.error("CalendarService.getKaryawan Error:", error);
+
+      return {
+        success: false,
+        data: [],
+        message:
+          error.response?.data?.message || "Failed to fetch data karyawan",
       };
     }
   }
