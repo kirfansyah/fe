@@ -414,14 +414,23 @@ class ManagementService {
      * @param {number} pageSize - Items per page
      * @returns {Promise} API response
      */
-    static async getAllEmployees(page = 1, pageSize = 10) {
+    static async getAllEmployees(params = {}) {
         try {
-            const response = await API.get("/employee", {
-                params: {
-                    page,
-                    limit: pageSize
-                }
-            });
+            const payload = {
+                // ✅ Defaults first
+                page: 1,
+                limit: 10,
+                employment_status: '1',
+                company_id: [],
+                dept_id: [],
+                grouping_id: [],
+                search: '',
+                // ✅ Spread params (override defaults)
+                ...params
+            };
+            
+            const response = await API.post("/employee", payload);
+            
             return {
                 success: true,
                 data: response.data.data || [],

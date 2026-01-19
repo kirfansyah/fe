@@ -148,6 +148,13 @@ export default function Enroll({
             showLoading('Saving enrollment...');
             
             const isGeneral = enrollmentData.enrollment.enroll_type_name === 'General';
+
+            const refreshmentMonths = enrollmentData.enrollment.refreshment_months && 
+                                 enrollmentData.enrollment.refreshment_months !== '' &&
+                                 enrollmentData.enrollment.refreshment_months !== '0'
+            ? parseInt(enrollmentData.enrollment.refreshment_months)
+            : undefined;
+
             const transformedData = {
                 id_course: parseInt(enrollmentData.courseId),
                 company_id: enrollmentData.enrollment.company_id,
@@ -163,11 +170,15 @@ export default function Enroll({
                 remedial_limit: enrollmentData.enrollment.remedial_limit || 
                             enrollmentData.enrollment.times || 1,
                 passing_grade: enrollmentData.enrollment.passing_grade ?? 0,
-                refreshment_months: enrollmentData.enrollment.refreshment_months || null,
+                
                 created_by: dataKaryawan.nama,
                 created_device: deviceInfo.device || "Unknown",
                 target_groupings: isGeneral ? [1] : extractGroupingIds(enrollmentData.enrollment.groupings)
             };
+
+            if (refreshmentMonths !== undefined) {
+                transformedData.refreshment_months = refreshmentMonths;
+            }
             
             if (isUpdate) {
                 transformedData.id_course_enrollment = enrollmentData.enrollment.id_course_enrollment;
@@ -194,7 +205,7 @@ export default function Enroll({
                     remedial_allowed: transformedData.remedial_allowed,
                     remedial_limit: transformedData.remedial_limit,
                     passing_grade: transformedData.passing_grade,
-                    refreshment_months: transformedData.refreshment_months,
+                    refreshment_months: refreshmentMonths,
                     groupings: extractGroupingIds(enrollmentData.enrollment.groupings),
                     created_at: response.data.created_at || new Date().toISOString(),
                     created_by: transformedData.created_by,
@@ -248,7 +259,29 @@ export default function Enroll({
                         endDate = new Date(publishDate.getTime() + 30 * 24 * 60 * 60 * 1000);
                     }
                     
-                    allEnrollments.push({
+                    // allEnrollments.push({
+                    //     id_course: parseInt(courseId),
+                    //     company_id: enrollment.company_id,
+                    //     id_enrollment_type: enrollmentTypeId,
+                    //     id_course_status: courseStatusId,
+                    //     publish_date: publishDate.toISOString(),
+                    //     end_date: endDate.toISOString(),
+                    //     remedial_allowed: remedialAllowed,
+                    //     remedial_limit: remedialAllowed ? (enrollment.remedial_limit || enrollment.times || 1) : 0,
+                    //     passing_grade: enrollment.passing_grade ?? 0,
+                    //     refreshment_months: enrollment.refreshment_months || null,
+                    //     created_by: dataKaryawan.nama,
+                    //     created_device: deviceInfo.device || "Unknown",
+                    //     target_groupings: isGeneral ? [1] : (enrollment.groupings || [])
+                    // });
+
+                    const refreshmentMonths = enrollment.refreshment_months && 
+                                        enrollment.refreshment_months !== '' &&
+                                        enrollment.refreshment_months !== '0'
+                    ? parseInt(enrollment.refreshment_months)
+                    : undefined;
+                
+                    const enrollmentPayload = {
                         id_course: parseInt(courseId),
                         company_id: enrollment.company_id,
                         id_enrollment_type: enrollmentTypeId,
@@ -256,13 +289,20 @@ export default function Enroll({
                         publish_date: publishDate.toISOString(),
                         end_date: endDate.toISOString(),
                         remedial_allowed: remedialAllowed,
-                        remedial_limit: remedialAllowed ? (enrollment.remedial_limit || enrollment.times || 1) : 0,
+                        remedial_limit: remedialAllowed 
+                            ? (enrollment.remedial_limit || enrollment.times || 1) 
+                            : 0,
                         passing_grade: enrollment.passing_grade ?? 0,
-                        refreshment_months: enrollment.refreshment_months || null,
                         created_by: dataKaryawan.nama,
                         created_device: deviceInfo.device || "Unknown",
                         target_groupings: isGeneral ? [1] : (enrollment.groupings || [])
-                    });
+                    };
+                    
+                    if (refreshmentMonths !== undefined) {
+                        enrollmentPayload.refreshment_months = refreshmentMonths;
+                    }
+                    
+                    allEnrollments.push(enrollmentPayload);
                 }
             });
         });

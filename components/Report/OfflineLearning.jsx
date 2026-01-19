@@ -3,6 +3,7 @@ import { Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { CirclePlus, AlertCircle, CheckCircle, Edit } from "lucide-react";
 import { useReport } from "../../hooks/useReport";
 import ExcelJS from "exceljs";
+import { useMenuPermissions } from "@/hooks/useMenuPermissions";
 
 export default function OfflineLearningView({
   offlineLearning,
@@ -12,6 +13,7 @@ export default function OfflineLearningView({
   dept,
   company,
 }) {
+  const permissions = useMenuPermissions();
   const [selectedOfflineLearning, setSelectedOfflineLearning] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [pageSize, setPageSize] = useState(10);

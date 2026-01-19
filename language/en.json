@@ -45,6 +45,18 @@
   "invalid_credentials": "Invalid username or password.",
   "reset_link_sent": "Reset link has been sent to your email.",
   "role_management": "Role Management",
-  "menu_management": "Menu Management"
+  "menu_management": "Menu Management",
+  "notifications": "Notifications",
+  "mark_all_read": "Mark all as read",
+  "no_notifications": "No notifications yet",
+  "no_notifications_subtitle": "We'll notify you when something arrives",
+  "view_all_notifications": "View all notifications",
+  "just_now": "Just now",
+  "minutes_ago": "minutes ago",
+  "hours_ago": "hours ago",
+  "days_ago": "days ago",
+  "new": "new",
+  "grouping": "Grouping",
+  "ebook_category": "eBook Category"
 
 }

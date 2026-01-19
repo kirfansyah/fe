@@ -43,7 +43,7 @@ const FileUploadForm = ({
         },
         '5': {
             accept: 'video/*',
-            maxSize: 100,
+            maxSize: 200,
             icon: Video,
             label: 'Video File',
             color: 'purple',

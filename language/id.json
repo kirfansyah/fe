@@ -31,7 +31,7 @@
   "employee_course": "Kursus Karyawan",
   "master_data": "Data Master",
   "user_management": "Manajemen Pengguna",
-  "mastering": "Penguasaan",
+  "mastering": "Master Data",
   "setting": "Pengaturan",
   "training_portal": "Portal Pelatihan",
   "course": "Kursus",
@@ -45,6 +45,17 @@
   "invalid_credentials": "Nama pengguna atau kata sandi tidak valid.",
   "reset_link_sent": "Tautan pengaturan ulang telah dikirim ke email Anda.",
   "role_management": "Manajemen Akses",
-  "menu_management": "Manajemen Menu"
+  "menu_management": "Manajemen Menu",
+  "notifications": "Notifikasi",
+  "mark_all_read": "Tandai semua dibaca",
+  "no_notifications": "Belum ada notifikasi",
+  "no_notifications_subtitle": "Kami akan memberitahu Anda jika ada update",
+  "view_all_notifications": "Lihat semua notifikasi",
+  "just_now": "Baru saja",
+  "minutes_ago": "menit lalu",
+  "hours_ago": "jam lalu",
+  "days_ago": "hari lalu",
+  "grouping": "Pengelompokan",
+  "ebook_category": "Kategori eBook"
   
 }

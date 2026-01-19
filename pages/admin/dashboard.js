@@ -16,12 +16,20 @@ import {
     Calendar
 } from 'lucide-react';
 import Admin from "layouts/Admin.js";
-import { useRoles } from "../../hooks/useRoles";
-import { useCourses } from "../../hooks/useCourses";
+import { useRoles } from "@/hooks/useRoles";
+import { useCourses } from "@/hooks/useCourses";
 
 export default function DashboardAnalytics() {
-    const { fetchAnalytics } = useRoles();
+    const { fetchAnalytics, fetchEmployeeCourseResult  } = useRoles();
     const { companies } = useCourses();
+    
+    const [employeeCourseData, setEmployeeCourseData] = useState(null);
+    const [loadingEmployeeCourse, setLoadingEmployeeCourse] = useState(false);
+
+    const [courseFilterEmployee, setCourseFilterEmployee] = useState('All');
+    const [showCourseEmployeeDropdown, setShowCourseEmployeeDropdown] = useState(false);
+    const courseEmployeeDropdownRef = useRef(null);
+
     
     // Get current year and month
     const currentDate = new Date();
@@ -95,7 +103,6 @@ export default function DashboardAnalytics() {
         loadAnalyticsData();
     }, [yearFilter, monthFilter, companyFilter]);
 
-    // Close dropdowns when clicking outside
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (yearDropdownRef.current && !yearDropdownRef.current.contains(event.target)) {
@@ -110,22 +117,57 @@ export default function DashboardAnalytics() {
             if (coursePassDropdownRef.current && !coursePassDropdownRef.current.contains(event.target)) {
                 setShowCoursePassDropdown(false);
             }
+            if (courseEmployeeDropdownRef.current && !courseEmployeeDropdownRef.current.contains(event.target)) {
+                setShowCourseEmployeeDropdown(false);
+            }
         };
-
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
+
+    // Tambah function untuk fetch employee course result
+    const loadEmployeeCourseResult = async () => {
+        try {
+            setLoadingEmployeeCourse(true);
+            
+            const filters = {};
+            if (companyFilter !== 'All') {
+                filters.company_id = companyFilter;
+            }
+            if (courseFilterEmployee !== 'All') {
+                // Cari course ID dari coursesList jika diperlukan
+                filters.id_course = courseFilterEmployee;
+            }
+            
+            const result = await fetchEmployeeCourseResult(filters);
+            
+            if (result?.data) {
+                setEmployeeCourseData(result.data);
+            } else {
+                setEmployeeCourseData(null);
+            }
+        } catch (err) {
+            console.error('Error fetching employee course result:', err);
+            setEmployeeCourseData(null);
+        } finally {
+            setLoadingEmployeeCourse(false);
+        }
+    };
+    
+    useEffect(() => {
+        loadEmployeeCourseResult();
+    }, [companyFilter, courseFilterEmployee]);
+
+    const handleCourseEmployeeSelect = (courseId) => {
+        setCourseFilterEmployee(courseId);
+        setShowCourseEmployeeDropdown(false);
+    };
 
     const loadAnalyticsData = async () => {
         try {
             setLoading(true);
             setError(null);
             
-            console.log('Fetching with filters:', { 
-                year: yearFilter, 
-                month: monthFilter, 
-                company: companyFilter 
-            });
             
             // Pass filters to API
             const filters = {};
@@ -145,7 +187,7 @@ export default function DashboardAnalytics() {
             
             const result = await fetchAnalytics(filters);
             
-            console.log('API Response:', result);
+            
             
             if (!result) {
                 throw new Error('No response from server');
@@ -955,59 +997,225 @@ export default function DashboardAnalytics() {
             
             {/* Employee x Courses Result */}
             <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 mb-8">
-                <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
-                    <BarChart3 className="w-5 h-5 text-indigo-600" />
-                    Employee x Courses Result
-                </h3>
+                <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                        <BarChart3 className="w-5 h-5 text-indigo-600" />
+                        Employee x Courses Result
+                    </h3>
+                    
+                    {/* Course Filter Dropdown */}
+                    <div className="relative" ref={courseEmployeeDropdownRef}>
+                        <button 
+                            onClick={() => setShowCourseEmployeeDropdown(!showCourseEmployeeDropdown)}
+                            className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors text-xs"
+                        >
+                            <Filter className="w-3 h-3 text-gray-600" />
+                            <span className="text-gray-700 font-medium max-w-[150px] truncate">
+                                {courseFilterEmployee === 'All' ? 'All Courses' : courseFilterEmployee}
+                            </span>
+                            <ChevronDown className={`w-3 h-3 text-gray-600 transition-transform ${showCourseEmployeeDropdown ? 'rotate-180' : ''}`} />
+                        </button>
+                        
+                        {showCourseEmployeeDropdown && (
+                            <div className="absolute top-full right-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                                {coursesList.length > 0 ? (
+                                    coursesList.map((course) => (
+                                        <button
+                                            key={course}
+                                            onClick={() => handleCourseEmployeeSelect(course)}
+                                            className={`w-full text-left px-3 py-2 hover:bg-gray-50 transition-colors text-xs ${
+                                                courseFilterEmployee === course ? 'bg-indigo-50 text-indigo-600 font-medium' : 'text-gray-700'
+                                            }`}
+                                            title={course}
+                                        >
+                                            <span className="line-clamp-2">{course}</span>
+                                        </button>
+                                    ))
+                                ) : (
+                                    <div className="px-3 py-2 text-xs text-gray-500">
+                                        No courses available
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
                 
-                {analyticsData.employeeCourseResults.length > 0 ? (
+                {loadingEmployeeCourse ? (
+                    <div className="flex items-center justify-center h-80">
+                        <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+                    </div>
+                ) : employeeCourseData && employeeCourseData.employee_groups?.length > 0 ? (
                     <>
-                        <div className="flex items-center justify-center gap-6 mb-6 text-xs">
-                            <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 rounded bg-pink-400"></div>
-                                <span className="text-gray-600">Course 1</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 rounded bg-purple-400"></div>
-                                <span className="text-gray-600">Course 2</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 rounded bg-indigo-500"></div>
-                                <span className="text-gray-600">Course 3</span>
+                        {/* Summary Stats */}
+                        <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                            <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-2">
+                                    <Users className="w-5 h-5 text-indigo-600" />
+                                    <span className="text-sm text-gray-600">Total Employees:</span>
+                                    <span className="text-lg font-bold text-gray-900">{employeeCourseData.total_employee}</span>
+                                </div>
                             </div>
                         </div>
 
+                        {/* Course Legend - Dynamic based on API data */}
+                        {(() => {
+                            // Collect all unique course names from all groups
+                            const allCourses = new Set();
+                            employeeCourseData.employee_groups.forEach(group => {
+                                Object.keys(group.employees_by_course || {}).forEach(course => {
+                                    allCourses.add(course);
+                                });
+                            });
+                            const courseArray = Array.from(allCourses);
+                            const colors = ['bg-pink-400', 'bg-purple-400', 'bg-indigo-500', 'bg-teal-400', 'bg-amber-400', 'bg-green-400'];
+                            
+                            return (
+                                <div className="flex items-center justify-center gap-4 mb-6 flex-wrap">
+                                    {courseArray.map((course, index) => (
+                                        <div key={course} className="flex items-center gap-2">
+                                            <div className={`w-3 h-3 rounded ${colors[index % colors.length]}`}></div>
+                                            <span className="text-xs text-gray-600 max-w-[150px] truncate" title={course}>
+                                                {course}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            );
+                        })()}
+
+                        {/* Chart */}
                         <div className="relative h-80 overflow-x-auto">
-                            <svg className="w-full h-full" viewBox="0 0 1100 300">
-                                <text x="10" y="20" fontSize="11" fill="#9ca3af">40</text>
-                                <text x="10" y="70" fontSize="11" fill="#9ca3af">35</text>
-                                <text x="10" y="120" fontSize="11" fill="#9ca3af">30</text>
-                                <text x="10" y="170" fontSize="11" fill="#9ca3af">25</text>
-                                <text x="10" y="220" fontSize="11" fill="#9ca3af">20</text>
-                                <text x="10" y="270" fontSize="11" fill="#9ca3af">15</text>
-                                
-                                <line x1="40" y1="280" x2="1080" y2="280" stroke="#e5e7eb" strokeWidth="1" />
-                                
-                                {analyticsData.employeeCourseResults.map((data, index) => {
-                                    const x = 50 + index * 45;
-                                    const scale = 200 / 40;
-                                    let currentY = 280;
-                                    
-                                    return data.courses.map((courseValue, courseIndex) => {
-                                        const barHeight = courseValue * scale;
-                                        currentY -= barHeight;
-                                        const colors = ['#f472b6', '#a78bfa', '#6366f1'];
-                                        return (
-                                            <rect
-                                                key={`${index}-${courseIndex}`}
-                                                x={x} y={currentY}
-                                                width="30" height={barHeight}
-                                                fill={colors[courseIndex]}
-                                            />
-                                        );
+                            {(() => {
+                                // Collect all unique course names
+                                const allCourses = new Set();
+                                employeeCourseData.employee_groups.forEach(group => {
+                                    Object.keys(group.employees_by_course || {}).forEach(course => {
+                                        allCourses.add(course);
                                     });
-                                })}
-                            </svg>
+                                });
+                                const courseArray = Array.from(allCourses);
+                                const colors = ['#f472b6', '#a78bfa', '#6366f1', '#2dd4bf', '#fbbf24', '#4ade80'];
+                                
+                                // Find max value for scaling
+                                let maxValue = 0;
+                                employeeCourseData.employee_groups.forEach(group => {
+                                    const total = Object.values(group.employees_by_course || {}).reduce((a, b) => a + b, 0);
+                                    if (total > maxValue) maxValue = total;
+                                });
+                                maxValue = Math.max(maxValue, 10); // Minimum scale of 10
+                                
+                                const chartWidth = Math.max(600, employeeCourseData.employee_groups.length * 80 + 100);
+                                
+                                return (
+                                    <svg className="w-full h-full" viewBox={`0 0 ${chartWidth} 300`} preserveAspectRatio="xMinYMid meet">
+                                        {/* Y-axis labels */}
+                                        {[0, 1, 2, 3, 4].map((i) => {
+                                            const value = Math.round(maxValue - (maxValue / 4) * i);
+                                            const y = 20 + i * 60;
+                                            return (
+                                                <g key={i}>
+                                                    <text x="25" y={y + 5} fontSize="11" fill="#9ca3af" textAnchor="end">
+                                                        {value}
+                                                    </text>
+                                                    <line x1="40" y1={y} x2={chartWidth - 20} y2={y} stroke="#e5e7eb" strokeWidth="1" strokeDasharray={i > 0 ? "3,3" : "0"} />
+                                                </g>
+                                            );
+                                        })}
+                                        
+                                        {/* X-axis line */}
+                                        <line x1="40" y1="260" x2={chartWidth - 20} y2="260" stroke="#e5e7eb" strokeWidth="1" />
+                                        
+                                        {/* Bars */}
+                                        {employeeCourseData.employee_groups.map((group, groupIndex) => {
+                                            const barWidth = 50;
+                                            const x = 60 + groupIndex * 70;
+                                            const scale = 220 / maxValue;
+                                            let currentY = 260;
+                                            
+                                            return (
+                                                <g key={groupIndex}>
+                                                    {/* Stacked bars for each course */}
+                                                    {courseArray.map((course, courseIndex) => {
+                                                        const value = group.employees_by_course?.[course] || 0;
+                                                        if (value === 0) return null;
+                                                        
+                                                        const barHeight = value * scale;
+                                                        currentY -= barHeight;
+                                                        
+                                                        return (
+                                                            <g key={`${groupIndex}-${courseIndex}`}>
+                                                                <rect
+                                                                    x={x}
+                                                                    y={currentY}
+                                                                    width={barWidth}
+                                                                    height={barHeight}
+                                                                    fill={colors[courseIndex % colors.length]}
+                                                                    rx="2"
+                                                                />
+                                                                {/* Value label inside bar if space allows */}
+                                                                {barHeight > 15 && (
+                                                                    <text
+                                                                        x={x + barWidth / 2}
+                                                                        y={currentY + barHeight / 2 + 4}
+                                                                        fontSize="10"
+                                                                        fill="white"
+                                                                        textAnchor="middle"
+                                                                    >
+                                                                        {value}
+                                                                    </text>
+                                                                )}
+                                                            </g>
+                                                        );
+                                                    })}
+                                                    
+                                                    {/* X-axis label (Score) */}
+                                                    <text
+                                                        x={x + barWidth / 2}
+                                                        y="278"
+                                                        fontSize="10"
+                                                        fill="#6b7280"
+                                                        textAnchor="middle"
+                                                    >
+                                                        Score: {group.best_score}
+                                                    </text>
+                                                </g>
+                                            );
+                                        })}
+                                    </svg>
+                                );
+                            })()}
+                        </div>
+                        
+                        {/* Data Table */}
+                        <div className="mt-6 overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead>
+                                    <tr className="border-b border-gray-200">
+                                        <th className="text-left py-2 px-3 font-semibold text-gray-700">Best Score</th>
+                                        <th className="text-left py-2 px-3 font-semibold text-gray-700">Course</th>
+                                        <th className="text-right py-2 px-3 font-semibold text-gray-700">Employees</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {employeeCourseData.employee_groups.map((group, groupIndex) => (
+                                        Object.entries(group.employees_by_course || {}).map(([course, count], courseIndex) => (
+                                            <tr key={`${groupIndex}-${courseIndex}`} className="border-b border-gray-100 hover:bg-gray-50">
+                                                {courseIndex === 0 && (
+                                                    <td 
+                                                        className="py-2 px-3 font-medium text-gray-900"
+                                                        rowSpan={Object.keys(group.employees_by_course || {}).length}
+                                                    >
+                                                        {group.best_score}
+                                                    </td>
+                                                )}
+                                                <td className="py-2 px-3 text-gray-600">{course}</td>
+                                                <td className="py-2 px-3 text-right font-medium text-gray-900">{count}</td>
+                                            </tr>
+                                        ))
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
                     </>
                 ) : (
