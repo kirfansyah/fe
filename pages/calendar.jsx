@@ -28,19 +28,33 @@ export default function CalendarPage() {
   const [selectedDate, setSelectedDate] = useState(null);
   const [holidays, setHolidays] = useState([]);
   const [dataCalendar, setDataCalendar] = useState(null);
+  const [dataKaryawan, setDataKaryawan] = useState(null);
 
-  const { fetchCalendar, fetchHoliday } = useCalendar();
+  const { fetchCalendar, fetchHoliday, getKaryawan } = useCalendar();
+
+  // =====================================================
+  // FETCH KARYAWAN SEKALI
+  // =====================================================
+  useEffect(() => {
+    async function load() {
+      const res = await getKaryawan();
+      setDataKaryawan(res.data.data);
+    }
+    load();
+  }, []);
 
   // =====================================================
   // FETCH EVENT BY MONTH (🔥 INI YANG BARU)
   // =====================================================
   useEffect(() => {
+    if (!dataKaryawan?.user?.company_id) return;
     const year = currentMonth.getFullYear();
     const month = currentMonth.getMonth() + 1; // 1–12
 
     async function load() {
       try {
-        const res = await fetchCalendar(year, month);
+        const company_id = dataKaryawan?.user?.company_id || "";
+        const res = await fetchCalendar(year, month, company_id);
         setDataCalendar(res?.data || null);
       } catch (err) {
         console.error("Fetch Calendar error:", err);
@@ -48,7 +62,7 @@ export default function CalendarPage() {
     }
 
     load();
-  }, [currentMonth]);
+  }, [currentMonth, dataKaryawan]);
 
   // =====================================================
   // FETCH HOLIDAYS SEKALI
@@ -70,6 +84,8 @@ export default function CalendarPage() {
       setEvents([]);
       return;
     }
+
+    // console.log("karyawan :", dataKaryawan);
 
     const parsed = dataCalendar.events.map((e) => ({
       ...e,

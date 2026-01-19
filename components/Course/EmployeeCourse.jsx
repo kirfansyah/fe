@@ -83,28 +83,28 @@ export default function CoursePage({ link }) {
     filterCategory,
   ]);
 
-  useEffect(() => {
-    const mediaQuery = window.matchMedia("(max-width: 639px)");
+  //   useEffect(() => {
+  //     const mediaQuery = window.matchMedia("(max-width: 639px)");
 
-    const handleChange = (e) => {
-      if (e.matches) {
-        setViewMode("list");
-      } else {
-        setViewMode("tiles");
-      }
-    };
+  //     const handleChange = (e) => {
+  //       if (e.matches) {
+  //         setViewMode("list");
+  //       } else {
+  //         setViewMode("tiles");
+  //       }
+  //     };
 
-    // cek pertama kali
-    if (mediaQuery.matches) {
-      setViewMode("list");
-    }
+  //     // cek pertama kali
+  //     if (mediaQuery.matches) {
+  //       setViewMode("list");
+  //     }
 
-    mediaQuery.addEventListener("change", handleChange);
+  //     mediaQuery.addEventListener("change", handleChange);
 
-    return () => {
-      mediaQuery.removeEventListener("change", handleChange);
-    };
-  }, []);
+  //     return () => {
+  //       mediaQuery.removeEventListener("change", handleChange);
+  //     };
+  //   }, []);
 
   const filteredCourses = [...courses];
 
