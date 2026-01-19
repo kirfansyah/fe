@@ -1,20 +1,21 @@
-import API from "contexts/api";
+// services/ReportService.js
+import API from "./api";
 
 class ReportService {
   /**
-   * Get all ebook
+   * Get all Online Learning with pagination & filters
+   * @param {Object} params - Query parameters
    * @returns {Promise} API response
    */
-
-  static async getAllOnlineLearning() {
+  static async getAllOnlineLearning(params = {}) {
     try {
-      const response = await API.get("/report/online-learning");
+      const response = await API.get("/report/online-learning", { params });
 
       return {
         success: response.data.success,
         data: response.data.data || [],
-        message: response.data.message,
-        pagination: response.data.pagination,
+        message: response.data.message || 'Success',
+        pagination: response.data.pagination || null
       };
     } catch (error) {
       console.error("ReportService.getAllOnlineLearning Error:", error);
@@ -24,15 +25,20 @@ class ReportService {
     }
   }
 
-  static async getAllOfflineLearning() {
+  /**
+   * Get all Offline Learning with pagination & filters
+   * @param {Object} params - Query parameters
+   * @returns {Promise} API response
+   */
+  static async getAllOfflineLearning(params = {}) {
     try {
-      const response = await API.get("/report/offline-learning");
+      const response = await API.get("/report/offline-learning", { params });
 
       return {
         success: response.data.success,
         data: response.data.data || [],
-        message: response.data.message,
-        pagination: response.data.pagination,
+        message: response.data.message || 'Success',
+        pagination: response.data.pagination || null
       };
     } catch (error) {
       console.error("ReportService.getAllOfflineLearning Error:", error);
@@ -42,6 +48,11 @@ class ReportService {
     }
   }
 
+  /**
+   * Create Offline Learning Certificate
+   * @param {Object} data - Certificate data
+   * @returns {Promise} API response
+   */
   static async createOfflineLearning(data) {
     try {
       const formData = new FormData();
@@ -53,31 +64,38 @@ class ReportService {
       formData.append("company_id", data.company_id);
       formData.append("training_title", data.training_title);
       formData.append("issuing_organization", data.issuing_organization);
-      formData.append("issue_date", data.issue_date); // format harus YYYY-MM-DD
-      formData.append("expiration_date", data.expiration_date); // format harus YYYY-MM-DD
+      formData.append("issue_date", data.issue_date);
+      formData.append("expiration_date", data.expiration_date);
       formData.append("credential_id", data.credential_id);
       formData.append("credential_url", data.credential_url);
       formData.append("created_by", data.created_by);
       formData.append("created_device", data.created_device);
+      
       if (data.certificate) {
         formData.append("certificate", data.certificate);
       }
 
       const response = await API.post("/report/offline-learning", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+        headers: { "Content-Type": "multipart/form-data" }
       });
 
-      return response.data;
+      return {
+        success: response.data.success,
+        data: response.data.data,
+        message: response.data.message || 'Certificate created successfully'
+      };
     } catch (error) {
-      console.error("createOfflineLearning Error:", error);
-      throw error;
+      console.error("ReportService.createOfflineLearning Error:", error);
+      throw new Error(
+        error.response?.data?.message || "Failed to create certificate"
+      );
     }
   }
 
   /**
-   * Update ebook
-   * @param {number} id - Ebook ID
-   * @param {Object} data - Ebook data
+   * Update Offline Learning Certificate
+   * @param {number} id - Certificate ID
+   * @param {Object} data - Certificate data
    * @returns {Promise} API response
    */
   static async updateOfflineLearning(id, data) {
@@ -96,8 +114,10 @@ class ReportService {
       formData.append("expiration_date", data.expiration_date);
       formData.append("credential_id", data.credential_id);
       formData.append("credential_url", data.credential_url);
+      formData.append("updated_by", data.updated_by);
+      formData.append("updated_device", data.updated_device);
 
-      // Hanya append file jika ada file baru
+      // Only append file if new file exists
       if (data.certificate && typeof data.certificate !== "string") {
         formData.append("certificate", data.certificate);
       }
@@ -106,16 +126,14 @@ class ReportService {
         `/report/offline-learning/${id}`,
         formData,
         {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
+          headers: { "Content-Type": "multipart/form-data" }
         }
       );
 
       return {
         success: response.data.success,
         data: response.data.data,
-        message: response.data.message,
+        message: response.data.message || 'Certificate updated successfully'
       };
     } catch (error) {
       console.error("ReportService.updateOfflineLearning Error:", error);
@@ -125,103 +143,121 @@ class ReportService {
     }
   }
 
+  /**
+   * Delete Offline Learning Certificate
+   * @param {number} id - Certificate ID
+   * @returns {Promise} API response
+   */
+  static async deleteOfflineLearning(id) {
+    try {
+      const response = await API.delete(`/report/offline-learning/${id}`);
+
+      return {
+        success: response.data.success,
+        message: response.data.message || 'Certificate deleted successfully'
+      };
+    } catch (error) {
+      console.error("ReportService.deleteOfflineLearning Error:", error);
+      throw new Error(
+        error.response?.data?.message || "Failed to delete certificate"
+      );
+    }
+  }
+
+  /**
+   * Get all Departments
+   * @returns {Promise} API response
+   */
   static async getAllDept() {
     try {
       const response = await API.get("/master/dept");
+      
       return {
         success: response.data.success,
         data: response.data.data || [],
-        message: response.data.message,
-        pagination: response.data.pagination,
+        message: response.data.message || 'Success',
+        pagination: response.data.pagination
       };
     } catch (error) {
       console.error("ReportService.getAllDept Error:", error);
-
-      //   Cek apakah token ada
-      const token = localStorage.getItem("token");
-      if (!token) {
-        console.error("⚠️ No token found in localStorage");
-      }
-
       throw new Error(
         error.response?.data?.message || "Failed to fetch department"
       );
     }
   }
 
+  /**
+   * Get all Positions
+   * @returns {Promise} API response
+   */
   static async getAllPosition() {
     try {
       const response = await API.get("/master/position");
+      
       return {
         success: response.data.success,
         data: response.data.data || [],
-        message: response.data.message,
-        pagination: response.data.pagination,
+        message: response.data.message || 'Success',
+        pagination: response.data.pagination
       };
     } catch (error) {
       console.error("ReportService.getAllPosition Error:", error);
-
-      //   Cek apakah token ada
-      const token = localStorage.getItem("token");
-      if (!token) {
-        console.error("⚠️ No token found in localStorage");
-      }
-
       throw new Error(
         error.response?.data?.message || "Failed to fetch position"
       );
     }
   }
 
+  /**
+   * Get all Companies
+   * @returns {Promise} API response
+   */
   static async getAllCompany() {
     try {
       const response = await API.get("/master/company");
+      
       return {
         success: response.data.success,
         data: response.data.data || [],
-        message: response.data.message,
-        pagination: response.data.pagination,
+        message: response.data.message || 'Success',
+        pagination: response.data.pagination
       };
     } catch (error) {
       console.error("ReportService.getAllCompany Error:", error);
-
-      //   Cek apakah token ada
-      const token = localStorage.getItem("token");
-      if (!token) {
-        console.error("⚠️ No token found in localStorage");
-      }
-
       throw new Error(
         error.response?.data?.message || "Failed to fetch company unit"
       );
     }
   }
 
+  /**
+   * Get Employee by Company ID and Employee ID
+   * @param {string} companyId - Company ID
+   * @param {string} employeeId - Employee ID
+   * @returns {Promise} API response
+   */
   static async getEmployee(companyId, employeeId) {
     try {
       const response = await API.get("/employee/source", {
         params: {
           site_id: companyId,
-          nik: employeeId,
-        },
+          nik: employeeId
+        }
       });
 
       return {
         success: response.data.success,
         data: response.data.data || null,
-        message: response.data.message,
-        pagination: response.data.pagination,
+        message: response.data.message || 'Success',
+        pagination: response.data.pagination
       };
     } catch (error) {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        console.error("⚠️ No token found in localStorage");
-      }
-
+      console.error("ReportService.getEmployee Error:", error);
       throw new Error(
         error.response?.data?.message || "Failed to fetch employee"
       );
     }
   }
 }
+
 export default ReportService;

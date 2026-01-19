@@ -7,8 +7,8 @@ import "aos/dist/aos.css";
 import "../styles/index.css";
 import "../styles/tailwind.css";
 import "../styles/toggle.scss";
-import { useEffect, useState } from "react";
-import AuthContextProvider from "../contexts/AuthContext";
+import { useEffect, useState, useContext } from "react";
+import AuthContextProvider, { AuthContext } from "../contexts/AuthContext"; // ✅ Import AuthContext
 import LanguageContextProvider from "../contexts/LanguageContext";
 import LoadingPages from "../components/LoadingPage";
 import moment from "moment";
@@ -20,10 +20,12 @@ import SeekingContextProvider from "contexts/SeekingContext";
 import CourseProvider from "../contexts/CourseContext";
 
 import { Toaster } from "@/components/ui/sonner";
+import ChangePasswordModal from "../components/ChangePasswordModal"; // ✅ Import modal
 
 function Loading() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  
   useEffect(() => {
     const handleStart = (url) => {
       url !== router.asPath && setLoading(true);
@@ -42,11 +44,71 @@ function Loading() {
       router.events.off("routeChangeError", handleComplete);
     };
   });
+  
   return loading && <LoadingPages />;
+}
+
+// ✅ NEW: AppContent dengan Route Guard
+function AppContent({ Component, pageProps, Layout, router }) {
+  const { mustChangePassword, getSession, stateAuth } = useContext(AuthContext);
+  const [mounted, setMounted] = useState(false);
+
+  // ✅ Public routes yang tidak perlu auth
+  const publicRoutes = ['/', '/login', '/register', '/forgot-password', '/reset-password'];
+  const isPublicRoute = publicRoutes.includes(router.pathname);
+
+  // ✅ Load session on mount
+  useEffect(() => {
+    setMounted(true);
+    if (!isPublicRoute) {
+      getSession();
+    }
+  }, [router.pathname]);
+
+  // ✅ Prevent flash of content on initial render
+  if (!mounted) {
+    return <LoadingPages />;
+  }
+
+  // ✅ FORCE CHANGE PASSWORD dengan Overlay - Better UX!
+  if (!isPublicRoute && mustChangePassword && stateAuth.isAuthenticated) {
+    return (
+      <div className="relative min-h-screen">
+        {/* ✅ Background overlay - disable interactions */}
+        <div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm z-40" />
+        
+        {/* ✅ Page content (blurred & disabled) */}
+        <div className="pointer-events-none blur-sm opacity-40">
+          <Layout>
+            <Component {...pageProps} />
+          </Layout>
+        </div>
+        
+        {/* ✅ Force Change Password Modal - Always on top */}
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <ChangePasswordModal 
+            isOpen={true} 
+            onClose={() => {}} // ✅ Empty - tidak bisa close
+            isForced={true}    // ✅ Flag untuk styling
+            canClose={false}   // ✅ Disable close button
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // ✅ Normal render
+  return (
+    <Layout>
+      <Component {...pageProps} />
+    </Layout>
+  );
 }
 
 function MyApp({ Component, pageProps }) {
   moment.locale("id", idLocal);
+  const router = useRouter();
+  
   useEffect(() => {
     AOS.init({
       easing: "ease-out-cubic",
@@ -56,7 +118,9 @@ function MyApp({ Component, pageProps }) {
       duration: 1000,
     });
   }, []);
+  
   const Layout = Component.layout || (({ children }) => <>{children}</>);
+  
   return (
     <>
       <React.Fragment>
@@ -69,7 +133,7 @@ function MyApp({ Component, pageProps }) {
           />
           <title>Learning Management System</title>
         </Head>
-        {/* <Layout>  */}
+        
         <ParallaxProvider>
           <Loading />
           <SeekingContextProvider>
@@ -77,9 +141,13 @@ function MyApp({ Component, pageProps }) {
               <LanguageContextProvider>
                 <ProfileContextProvider>
                   <CourseProvider>
-                    <Layout>
-                      <Component {...pageProps} />
-                    </Layout>
+                    {/* ✅ Wrap dengan AppContent untuk route guard */}
+                    <AppContent 
+                      Component={Component} 
+                      pageProps={pageProps} 
+                      Layout={Layout}
+                      router={router}
+                    />
                   </CourseProvider>
                 </ProfileContextProvider>
               </LanguageContextProvider>
@@ -87,8 +155,6 @@ function MyApp({ Component, pageProps }) {
           </SeekingContextProvider>
           <Toaster position="top-right" richColors />
         </ParallaxProvider>
-
-        {/* </Layout> */}
       </React.Fragment>
     </>
   );

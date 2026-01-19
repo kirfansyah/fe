@@ -8,7 +8,11 @@ import {
     Edit,
     Trash2,
     Lock,
-    Eye
+    Eye,
+    Globe,
+    EyeOff,
+    Clock,
+    Calendar as CalendarIcon
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import EnrollmentFormModal from "./EnrollmentForm";
@@ -124,7 +128,6 @@ export default function CourseCard({
 
         if (!result.isConfirmed) return;
 
-
         const deleteResult = await onDeleteEnrollment(
             course.id_course,
             enrollment.id_course_enrollment,
@@ -152,14 +155,12 @@ export default function CourseCard({
         }
     };
 
-    // ✅ New: Handle View (always allowed)
     const handleViewClick = (enrollment, idx) => {
         openModal(enrollment, idx);
     };
 
-    // ✅ Handle Edit (with permission check)
     const handleEditClick = (enrollment, idx, e) => {
-        e?.stopPropagation(); // Prevent event bubbling
+        e?.stopPropagation();
 
         const isExisting = !!enrollment.id_course_enrollment;
 
@@ -184,6 +185,60 @@ export default function CourseCard({
         }
 
         openModal(enrollment, idx);
+    };
+
+    // ✅ Helper function to format date
+    const formatDate = (dateString) => {
+        if (!dateString) return null;
+        const date = new Date(dateString);
+        return date.toLocaleDateString('id-ID', { 
+            day: '2-digit', 
+            month: 'short', 
+            year: 'numeric' 
+        });
+    };
+
+    // ✅ Helper function to get enrollment status
+    const getEnrollmentStatus = (enrollment) => {
+        if (!enrollment.publish_date || !enrollment.end_date) {
+            return { status: 'draft', label: 'Draft', color: 'gray' };
+        }
+
+        const now = new Date();
+        const publishDate = new Date(enrollment.publish_date);
+        const endDate = new Date(enrollment.end_date);
+
+        // Scheduled (belum publish)
+        if (now < publishDate) {
+            return { 
+                status: 'scheduled', 
+                label: 'Scheduled', 
+                color: 'blue',
+                icon: Clock 
+            };
+        }
+
+        // Active (sedang publish)
+        if (now >= publishDate && now <= endDate) {
+            return { 
+                status: 'published', 
+                label: 'Published', 
+                color: 'green',
+                icon: Globe 
+            };
+        }
+
+        // Expired (sudah lewat end_date)
+        if (now > endDate) {
+            return { 
+                status: 'expired', 
+                label: 'Expired', 
+                color: 'red',
+                icon: EyeOff 
+            };
+        }
+
+        return { status: 'draft', label: 'Draft', color: 'gray' };
     };
 
     const canInteract = permissions?.can_create || permissions?.can_edit || permissions?.can_delete;
@@ -213,6 +268,7 @@ export default function CourseCard({
                                 <h4 className="text-lg font-bold text-gray-900 line-clamp-1">
                                     {course.course_title}
                                 </h4>
+
                                 {!canInteract && (
                                     <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-full flex items-center gap-1">
                                         <Lock className="w-3 h-3" />
@@ -317,11 +373,23 @@ export default function CourseCard({
                             )}
                         </div>
 
-                        {/* ✅ Updated Enrollments List */}
+                        {/* ✅ Updated Enrollments List with Smart Status */}
                         <div className="space-y-3">
                             {enrollments.map((enrollment, idx) => {
                                 const isExisting = !!enrollment.id_course_enrollment;
                                 const canEdit = isExisting ? permissions?.can_edit : permissions?.can_create;
+                                const enrollStatus = getEnrollmentStatus(enrollment);
+                                const StatusIcon = enrollStatus.icon;
+
+                                // Color mapping for status
+                                const statusColorMap = {
+                                    'scheduled': { bg: 'bg-blue-100', text: 'text-blue-700', border: 'border-blue-200' },
+                                    'published': { bg: 'bg-green-100', text: 'text-green-700', border: 'border-green-200' },
+                                    'expired': { bg: 'bg-red-100', text: 'text-red-700', border: 'border-red-200' },
+                                    'draft': { bg: 'bg-gray-100', text: 'text-gray-600', border: 'border-gray-200' }
+                                };
+
+                                const statusColors = statusColorMap[enrollStatus.status] || statusColorMap.draft;
 
                                 return (
                                     <div
@@ -337,11 +405,11 @@ export default function CourseCard({
                                                 <Building2 className={`w-5 h-5 ${isExisting ? 'text-green-600' : 'text-yellow-600'
                                                     }`} />
                                             </div>
-                                            <div className="flex-1">
+                                            <div className="flex-1 min-w-0">
                                                 <p className="font-bold text-gray-900">
                                                     {enrollment.company_name || 'Incomplete'}
                                                 </p>
-                                                <div className="flex items-center gap-2 mt-1">
+                                                <div className="flex items-center gap-2 mt-1 flex-wrap">
                                                     {isExisting ? (
                                                         <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-bold rounded-full flex items-center gap-1">
                                                             <Check className="w-3 h-3" />
@@ -353,6 +421,15 @@ export default function CourseCard({
                                                             Pending
                                                         </span>
                                                     )}
+
+                                                    {/* ✅ Smart Status Badge */}
+                                                    {isExisting && StatusIcon && (
+                                                        <span className={`px-2 py-0.5 ${statusColors.bg} ${statusColors.text} text-xs font-bold rounded-full flex items-center gap-1`}>
+                                                            <StatusIcon className="w-3 h-3" />
+                                                            {enrollStatus.label}
+                                                        </span>
+                                                    )}
+
                                                     {enrollment.enroll_type_name && (
                                                         <span className="text-xs text-gray-600">
                                                             • {enrollment.enroll_type_name}
@@ -364,12 +441,28 @@ export default function CourseCard({
                                                         </span>
                                                     )}
                                                 </div>
+
+                                                {/* ✅ Show Date Range */}
+                                                {isExisting && (enrollment.publish_date || enrollment.end_date) && (
+                                                    <div className="mt-1.5 flex items-center gap-3 text-xs text-gray-500">
+                                                        {enrollment.publish_date && (
+                                                            <span className="flex items-center gap-1">
+                                                                <CalendarIcon className="w-3 h-3" />
+                                                                Start: {formatDate(enrollment.publish_date)}
+                                                            </span>
+                                                        )}
+                                                        {enrollment.end_date && (
+                                                            <span className="flex items-center gap-1">
+                                                                <CalendarIcon className="w-3 h-3" />
+                                                                End: {formatDate(enrollment.end_date)}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
 
-                                        {/* ✅ Updated Action Buttons */}
                                         <div className="flex items-center gap-2">
-                                            {/* View Button - Always Available for Existing */}
                                             {isExisting && (
                                                 <button
                                                     type="button"
@@ -384,7 +477,6 @@ export default function CourseCard({
                                                 </button>
                                             )}
 
-                                            {/* Edit Button - Permission Based */}
                                             {canEdit ? (
                                                 <button
                                                     type="button"
@@ -395,7 +487,6 @@ export default function CourseCard({
                                                     <Edit className="w-4 h-4" />
                                                 </button>
                                             ) : !isExisting ? (
-                                                // Show lock for pending without permission
                                                 <button
                                                     type="button"
                                                     disabled
@@ -406,7 +497,6 @@ export default function CourseCard({
                                                 </button>
                                             ) : null}
 
-                                            {/* Delete Button - Permission Based */}
                                             {!isExisting || permissions?.can_delete ? (
                                                 <button
                                                     type="button"
@@ -434,7 +524,6 @@ export default function CourseCard({
                                 );
                             })}
 
-                            {/* Empty State */}
                             {enrollments.length === 0 && (
                                 <div className="p-12 bg-white border-2 border-dashed border-gray-300 rounded-2xl text-center">
                                     <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -467,7 +556,6 @@ export default function CourseCard({
                 )}
             </div>
 
-            {/* Modal */}
             {modalState.isOpen && modalState.enrollment && (
                 <EnrollmentFormModal
                     isOpen={modalState.isOpen}

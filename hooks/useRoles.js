@@ -194,6 +194,21 @@ export function useRoles() {
         return result;
     }, []);
 
+    // Dashboard Analytics ********************************** Home  \\
+    const fetchOverallPassPercentage  = useCallback(async (filters = {}) => {
+        setLoading(true);
+        setError(null);
+
+        const result = await RoleService.getOverallPassPercentage(filters);
+
+        if (!result.success) {
+            setError(result.message);
+        }
+
+        setLoading(false);
+        return result;
+    }, []);
+
     const fetchEmployeeCourseResult  = useCallback(async (filters = {}) => {
         setLoading(true);
         setError(null);
@@ -236,6 +251,20 @@ export function useRoles() {
         return result;
     }, []);
 
+    const handleNotificationRead = useCallback(async () => {
+        setLoading(true);
+        setError(null);
+
+        const result = await RoleService.updateNotification();
+
+        if (!result.success) {
+            setError(result.message);
+        }
+
+        setLoading(false);
+        return result;
+    }, []);
+
     const fetchCalenderHome  = useCallback(async (filters = {}) => {
         setLoading(true);
         setError(null);
@@ -252,8 +281,8 @@ export function useRoles() {
 
     // ✅ Initial load
     useEffect(() => {
-        Promise.all([fetchRoles(), fetchMenus(), fetchEmployeeCourseResult(), fetchCalenderHome(), fetchNotification(),fetchSchedule]);
-    }, [fetchRoles, fetchMenus, fetchEmployeeCourseResult, fetchCalenderHome, fetchNotification,fetchSchedule]);
+        Promise.all([fetchRoles(), fetchMenus(), fetchEmployeeCourseResult(), fetchCalenderHome(), fetchNotification(),fetchSchedule(), fetchOverallPassPercentage()]);
+    }, [fetchRoles, fetchMenus, fetchEmployeeCourseResult, fetchCalenderHome, fetchNotification,fetchSchedule,fetchOverallPassPercentage]);
 
     return {
         roles,
@@ -267,10 +296,12 @@ export function useRoles() {
         handleCreateMenus,
         handleUpdateRolePermissions,
         fetchAnalytics,
+        fetchOverallPassPercentage,
         fetchSchedule,
         handleCreateCategory,
         handleCreateSubCategory,
         handleUpdateUser,
+        handleNotificationRead,
         fetchEmployeeCourseResult,
         fetchCalenderHome,
         fetchNotification,
