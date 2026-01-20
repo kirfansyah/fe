@@ -65,7 +65,7 @@ export default function CoursePage({ link }) {
         setCourseData(res.result || []);
         // console.log("filterStatus:", filterStatus);
 
-        // console.log("courses data:", res.data);
+        console.log("courses data:", res.data);
 
         setTotalItems(res.pagination.totalCount || 0);
       } catch (error) {
@@ -268,99 +268,232 @@ export default function CoursePage({ link }) {
                 >
                   {/* ================= LIST MODE ================= */}
                   {viewMode === "list" ? (
-                    <Card className="w-full relative hover:shadow-lg transition-all duration-300 border-l-4 border-blue-600">
-                      <div className="flex items-center gap-4 p-4">
-                        {/* Thumbnail */}
-                        <div className="w-32 flex-shrink-0">
-                          <img
-                            src={
-                              course?.thumbnail_url ||
-                              "/img/course/Course app-bro.png"
-                            }
-                            onError={(e) =>
-                              (e.target.src = "/img/course/Course app-bro.png")
-                            }
-                            className="w-32 h-20 object-cover rounded-lg shadow-sm"
-                          />
-                        </div>
+                    // <Card className="w-full relative hover:shadow-lg transition-all duration-300 border-l-4 border-blue-600">
+                    //   <div className="flex items-center gap-4 p-4">
+                    //     {/* Thumbnail */}
+                    //     <div className="w-32 flex-shrink-0">
+                    //       <img
+                    //         src={
+                    //           course?.thumbnail_url ||
+                    //           "/img/course/Course app-bro.png"
+                    //         }
+                    //         onError={(e) =>
+                    //           (e.target.src = "/img/course/Course app-bro.png")
+                    //         }
+                    //         className="w-32 h-20 object-cover rounded-lg shadow-sm"
+                    //       />
+                    //     </div>
 
-                        {/* Middle Content */}
-                        <div className="flex flex-col justify-between flex-1">
-                          <div className="flex flex-col gap-1">
+                    //     {/* Middle Content */}
+                    //     <div className="flex flex-col justify-between flex-1">
+                    //       <div className="flex flex-col gap-1">
+                    //         <Link href={`${link}${course.id_course}`}>
+                    //           <span className="text-xl font-semibold text-blue-700 hover:underline cursor-pointer">
+                    //             {course.course_title}
+                    //           </span>
+                    //         </Link>
+
+                    //         {/* Badges */}
+                    //         <div className="flex gap-2 mt-1 flex-wrap">
+                    //           {course.enrollment_categories?.map((cat, i) => (
+                    //             <Badge key={i} variant="secondary">
+                    //               {cat}
+                    //             </Badge>
+                    //           ))}
+                    //         </div>
+                    //       </div>
+                    //       {/* Stats */}
+                    //       <div className="flex items-center gap-4 text-sm text-gray-700">
+                    //         <span className="flex items-center gap-1">
+                    //           <BookOpen size={16} />
+                    //           {course.total_lessons} Lessons
+                    //         </span>
+
+                    //         <span className="flex items-center gap-1">
+                    //           <Clock size={16} />
+                    //           {course.total_duration}
+                    //         </span>
+
+                    //         <span className="flex items-center gap-1">
+                    //           <Star
+                    //             size={16}
+                    //             className="text-yellow-500 fill-yellow-500"
+                    //           />
+                    //           {course.average_rating || "No review"}
+                    //         </span>
+                    //       </div>
+                    //       {/* Status or Progress */}
+                    //       <Badge
+                    //         className={`mt-2 px-3 py-1 w-24 text-center justify-center ${
+                    //           course.status === "Passed"
+                    //             ? "bg-green-600"
+                    //             : course.status === "Failed"
+                    //             ? "bg-red-600"
+                    //             : course.status === "Not Started"
+                    //             ? "bg-blue-500 text-white"
+                    //             : course.status === "In Progress"
+                    //             ? "bg-gray-500"
+                    //             : ""
+                    //         }`}
+                    //       >
+                    //         {course.status}
+                    //       </Badge>
+                    //     </div>
+
+                    //     {/* Right Actions */}
+                    //     <div className="flex flex-col justify-center items-end gap-2">
+                    //       {/* <DropdownMenu>
+                    //       <DropdownMenuTrigger asChild>
+                    //         <Button variant="ghost" size="icon">
+                    //           <MoreVertical className="h-5 w-5" />
+                    //         </Button>
+                    //       </DropdownMenuTrigger>
+                    //       <DropdownMenuContent align="end"> */}
+                    //       {/* <DropdownMenuItem>Edit</DropdownMenuItem>
+                    //         <DropdownMenuItem>Delete</DropdownMenuItem> */}
+                    //       {/* </DropdownMenuContent>
+                    //     </DropdownMenu> */}
+                    //       <Link href={`${link}${course.id_course}`}>
+                    //         <Button className="bg-blue-900 hover:bg-blue-700">
+                    //           View
+                    //         </Button>
+                    //       </Link>
+                    //     </div>
+                    //   </div>
+                    // </Card>
+                    <>
+                      {/* ================= DESKTOP CARD ================= */}
+                      <div className="hidden md:block">
+                        <Card className="w-full relative hover:shadow-lg transition-all duration-300 border-l-4 border-blue-600">
+                          <div className="flex items-center gap-4 p-4">
+                            {/* Thumbnail */}
+                            <div className="w-32 flex-shrink-0">
+                              <img
+                                src={
+                                  course?.thumbnail_url ||
+                                  "/img/course/Course app-bro.png"
+                                }
+                                onError={(e) =>
+                                  (e.target.src =
+                                    "/img/course/Course app-bro.png")
+                                }
+                                className="w-32 h-20 object-cover rounded-lg shadow-sm"
+                              />
+                            </div>
+
+                            {/* Middle */}
+                            <div className="flex flex-col justify-between flex-1">
+                              <div className="flex flex-col gap-1">
+                                <Link href={`${link}${course.id_course}`}>
+                                  <span className="text-xl font-semibold text-blue-700 hover:underline">
+                                    {course.course_title}
+                                  </span>
+                                </Link>
+
+                                <div className="flex gap-2 mt-1 flex-wrap">
+                                  {course.enrollment_categories?.map(
+                                    (cat, i) => (
+                                      <Badge key={i} variant="secondary">
+                                        {cat}
+                                      </Badge>
+                                    )
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-4 text-sm text-gray-700">
+                                <span className="flex items-center gap-1">
+                                  <BookOpen size={16} /> {course.total_lessons}{" "}
+                                  Lessons
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <Clock size={16} /> {course.total_duration}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <Star
+                                    size={16}
+                                    className="text-yellow-500 fill-yellow-500"
+                                  />
+                                  {course.average_rating || "No review"}
+                                </span>
+                              </div>
+
+                              <Badge className="mt-2 w-24 justify-center">
+                                {course.status}
+                              </Badge>
+                            </div>
+
+                            {/* Action */}
+                            <div className="flex items-end">
+                              <Link href={`${link}${course.id_course}`}>
+                                <Button className="bg-blue-900 hover:bg-blue-700">
+                                  View
+                                </Button>
+                              </Link>
+                            </div>
+                          </div>
+                        </Card>
+                      </div>
+
+                      {/* ================= MOBILE CARD ================= */}
+                      <div className="md:hidden">
+                        <Card className="w-full relative hover:shadow-lg transition-all duration-300 border-l-4 border-blue-600">
+                          <div className="flex flex-col gap-4 p-4">
+                            {/* Thumbnail */}
+                            <img
+                              src={
+                                course?.thumbnail_url ||
+                                "/img/course/Course app-bro.png"
+                              }
+                              onError={(e) =>
+                                (e.target.src =
+                                  "/img/course/Course app-bro.png")
+                              }
+                              className="w-full h-40 object-cover rounded-lg"
+                            />
+
                             <Link href={`${link}${course.id_course}`}>
-                              <span className="text-xl font-semibold text-blue-700 hover:underline cursor-pointer">
+                              <span className="text-base font-semibold text-blue-700">
                                 {course.course_title}
                               </span>
                             </Link>
 
-                            {/* Badges */}
-                            <div className="flex gap-2 mt-1 flex-wrap">
+                            <div className="flex gap-2 flex-wrap">
                               {course.enrollment_categories?.map((cat, i) => (
                                 <Badge key={i} variant="secondary">
                                   {cat}
                                 </Badge>
                               ))}
                             </div>
+
+                            <div className="flex flex-wrap gap-3 text-xs text-gray-700">
+                              <span className="flex items-center gap-1">
+                                <BookOpen size={14} /> {course.total_lessons}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Clock size={14} /> {course.total_duration}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Star
+                                  size={14}
+                                  className="text-yellow-500 fill-yellow-500"
+                                />
+                                {course.average_rating || "No review"}
+                              </span>
+                            </div>
+
+                            <div className="flex justify-between items-center">
+                              <Badge>{course.status}</Badge>
+                              <Link href={`${link}${course.id_course}`}>
+                                <Button className="bg-blue-900 w-full">
+                                  View
+                                </Button>
+                              </Link>
+                            </div>
                           </div>
-                          {/* Stats */}
-                          <div className="flex items-center gap-4 text-sm text-gray-700">
-                            <span className="flex items-center gap-1">
-                              <BookOpen size={16} />
-                              {course.total_lessons} Lessons
-                            </span>
-
-                            <span className="flex items-center gap-1">
-                              <Clock size={16} />
-                              {course.total_duration}
-                            </span>
-
-                            <span className="flex items-center gap-1">
-                              <Star
-                                size={16}
-                                className="text-yellow-500 fill-yellow-500"
-                              />
-                              {course.average_rating || "No review"}
-                            </span>
-                          </div>
-                          {/* Status or Progress */}
-                          <Badge
-                            className={`mt-2 px-3 py-1 w-24 text-center justify-center ${
-                              course.status === "Passed"
-                                ? "bg-green-600"
-                                : course.status === "Failed"
-                                ? "bg-red-600"
-                                : course.status === "Not Started"
-                                ? "bg-blue-500 text-white"
-                                : course.status === "In Progress"
-                                ? "bg-gray-500"
-                                : ""
-                            }`}
-                          >
-                            {course.status}
-                          </Badge>
-                        </div>
-
-                        {/* Right Actions */}
-                        <div className="flex flex-col justify-center items-end gap-2">
-                          {/* <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreVertical className="h-5 w-5" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end"> */}
-                          {/* <DropdownMenuItem>Edit</DropdownMenuItem>
-                            <DropdownMenuItem>Delete</DropdownMenuItem> */}
-                          {/* </DropdownMenuContent>
-                        </DropdownMenu> */}
-                          <Link href={`${link}${course.id_course}`}>
-                            <Button className="bg-blue-900 hover:bg-blue-700">
-                              View
-                            </Button>
-                          </Link>
-                        </div>
+                        </Card>
                       </div>
-                    </Card>
+                    </>
                   ) : (
                     /* ================= TILES MODE (ORIGINAL CARD) ================= */
                     // <Card className="w-96 relative">
@@ -478,7 +611,7 @@ export default function CoursePage({ link }) {
                         </div>
                       </CardContent>
 
-                      <CardFooter className="border-t pt-4">
+                      {/* <CardFooter className="border-t pt-4">
                         <div className="w-full grid grid-cols-4 divide-x divide-gray-300 text-center">
                           <div className="px-4">
                             <div className="text-lg font-bold text-gray-800">
@@ -509,6 +642,47 @@ export default function CoursePage({ link }) {
                                 course.total_finished}
                             </div>
                             <div className="text-sm text-gray-500">Total</div>
+                          </div>
+                        </div>
+                      </CardFooter> */}
+                      <CardFooter className="border-t pt-4">
+                        <div className="w-full grid grid-cols-4 divide-x divide-gray-300 text-center">
+                          <div className="px-1 sm:px-4">
+                            <div className="text-sm sm:text-lg font-bold text-gray-800">
+                              {course.total_invited}
+                            </div>
+                            <div className="text-[10px] sm:text-sm text-gray-500 whitespace-nowrap">
+                              Invited
+                            </div>
+                          </div>
+
+                          <div className="px-1 sm:px-4">
+                            <div className="text-sm sm:text-lg font-bold text-gray-800">
+                              {course.total_ongoing}
+                            </div>
+                            <div className="text-[10px] sm:text-sm text-gray-500 whitespace-nowrap">
+                              On&nbsp;Going
+                            </div>
+                          </div>
+
+                          <div className="px-1 sm:px-4">
+                            <div className="text-sm sm:text-lg font-bold text-gray-800">
+                              {course.total_finished}
+                            </div>
+                            <div className="text-[10px] sm:text-sm text-gray-500 whitespace-nowrap">
+                              Finished
+                            </div>
+                          </div>
+
+                          <div className="px-1 sm:px-4">
+                            <div className="text-sm sm:text-lg font-bold text-gray-800">
+                              {course.total_invited +
+                                course.total_ongoing +
+                                course.total_finished}
+                            </div>
+                            <div className="text-[10px] sm:text-sm text-gray-500 whitespace-nowrap">
+                              Total
+                            </div>
                           </div>
                         </div>
                       </CardFooter>
