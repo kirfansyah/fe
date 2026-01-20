@@ -470,14 +470,14 @@ export default function ContentArea({ exitCourse }) {
             </AlertDialogHeader>
             <AlertDialogFooter className="flex-row justify-center gap-2 sm:justify-end">
               <AlertDialogCancel
-                className="w-2 sm:w-auto"
+                className="w-1/2 sm:w-auto h-11 !mt-0"
                 onClick={() => setShowConfirm(false)}
               >
                 Batal
               </AlertDialogCancel>
               <AlertDialogAction
                 onClick={submitQuiz}
-                className="bg-blue-600 text-white hover:bg-blue-700"
+                className="bg-blue-600 text-white hover:bg-blue-700 w-1/2 sm:w-auto h-11 "
               >
                 Simpan & Selesai
               </AlertDialogAction>
@@ -499,7 +499,7 @@ export default function ContentArea({ exitCourse }) {
             </AlertDialogHeader>
             <AlertDialogFooter className="flex-row justify-center gap-2 sm:justify-end">
               <AlertDialogCancel
-                className="w-2 sm:w-auto"
+                className="w-1/2 sm:w-auto h-11 !mt-0"
                 onClick={() => {
                   setShowNextConfirm(false);
                   setPendingStep(null);
@@ -513,7 +513,7 @@ export default function ContentArea({ exitCourse }) {
                   setShowNextConfirm(false);
                 }}
                 disabled={isSubmitting}
-                className="bg-blue-600 text-white hover:bg-blue-700"
+                className="bg-blue-600 text-white hover:bg-blue-700 w-1/2 sm:w-auto h-11"
               >
                 {isSubmitting ? "Menyimpan..." : "Ya, Lanjutkan"}
               </AlertDialogAction>
@@ -534,7 +534,7 @@ export default function ContentArea({ exitCourse }) {
             </AlertDialogHeader>
             <AlertDialogFooter className="flex-row justify-center gap-2 sm:justify-end">
               <AlertDialogCancel
-                className="w-2 sm:w-auto"
+                className="w-1/2 sm:w-auto h-11 !mt-0"
                 onClick={() => {
                   setOpen(false);
                 }}
@@ -543,7 +543,7 @@ export default function ContentArea({ exitCourse }) {
               </AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleFinishLogic}
-                className="bg-blue-600 text-white hover:bg-blue-700"
+                className="bg-blue-600 text-white hover:bg-blue-700 w-1/2 sm:w-auto h-11"
               >
                 Ya, Selesai
               </AlertDialogAction>

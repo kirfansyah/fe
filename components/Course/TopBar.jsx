@@ -80,11 +80,13 @@ export default function TopBar({ exitCourse, mainCourse }) {
           >
             {isFullscreen ? (
               <>
-                <Minimize className="w-4 h-4 mr-1" /> Exit Fullscreen
+                <Minimize className="w-4 h-4 mr-1" />
+                <span className="hidden sm:inline">Exit Fullscreen</span>
               </>
             ) : (
               <>
-                <Maximize className="w-4 h-4 mr-1" /> Full Screen
+                <Maximize className="w-4 h-4 mr-1" />
+                <span className="hidden sm:inline">Full Screen</span>
               </>
             )}
           </Button>
@@ -95,7 +97,8 @@ export default function TopBar({ exitCourse, mainCourse }) {
             size="sm"
             onClick={handleExitCourse}
           >
-            <LogOut className="w-4 h-4 mr-1" /> Exit Course
+            <LogOut className="w-4 h-4 mr-1" />
+            <span className="hidden sm:inline">Exit Course</span>
           </Button>
 
           <Button
@@ -104,7 +107,8 @@ export default function TopBar({ exitCourse, mainCourse }) {
             size="sm"
             onClick={handleMainCourse}
           >
-            <Home className="w-4 h-4 mr-1" /> Main Course
+            <Home className="w-4 h-4 mr-1" />{" "}
+            <span className="hidden sm:inline">Main Course</span>
           </Button>
         </div>
 

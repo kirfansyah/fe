@@ -56,9 +56,9 @@ export default function CoursePlayer({ ...props }) {
   }, [currentStep, courseId]);
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="p-0 space-y-4">
       <TopBar exitCourse={exitCourse} mainCourse={mainCourse} />
-      <div className="flex flex-col md:flex-row gap-4">
+      <div className="flex flex-col-reverse md:flex-row gap-4">
         <LeftSidebar
           flow={flow}
           current={currentStep}

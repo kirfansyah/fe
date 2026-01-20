@@ -136,7 +136,7 @@ export default function CourseDetail({ ...props }) {
   }, [getCourseById, id, hasFeedback, userFeedback]);
 
   const sections = courseData?.sections || {};
-  //   console.log("coursedata a:", courseData);
+  console.log("coursedata a:", courseData);
 
   const handleStartCourse = async () => {
     try {
@@ -262,13 +262,29 @@ export default function CourseDetail({ ...props }) {
                 </Avatar>
 
                 {/* Teks Status */}
-                <span className="font-medium">
+                {/* <span className="font-medium">
                   {courseData.progress_percentage === 0
                     ? "Not Started Yet"
                     : courseData.progress_percentage === 100
                     ? "Completed 🎉"
                     : "In Progress"}
-                </span>
+                </span> */}
+                {/* Status or Progress */}
+                <Badge
+                  className={`mt-2 px-3 py-1 w-24 text-center justify-center ${
+                    courseData.status === "Passed"
+                      ? "bg-green-600"
+                      : courseData.status === "Failed"
+                      ? "bg-red-600"
+                      : courseData.status === "Not Started"
+                      ? "bg-blue-500 text-white"
+                      : courseData.status === "In Progress"
+                      ? "bg-blue-500"
+                      : ""
+                  }`}
+                >
+                  {courseData.status}
+                </Badge>
 
                 {/* Badge sesuai status */}
                 {courseData.progress_percentage === 100 ? (
@@ -329,14 +345,18 @@ export default function CourseDetail({ ...props }) {
                       )}
                     </AlertDialogDescription>
                   </AlertDialogHeader>
-                  <AlertDialogFooter className="flex-row justify-center gap-2 sm:justify-end">
-                    <AlertDialogCancel>Batal</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={handleStartCourse}
-                      className="bg-blue-900 hover:bg-blue-700 text-white"
-                    >
-                      {loading ? "Memulai..." : "Mulai"}
-                    </AlertDialogAction>
+                  <AlertDialogFooter className="!flex !flex-row justify-center gap-3 sm:justify-end">
+                    <div className="flex w-full flex-row gap-3 justify-center">
+                      <AlertDialogCancel className="w-1/2 sm:w-auto h-11 !mt-0">
+                        Batal
+                      </AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleStartCourse}
+                        className="w-1/2 sm:w-auto h-11 bg-blue-900 hover:bg-blue-700 text-white"
+                      >
+                        {loading ? "Memulai..." : "Mulai"}
+                      </AlertDialogAction>
+                    </div>
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
@@ -489,33 +509,35 @@ export default function CourseDetail({ ...props }) {
                                 );
                               })
                           ) : (
-                            <Card className="flex items-center justify-between p-4">
-                              <FileText className="w-5 h-5 text-gray-400 mr-4" />
-                              <span className="flex-1 text-gray-500 italic">
-                                No content available.
-                              </span>
-                              <Checkbox
-                                checked={v.is_completed}
-                                className="w-5 h-5 border-gray-300 rounded bg-white 
-                                        data-[state=checked]:bg-blue-600 
-                                        data-[state=checked]:border-blue-600 focus:ring-0"
-                              />
-                            </Card>
+                            // <Card className="flex items-center justify-between p-4">
+                            //   <FileText className="w-5 h-5 text-gray-400 mr-4" />
+                            //   <span className="flex-1 text-gray-500 italic">
+                            //     No content available.
+                            //   </span>
+                            //   <Checkbox
+                            //     checked={v.is_completed}
+                            //     className="w-5 h-5 border-gray-300 rounded bg-white
+                            //             data-[state=checked]:bg-blue-600
+                            //             data-[state=checked]:border-blue-600 focus:ring-0"
+                            //   />
+                            // </Card>
+                            <></>
                           )}
                         </div>
                       ))
                     ) : (
-                      <Card className="flex items-center justify-between p-4">
-                        <FileText className="w-5 h-5 text-gray-400 mr-4" />
-                        <span className="flex-1 text-gray-500 italic">
-                          No content available.
-                        </span>
-                        <Checkbox
-                          className="w-5 h-5 border-gray-300 rounded bg-white 
-              data-[state=checked]:bg-blue-600 
-              data-[state=checked]:border-blue-600 focus:ring-0"
-                        />
-                      </Card>
+                      //           <Card className="flex items-center justify-between p-4">
+                      //             <FileText className="w-5 h-5 text-gray-400 mr-4" />
+                      //             <span className="flex-1 text-gray-500 italic">
+                      //               No content available.
+                      //             </span>
+                      //             <Checkbox
+                      //               className="w-5 h-5 border-gray-300 rounded bg-white
+                      //   data-[state=checked]:bg-blue-600
+                      //   data-[state=checked]:border-blue-600 focus:ring-0"
+                      //             />
+                      //           </Card>
+                      <></>
                     )}
                   </div>
                 );
