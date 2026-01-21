@@ -476,10 +476,22 @@ class RoleService {
      * Dashboard Schedule
      * @returns {Promise} API response
      */
-    static async getNotification()
+    static async getNotification(filters = {})
     {   
         try {
-            const response = await API.get("/dashboard/notifications"); 
+            const queryParams = new URLSearchParams();
+            
+            
+            if (filters.is_read !== undefined && filters.is_read !== null) {
+                queryParams.append('is_read', filters.is_read);
+            }
+
+            const queryString = queryParams.toString();
+            const endpoint = queryString 
+                ? `/dashboard/notifications?${queryString}` 
+                : '/dashboard/notifications';
+
+            const response = await API.get(endpoint);
             return {
                 success: true,
                 data: response.data.data || [],

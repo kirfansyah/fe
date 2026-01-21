@@ -2,13 +2,13 @@ import { useState, useEffect } from "react";
 import { Users, Search, ChevronDown, X, Plus, Check, AlertCircle, Filter, Info, Lock } from "lucide-react";
 import { useCourses } from "../../../hooks/useCourses";
 import { useSweetAlert } from '../../../hooks/useSweetAlert';
-import { useDebounce } from '../../../hooks/useDebounce'; // ✅ Add debounce
+import { useDebounce } from '../../../hooks/useDebounce';
 import API from '../../../services/api';
 
 export default function ListEmployee({ created_by }) {
     const [selectedEmployees, setSelectedEmployees] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
-    const debouncedSearch = useDebounce(searchQuery, 500); // ✅ Debounce search
+    const debouncedSearch = useDebounce(searchQuery, 500);
     
     const [pageSize, setPageSize] = useState(10);
     const [currentPage, setCurrentPage] = useState(1);
@@ -16,15 +16,13 @@ export default function ListEmployee({ created_by }) {
     const [selectedGroupings, setSelectedGroupings] = useState([]);
     const [initialGroupings, setInitialGroupings] = useState([]);
     
-    // Filter states
+    // ✅ Filter states - REMOVED Position
     const [showCompanyFilter, setShowCompanyFilter] = useState(false);
     const [showDeptFilter, setShowDeptFilter] = useState(false);
-    const [showPositionFilter, setShowPositionFilter] = useState(false);
     const [showGroupingFilter, setShowGroupingFilter] = useState(false);
     
     const [selectedCompanies, setSelectedCompanies] = useState([]);
     const [selectedDepts, setSelectedDepts] = useState([]);
-    const [selectedPositions, setSelectedPositions] = useState([]);
     const [selectedGroupingFilters, setSelectedGroupingFilters] = useState([]);
     
     const { employeeData, groupEnroll, fetchEmployeeData, error, handleSaveAssignEmployeeGrouping } = useCourses();
@@ -38,7 +36,6 @@ export default function ListEmployee({ created_by }) {
         totalPages: 1
     };
 
-    // ✅ Fetch all employees untuk filter options
     const [allEmployees, setAllEmployees] = useState([]);
     const [companyMap, setCompanyMap] = useState({});
     const [deptMap, setDeptMap] = useState({});
@@ -50,10 +47,8 @@ export default function ListEmployee({ created_by }) {
                     params: { page: 1, limit: 99999 } 
                 });
                 const data = response.data?.data || [];
-                console.log('All employees for filters:', data);
                 setAllEmployees(data);
                 
-                // ✅ Build maps: name → id
                 const compMap = {};
                 const depMap = {};
                 data.forEach(emp => {
@@ -73,7 +68,7 @@ export default function ListEmployee({ created_by }) {
         fetchAllForFilters();
     }, []);
 
-    // ✅ Fetch dengan filters (server-side) - use debounced search
+    // ✅ Fetch dengan filters - REMOVED Position
     useEffect(() => {
         const filters = {
             search: debouncedSearch,
@@ -85,10 +80,10 @@ export default function ListEmployee({ created_by }) {
         fetchEmployeeData(currentPage, pageSize, filters);
     }, [currentPage, pageSize, debouncedSearch, selectedCompanies, selectedDepts, selectedGroupingFilters, companyMap, deptMap]);
 
-    // ✅ Reset page on filter change
+    // ✅ Reset page on filter change - REMOVED Position
     useEffect(() => {
         setCurrentPage(1);
-    }, [debouncedSearch, selectedCompanies, selectedDepts, selectedPositions, selectedGroupingFilters]);
+    }, [debouncedSearch, selectedCompanies, selectedDepts, selectedGroupingFilters]);
 
     const availableGroupings = groupEnroll || [];
 
@@ -97,10 +92,9 @@ export default function ListEmployee({ created_by }) {
         return name === 'all employee' || name === 'all employees';
     };
 
-    // Get unique values dari ALL employees
+    // ✅ Get unique values - REMOVED Position
     const uniqueCompanies = [...new Set(allEmployees.map(e => e.company_name))].filter(Boolean);
     const uniqueDepts = [...new Set(allEmployees.map(e => e.dept_abbr))].filter(Boolean);
-    const uniquePositions = [...new Set(allEmployees.map(e => e.position_name))].filter(Boolean);
 
     const getGroupingColor = (groupingId) => {
         const colorMap = {
@@ -114,7 +108,6 @@ export default function ListEmployee({ created_by }) {
         return colorMap[groupingId] || 'bg-gray-400 text-white';
     };
 
-    // Filter handlers
     const handleCompanyToggle = (company) => {
         setSelectedCompanies(prev => 
             prev.includes(company) 
@@ -131,14 +124,6 @@ export default function ListEmployee({ created_by }) {
         );
     };
 
-    const handlePositionToggle = (position) => {
-        setSelectedPositions(prev => 
-            prev.includes(position) 
-                ? prev.filter(p => p !== position)
-                : [...prev, position]
-        );
-    };
-
     const handleGroupingFilterToggle = (groupingId) => {
         setSelectedGroupingFilters(prev => 
             prev.includes(groupingId) 
@@ -147,18 +132,18 @@ export default function ListEmployee({ created_by }) {
         );
     };
 
+    // ✅ Clear all filters - REMOVED Position
     const clearAllFilters = () => {
         setSelectedCompanies([]);
         setSelectedDepts([]);
-        setSelectedPositions([]);
         setSelectedGroupingFilters([]);
         setSearchQuery('');
     };
 
+    // ✅ Active filters count - REMOVED Position
     const activeFiltersCount = 
         selectedCompanies.length + 
         selectedDepts.length + 
-        selectedPositions.length + 
         selectedGroupingFilters.length;
 
     const handleSelectAll = (checked) => {
@@ -271,111 +256,115 @@ export default function ListEmployee({ created_by }) {
     };
 
     const handleSaveGroupings = async () => {
-    const allEmployeeId = availableGroupings.find(g => isAllEmployeeGrouping(g))?.id;
-    
-    const groupingsToAdd = selectedGroupings.filter(id => 
-        !initialGroupings.includes(id) && id !== allEmployeeId
-    );
-    const groupingsToRemove = initialGroupings.filter(id => 
-        !selectedGroupings.includes(id) && id !== allEmployeeId
-    );
-
-    if (groupingsToAdd.length === 0 && groupingsToRemove.length === 0) {
-        showWarning('No changes detected');
-        return;
-    }
-
-    let confirmHtml = '<div class="text-left">';
-    
-    if (selectedEmployees.length === 1) {
-        const emp = employees.find(e => e.no_ktp === selectedEmployees[0]);
-        confirmHtml += `<p class="mb-3">Update groupings for <strong>${emp?.nama}</strong>:</p>`;
-    } else {
-        confirmHtml += `<p class="mb-3">Update groupings for <strong>${selectedEmployees.length} employees</strong>:</p>`;
-    }
-
-    confirmHtml += '<div class="space-y-2">';
-    
-    if (groupingsToAdd.length > 0) {
-        confirmHtml += '<div class="bg-green-50 border border-green-200 rounded p-2">';
-        confirmHtml += '<p class="text-sm font-semibold text-green-800 mb-1">✓ Add:</p>';
-        groupingsToAdd.forEach(id => {
-            const g = availableGroupings.find(gr => gr.id === id);
-            if (g) confirmHtml += `<span class="inline-block px-2 py-1 bg-green-100 text-green-800 text-xs rounded mr-1 mb-1">${g.name_group}</span>`;
-        });
-        confirmHtml += '</div>';
-    }
-    
-    if (groupingsToRemove.length > 0) {
-        confirmHtml += '<div class="bg-red-50 border border-red-200 rounded p-2">';
-        confirmHtml += '<p class="text-sm font-semibold text-red-800 mb-1">✗ Remove:</p>';
-        groupingsToRemove.forEach(id => {
-            const g = availableGroupings.find(gr => gr.id === id);
-            if (g) confirmHtml += `<span class="inline-block px-2 py-1 bg-red-100 text-red-800 text-xs rounded mr-1 mb-1">${g.name_group}</span>`;
-        });
-        confirmHtml += '</div>';
-    }
-    
-    confirmHtml += '</div></div>';
-
-    const result = await confirmAction({
-        title: 'Update Groupings?',
-        html: confirmHtml,
-        confirmButtonText: 'Yes, update!',
-        icon: 'question'
-    });
-    
-    if (!result.isConfirmed) return;
-
-    try {
-        showLoading('Updating groupings...');
+        const allEmployeeGrouping = availableGroupings.find(g => isAllEmployeeGrouping(g));
+        const allEmployeeId = allEmployeeGrouping?.id;
         
-        // ✅ Build users array dengan full_name
-        const users = selectedEmployees.map(no_ktp => {
-            const emp = employees.find(e => e.no_ktp === no_ktp);
-            return {
-                no_ktp: no_ktp,
-                full_name: emp?.nama || ''
-            };
-        });
-
-        // ✅ NEW PAYLOAD FORMAT
-        const payload = {
-            users: users,
-            groups: [...groupingsToAdd, ...groupingsToRemove], // Gabung ADD dan REMOVE
-            assigned_by: created_by
-        };
-
-        await handleSaveAssignEmployeeGrouping(payload);
+        const groupingsToAdd = selectedGroupings.filter(id => 
+            !initialGroupings.includes(id) && id !== allEmployeeId
+        );
+        const groupingsToRemove = initialGroupings.filter(id => 
+            !selectedGroupings.includes(id) && id !== allEmployeeId
+        );
         
-        let successMsg = 'Groupings updated successfully';
-        if (groupingsToAdd.length > 0 && groupingsToRemove.length > 0) {
-            successMsg += ` (${groupingsToAdd.length} added, ${groupingsToRemove.length} removed)`;
-        } else if (groupingsToAdd.length > 0) {
-            successMsg += ` (${groupingsToAdd.length} added)`;
+        if (groupingsToAdd.length === 0 && groupingsToRemove.length === 0) {
+            showWarning('No changes detected');
+            return;
+        }
+
+        let confirmHtml = '<div class="text-left">';
+        
+        if (selectedEmployees.length === 1) {
+            const emp = employees.find(e => e.no_ktp === selectedEmployees[0]);
+            confirmHtml += `<p class="mb-3">Update groupings for <strong>${emp?.nama}</strong>:</p>`;
         } else {
-            successMsg += ` (${groupingsToRemove.length} removed)`;
+            confirmHtml += `<p class="mb-3">Update groupings for <strong>${selectedEmployees.length} employees</strong>:</p>`;
+        }
+
+        confirmHtml += '<div class="space-y-2">';
+        
+        if (groupingsToAdd.length > 0) {
+            confirmHtml += '<div class="bg-green-50 border border-green-200 rounded p-2">';
+            confirmHtml += '<p class="text-sm font-semibold text-green-800 mb-1">✓ Add:</p>';
+            groupingsToAdd.forEach(id => {
+                const g = availableGroupings.find(gr => gr.id === id);
+                if (g) confirmHtml += `<span class="inline-block px-2 py-1 bg-green-100 text-green-800 text-xs rounded mr-1 mb-1">${g.name_group}</span>`;
+            });
+            confirmHtml += '</div>';
         }
         
-        showSuccess(successMsg);
+        if (groupingsToRemove.length > 0) {
+            confirmHtml += '<div class="bg-red-50 border border-red-200 rounded p-2">';
+            confirmHtml += '<p class="text-sm font-semibold text-red-800 mb-1">✗ Remove:</p>';
+            groupingsToRemove.forEach(id => {
+                const g = availableGroupings.find(gr => gr.id === id);
+                if (g) confirmHtml += `<span class="inline-block px-2 py-1 bg-red-100 text-red-800 text-xs rounded mr-1 mb-1">${g.name_group}</span>`;
+            });
+            confirmHtml += '</div>';
+        }
         
-        setShowGroupingModal(false);
-        setSelectedEmployees([]);
-        setSelectedGroupings([]);
-        setInitialGroupings([]);
+        if (groupingsToAdd.length === 0 && groupingsToRemove.length > 0) {
+            confirmHtml += '<div class="bg-blue-50 border border-blue-200 rounded p-2 mt-2">';
+            confirmHtml += '<p class="text-sm text-blue-800"><strong>Note:</strong> Employee will only have "All Employee" grouping after removal.</p>';
+            confirmHtml += '</div>';
+        }
         
-        // ✅ Refresh
-        const filters = {
-            search: debouncedSearch,
-            company_id: selectedCompanies.map(name => companyMap[name]).filter(Boolean),
-            dept_id: selectedDepts.map(name => deptMap[name]).filter(Boolean),
-            grouping_id: selectedGroupingFilters
-        };
-        fetchEmployeeData(currentPage, pageSize, filters);
-    } catch (error) {
-        showError('Failed to update groupings: ' + error.message);
-    }
-};
+        confirmHtml += '</div></div>';
+
+        const result = await confirmAction({
+            title: 'Update Groupings?',
+            html: confirmHtml,
+            confirmButtonText: 'Yes, update!',
+            icon: 'question'
+        });
+        
+        if (!result.isConfirmed) return;
+
+        try {
+            showLoading('Updating groupings...');
+            
+            const users = selectedEmployees.map(no_ktp => {
+                const emp = employees.find(e => e.no_ktp === no_ktp);
+                return {
+                    no_ktp: no_ktp,
+                    full_name: emp?.nama || ''
+                };
+            });
+
+            const payload = {
+                users: users,
+                groups: selectedGroupings,
+                assigned_by: created_by
+            };
+
+            await handleSaveAssignEmployeeGrouping(payload);
+            
+            let successMsg = 'Groupings updated successfully';
+            if (groupingsToAdd.length > 0 && groupingsToRemove.length > 0) {
+                successMsg += ` (${groupingsToAdd.length} added, ${groupingsToRemove.length} removed)`;
+            } else if (groupingsToAdd.length > 0) {
+                successMsg += ` (${groupingsToAdd.length} added)`;
+            } else if (groupingsToRemove.length > 0) {
+                successMsg += ` (${groupingsToRemove.length} removed)`;
+            }
+            
+            showSuccess(successMsg);
+            
+            setShowGroupingModal(false);
+            setSelectedEmployees([]);
+            setSelectedGroupings([]);
+            setInitialGroupings([]);
+            
+            const filters = {
+                search: debouncedSearch,
+                company_id: selectedCompanies.map(name => companyMap[name]).filter(Boolean),
+                dept_id: selectedDepts.map(name => deptMap[name]).filter(Boolean),
+                grouping_id: selectedGroupingFilters
+            };
+            fetchEmployeeData(currentPage, pageSize, filters);
+        } catch (error) {
+            showError('Failed to update groupings: ' + error.message);
+        }
+    };
 
     const handlePageSizeChange = (newSize) => {
         setPageSize(newSize);
@@ -417,9 +406,8 @@ export default function ListEmployee({ created_by }) {
                     className="absolute mt-2 w-72 bg-white rounded-lg shadow-xl border border-gray-200 max-h-96 overflow-hidden"
                     style={{ 
                         top: '180px',
-                        right: title === 'Company Unit' ? '420px' : 
-                               title === 'Department' ? '280px' :
-                               title === 'Position' ? '140px' : '20px'
+                        right: title === 'Company Unit' ? '280px' : 
+                               title === 'Department' ? '140px' : '20px'
                     }}
                     onClick={(e) => e.stopPropagation()}
                 >
@@ -431,7 +419,6 @@ export default function ListEmployee({ created_by }) {
                                     onClick={() => {
                                         if (title === 'Company Unit') setSelectedCompanies([]);
                                         if (title === 'Department') setSelectedDepts([]);
-                                        if (title === 'Position') setSelectedPositions([]);
                                         if (title === 'Grouping') setSelectedGroupingFilters([]);
                                     }}
                                     className="text-xs text-blue-600 hover:text-blue-800 font-medium"
@@ -490,7 +477,6 @@ export default function ListEmployee({ created_by }) {
                         )}
                     </button>
 
-                    {/* ✅ Search with debounce indicator */}
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                         <input
@@ -500,7 +486,6 @@ export default function ListEmployee({ created_by }) {
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-80"
                         />
-                        {/* ✅ Loading indicator */}
                         {searchQuery !== debouncedSearch && (
                             <div className="absolute right-3 top-1/2 -translate-y-1/2">
                                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
@@ -509,13 +494,13 @@ export default function ListEmployee({ created_by }) {
                     </div>
                 </div>
 
+                {/* ✅ Filter Buttons - REMOVED Position Filter */}
                 <div className="flex items-center gap-3 flex-wrap">
                     <div className="relative">
                         <button 
                             onClick={() => {
                                 setShowCompanyFilter(!showCompanyFilter);
                                 setShowDeptFilter(false);
-                                setShowPositionFilter(false);
                                 setShowGroupingFilter(false);
                             }}
                             className={`flex items-center gap-2 px-4 py-2.5 border rounded-lg transition-colors text-sm font-medium ${
@@ -547,7 +532,6 @@ export default function ListEmployee({ created_by }) {
                             onClick={() => {
                                 setShowDeptFilter(!showDeptFilter);
                                 setShowCompanyFilter(false);
-                                setShowPositionFilter(false);
                                 setShowGroupingFilter(false);
                             }}
                             className={`flex items-center gap-2 px-4 py-2.5 border rounded-lg transition-colors text-sm font-medium ${
@@ -577,42 +561,9 @@ export default function ListEmployee({ created_by }) {
                     <div className="relative">
                         <button 
                             onClick={() => {
-                                setShowPositionFilter(!showPositionFilter);
-                                setShowCompanyFilter(false);
-                                setShowDeptFilter(false);
-                                setShowGroupingFilter(false);
-                            }}
-                            className={`flex items-center gap-2 px-4 py-2.5 border rounded-lg transition-colors text-sm font-medium ${
-                                selectedPositions.length > 0
-                                    ? 'border-blue-500 bg-blue-50 text-blue-700'
-                                    : 'border-gray-300 hover:bg-gray-50 text-gray-700'
-                            }`}
-                        >
-                            <span>Position</span>
-                            {selectedPositions.length > 0 && (
-                                <span className="px-1.5 py-0.5 bg-blue-600 text-white text-xs rounded-full">
-                                    {selectedPositions.length}
-                                </span>
-                            )}
-                            <ChevronDown size={16} />
-                        </button>
-                        <FilterDropdown
-                            show={showPositionFilter}
-                            onClose={() => setShowPositionFilter(false)}
-                            title="Position"
-                            items={uniquePositions}
-                            selectedItems={selectedPositions}
-                            onToggle={handlePositionToggle}
-                        />
-                    </div>
-                    
-                    <div className="relative">
-                        <button 
-                            onClick={() => {
                                 setShowGroupingFilter(!showGroupingFilter);
                                 setShowCompanyFilter(false);
                                 setShowDeptFilter(false);
-                                setShowPositionFilter(false);
                             }}
                             className={`flex items-center gap-2 px-4 py-2.5 border rounded-lg transition-colors text-sm font-medium ${
                                 selectedGroupingFilters.length > 0
@@ -659,7 +610,7 @@ export default function ListEmployee({ created_by }) {
                 </div>
             </div>
 
-            {/* Active Filters Badge */}
+            {/* ✅ Active Filters Badge - REMOVED Position */}
             {activeFiltersCount > 0 && (
                 <div className="flex items-center gap-2 flex-wrap">
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg text-sm">
@@ -682,15 +633,6 @@ export default function ListEmployee({ created_by }) {
                         <span key={dept} className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
                             {dept}
                             <button onClick={() => handleDeptToggle(dept)}>
-                                <X size={14} />
-                            </button>
-                        </span>
-                    ))}
-                    
-                    {selectedPositions.map(position => (
-                        <span key={position} className="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">
-                            {position}
-                            <button onClick={() => handlePositionToggle(position)}>
                                 <X size={14} />
                             </button>
                         </span>

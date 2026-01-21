@@ -22,9 +22,11 @@ export default function ListCourses({
     onCourseChange,
     deleteEnrolls,
     onDeleteContentSuccess,
+    onUpdateEnrollmentStatus,
     loading = false,
     error = null,
-    permissions // ✅ Receive permissions
+    permissions, // ✅ Receive permissions
+    created_by
 }) {
     const [expanded, setExpanded] = useState(null);
     const [searchQuery, setSearchQuery] = useState("");
@@ -509,7 +511,9 @@ export default function ListCourses({
                         onDuplicate={duplicateEnrollment}
                         onSave={handleSaveEnrollment}
                         onDeleteEnrollment={handleDeleteEnrollment}
+                        onUpdateEnrollmentStatus={onUpdateEnrollmentStatus}
                         permissions={permissions} // ✅ Pass to child
+                        created_by={created_by}
                     />
                 ))}
             </div>

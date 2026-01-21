@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import {
   Search,
   ChevronLeft,
@@ -18,6 +18,9 @@ import ExcelJS from "exceljs";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useSweetAlert } from "@/hooks/useSweetAlert";
 import { ReportTableSkeleton } from "@/components/Loading/Skeleton";
+import { getDeviceInfo } from '@/lib/deviceHelper';
+import { ProfileContext } from '@/contexts/profile/ProfileContext';
+import API from '../../services/api';
 
 export default function OfflineLearningView({
   offlineLearning = [],
@@ -42,9 +45,9 @@ export default function OfflineLearningView({
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
 
-  // ✅ Filters
-  const [selectedCompany, setSelectedCompany] = useState("");
-  const [selectedDepartment, setSelectedDepartment] = useState("");
+  // ✅ Filters - Sekarang kirim ID
+  const [selectedCompanyId, setSelectedCompanyId] = useState("");
+  const [selectedDeptId, setSelectedDeptId] = useState("");
   const [selectedTraining, setSelectedTraining] = useState("");
   const [selectedProvider, setSelectedProvider] = useState("");
   const [dateFrom, setDateFrom] = useState("");
@@ -55,6 +58,7 @@ export default function OfflineLearningView({
   const [isEditMode, setIsEditMode] = useState(false);
   const [currentCertificateId, setCurrentCertificateId] = useState(null);
   
+  // ✅ Form states
   const [employeeId, setemployeeId] = useState("");
   const [employeeName, setemployeeName] = useState("");
   const [employeePosition, setemployeePosition] = useState("");
@@ -99,43 +103,121 @@ export default function OfflineLearningView({
     uploadCertificate: false,
   });
 
-  // ✅ Get unique values from ALL data (untuk dropdown options)
-  const [allData, setAllData] = useState([]);
-  
+  // ✅ State untuk master data filters
+  const [filterOptions, setFilterOptions] = useState({
+    companies: [],    // [{id: 1, name: "PT ABC"}]
+    departments: [],  // [{id: 2, name: "IT"}]
+    trainings: [],    // [Training titles as strings]
+    providers: []     // [Provider names as strings]
+  });
+
+  // ✅ Fetch master data untuk filters saat component mount
   useEffect(() => {
-    if (offlineLearning.length > 0) {
-      setAllData(offlineLearning);
-    }
-  }, [offlineLearning]);
+    const fetchFilterOptions = async () => {
+      try {
+        const response = await API.get('/report/offline-learning', { 
+          params: { page: 1, limit: 99999 } 
+        });
+        
+        const data = response.data.data || [];
+        
+        // Build unique lists
+        const uniqueCompanies = [];
+        const uniqueDepartments = [];
+        const uniqueTrainings = new Set();
+        const uniqueProviders = new Set();
+        
+        const companySet = new Set();
+        const deptSet = new Set();
+        
+        data.forEach(item => {
+          // Companies
+          if (item.company_id && item.company_name && !companySet.has(item.company_id)) {
+            companySet.add(item.company_id);
+            uniqueCompanies.push({
+              id: item.company_id,
+              name: item.company_name
+            });
+          }
+          
+          // Departments
+          if (item.department_id && item.dept_abbr && !deptSet.has(item.department_id)) {
+            deptSet.add(item.department_id);
+            uniqueDepartments.push({
+              id: item.department_id,
+              name: item.dept_abbr
+            });
+          }
+          
+          // Trainings (tetap string karena backend filter by name)
+          if (item.training_title) {
+            uniqueTrainings.add(item.training_title);
+          }
+          
+          // Providers (tetap string)
+          if (item.issuing_organization) {
+            uniqueProviders.add(item.issuing_organization);
+          }
+        });
+        
+        // Sort
+        uniqueCompanies.sort((a, b) => a.name.localeCompare(b.name));
+        uniqueDepartments.sort((a, b) => a.name.localeCompare(b.name));
+        
+        setFilterOptions({
+          companies: uniqueCompanies,
+          departments: uniqueDepartments,
+          trainings: Array.from(uniqueTrainings).sort(),
+          providers: Array.from(uniqueProviders).sort()
+        });
+        
+      } catch (error) {
+        console.error("Error fetching filter options:", error);
+        setFilterOptions({
+          companies: [],
+          departments: [],
+          trainings: [],
+          providers: []
+        });
+      }
+    };
+    
+    fetchFilterOptions();
+  }, []);
 
-  const companies = [...new Set(allData.map((e) => e.company_name))].filter(Boolean);
-  const departments = [...new Set(allData.map((e) => e.dept_abbr))].filter(Boolean);
-  const trainings = [...new Set(allData.map((e) => e.training_title))].filter(Boolean);
-  const providers = [...new Set(allData.map((e) => e.issuing_organization))].filter(Boolean);
+  const { dataKaryawan } = useContext(ProfileContext);
 
-  // ✅ Fetch data with server-side filters
+  // ✅ Fetch data with server-side filters (kirim IDs untuk company & dept)
   useEffect(() => {
     const filters = {
       search: debouncedSearch,
-      company_name: selectedCompany,
-      dept_abbr: selectedDepartment,
-      training_title: selectedTraining,
-      provider: selectedProvider,
-      date_from: dateFrom,
-      date_to: dateTo
+      company_id: selectedCompanyId,        // ✅ Kirim ID
+      department_id: selectedDeptId,        // ✅ Kirim ID
+      training_title: selectedTraining,      // ✅ String (backend filter by name)
+      issuing_organization: selectedProvider, // ✅ String (backend filter by name)
+      start_date: dateFrom,
+      end_date: dateTo
     };
     
     onFetch(currentPage, pageSize, filters);
-  }, [currentPage, pageSize, debouncedSearch, selectedCompany, selectedDepartment, selectedTraining, selectedProvider, dateFrom, dateTo]);
+  }, [currentPage, pageSize, debouncedSearch, selectedCompanyId, selectedDeptId, selectedTraining, selectedProvider, dateFrom, dateTo]);
 
   // ✅ Reset page on filter change
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearch, selectedCompany, selectedDepartment, selectedTraining, selectedProvider, dateFrom, dateTo]);
+  }, [debouncedSearch, selectedCompanyId, selectedDeptId, selectedTraining, selectedProvider, dateFrom, dateTo]);
 
   // ✅ Auto-fetch employee data
+  const [isFetchingEmployee, setIsFetchingEmployee] = useState(false);
+
+  // ✅ Update useEffect untuk employee fetch
   useEffect(() => {
-    if (!employeeComp || employeeId.length < 5) return;
+    if (!employeeComp || employeeId.length < 5) {
+      setIsFetchingEmployee(false);
+      return;
+    }
+
+    setIsFetchingEmployee(true); // ✅ Start loading
 
     const timer = setTimeout(async () => {
       try {
@@ -148,15 +230,20 @@ export default function OfflineLearningView({
         }
       } catch (err) {
         console.warn("Employee not found");
+      } finally {
+        setIsFetchingEmployee(false); // ✅ Stop loading
       }
     }, 500);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      setIsFetchingEmployee(false); // ✅ Cleanup
+    };
   }, [employeeComp, employeeId, fetchEmployee]);
 
-  const clearAllFilters = () => {
-    setSelectedCompany("");
-    setSelectedDepartment("");
+   const clearAllFilters = () => {
+    setSelectedCompanyId("");
+    setSelectedDeptId("");
     setSelectedTraining("");
     setSelectedProvider("");
     setDateFrom("");
@@ -165,13 +252,26 @@ export default function OfflineLearningView({
   };
 
   const activeFiltersCount = [
-    selectedCompany,
-    selectedDepartment,
+    selectedCompanyId,
+    selectedDeptId,
     selectedTraining,
     selectedProvider,
     dateFrom,
     dateTo
   ].filter(Boolean).length;
+
+  // ✅ Helper to get name from ID (menggunakan == untuk type coercion)
+  const getCompanyName = (id) => {
+    if (!id) return '';
+    const company = filterOptions.companies.find(c => c.id == id); // ✅ == instead of ===
+    return company ? company.name : `Company ${id}`;
+  };
+
+  const getDeptName = (id) => {
+    if (!id) return '';
+    const dept = filterOptions.departments.find(d => d.id == id); // ✅ == instead of ===
+    return dept ? dept.name : `Dept ${id}`;
+  };
 
   const formatDateDisplay = (dateString) => {
     if (!dateString) return '';
@@ -211,6 +311,7 @@ export default function OfflineLearningView({
   };
 
   const handleDelete = async (id) => {
+    const deviceInfo = getDeviceInfo();
     const result = await confirmAction({
       title: 'Delete Certificate?',
       html: 'This action cannot be undone. Are you sure you want to delete this certificate?',
@@ -220,7 +321,12 @@ export default function OfflineLearningView({
 
     if (result.isConfirmed) {
       try {
-        await onDelete(id);
+        const payload = {
+          id_training_certificate: id,
+          updated_by: deviceInfo.device,
+          updated_device: "Web"
+        };
+        await onDelete(payload);
         showSuccess('Certificate deleted successfully');
       } catch (error) {
         showError('Failed to delete certificate: ' + error.message);
@@ -773,7 +879,7 @@ export default function OfflineLearningView({
           </button>
         </div>
 
-        {/* Filters Row */}
+        {/* ✅ Filters Row - Pakai filterOptions dengan ID untuk company & dept */}
         <div className="flex items-center gap-2 flex-wrap">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
@@ -790,52 +896,61 @@ export default function OfflineLearningView({
               </div>
             )}
           </div>
+
+          {/* Company Select */}
           <select
-            value={selectedCompany}
-            onChange={(e) => setSelectedCompany(e.target.value)}
+            value={selectedCompanyId}
+            onChange={(e) => setSelectedCompanyId(e.target.value)}
             className="py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
           >
             <option value="">All Companies</option>
-            {companies.map((company) => (
-              <option key={company} value={company}>{company}</option>
+            {filterOptions.companies.map((company) => (
+              <option key={company.id} value={company.id}>
+                {company.name}
+              </option>
             ))}
           </select>
 
+          {/* Department Select */}
           <select
-            value={selectedDepartment}
-            onChange={(e) => setSelectedDepartment(e.target.value)}
+            value={selectedDeptId}
+            onChange={(e) => setSelectedDeptId(e.target.value)}
             className="py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
           >
             <option value="">All Departments</option>
-            {departments.map((dept) => (
-              <option key={dept} value={dept}>{dept}</option>
+            {filterOptions.departments.map((dept) => (
+              <option key={dept.id} value={dept.id}>
+                {dept.name}
+              </option>
             ))}
           </select>
 
-          <select
+          {/* Training Select */}
+          {/* <select
             value={selectedTraining}
             onChange={(e) => setSelectedTraining(e.target.value)}
             className="py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
           >
             <option value="">All Trainings</option>
-            {trainings.map((training) => (
+            {filterOptions.trainings.map((training) => (
               <option key={training} value={training}>{training}</option>
             ))}
-          </select>
+          </select> */}
 
+          {/* Provider Select */}
           <select
             value={selectedProvider}
             onChange={(e) => setSelectedProvider(e.target.value)}
             className="py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
           >
             <option value="">All Providers</option>
-            {providers.map((provider) => (
+            {filterOptions.providers.map((provider) => (
               <option key={provider} value={provider}>{provider}</option>
             ))}
           </select>
 
-          {/* ✅ Date Range Picker */}
-          <div className="flex items-center gap-2 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+          {/* Date Range Picker */}
+          <div className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
             <Calendar size={16} className="text-gray-500" />
             <input
               type="date"
@@ -865,22 +980,22 @@ export default function OfflineLearningView({
         </div>
       </div>
 
-      {/* Active Filters Badges */}
+      {/* ✅ Active Filters Badges - Display names */}
       {activeFiltersCount > 0 && (
         <div className="mb-4 flex items-center gap-2 flex-wrap">
           <span className="text-sm font-medium text-gray-600">Active filters:</span>
-          {selectedCompany && (
+          {selectedCompanyId && (
             <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
-              Company: {selectedCompany}
-              <button onClick={() => setSelectedCompany("")} className="hover:text-blue-900">
+              Company: {getCompanyName(selectedCompanyId)}
+              <button onClick={() => setSelectedCompanyId("")} className="hover:text-blue-900">
                 <X size={14} />
               </button>
             </span>
           )}
-          {selectedDepartment && (
+          {selectedDeptId && (
             <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
-              Dept: {selectedDepartment}
-              <button onClick={() => setSelectedDepartment("")} className="hover:text-green-900">
+              Dept: {getDeptName(selectedDeptId)}
+              <button onClick={() => setSelectedDeptId("")} className="hover:text-green-900">
                 <X size={14} />
               </button>
             </span>
@@ -1204,10 +1319,27 @@ export default function OfflineLearningView({
                     {errors.employeeId}
                   </p>
                 )}
-                {!isEditMode && employeeComp && employeeId.length >= 3 && (
+                {/* ✅ Loading indicator - hanya tampil saat fetching */}
+                {!isEditMode && isFetchingEmployee && (
                   <p className="text-xs text-blue-600 mt-1 flex items-center gap-1">
                     <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
                     Fetching employee data...
+                  </p>
+                )}
+                
+                {/* ✅ Success indicator - tampil setelah berhasil fetch */}
+                {!isEditMode && !isFetchingEmployee && employeeName && (
+                  <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                    <CheckCircle className="w-3 h-3" />
+                    Employee found!
+                  </p>
+                )}
+                
+                {/* ✅ Error indicator - tampil jika tidak ditemukan */}
+                {!isEditMode && !isFetchingEmployee && !employeeName && employeeId.length >= 5 && (
+                  <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    Employee not found
                   </p>
                 )}
               </div>

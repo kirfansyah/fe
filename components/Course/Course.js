@@ -1,8 +1,7 @@
 import { 
-    Plus, Trash2, Globe, GlobeLock, FileText, ChevronDown, ChevronRight,
+    Plus, Trash2, FileText, ChevronDown, ChevronRight,
     Video, FileCheck, ClipboardList, Edit, X, Search, Upload,
-    Grid, List, Copy,
-    Eye
+    Grid, List, Copy, Eye, Check, XCircle
 } from "lucide-react";
 import { useState, useContext } from "react";
 import { useRouter } from "next/router";
@@ -11,6 +10,7 @@ import { useSweetAlert } from '../../hooks/useSweetAlert';
 import { ProfileContext } from '@/contexts/profile/ProfileContext';
 import { LoadingSpinner, CourseCardSkeleton, StatsCardSkeleton } from '@/components/Loading/Skeleton';
 import { getDeviceInfo } from '@/lib/deviceHelper';
+
 export default function Course({ 
     courses, 
     onAddContent, 
@@ -23,7 +23,7 @@ export default function Course({
     onViewContent,
     onDeleteContentSuccess,
     onDuplicateTest,
-    permissions // ✅ Receive permissions from parent
+    permissions
 }) {
     const [expandedCourse, setExpandedCourse] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -78,7 +78,6 @@ export default function Course({
     };
 
     const handleSave = async () => {
-        // ✅ Check permission
         if (!permissions?.can_create) {
             showError('You do not have permission to create courses');
             return;
@@ -121,7 +120,6 @@ export default function Course({
     };
 
     const handleDelete = async (courseId) => {
-        // ✅ Check permission
         if (!permissions?.can_delete) {
             showError('You do not have permission to delete courses');
             return;
@@ -148,7 +146,6 @@ export default function Course({
     };
 
     const handleDeleteContent = async (contentId) => {
-        // ✅ Check permission
         if (!permissions?.can_delete) {
             showError('You do not have permission to delete content');
             return;
@@ -175,7 +172,6 @@ export default function Course({
     };
 
     const handleAddContent = (courseId) => {
-        // ✅ Check permission
         if (!permissions?.can_create) {
             showError('You do not have permission to add content');
             return;
@@ -184,7 +180,6 @@ export default function Course({
     };
 
     const handleEditContent = (courseId, contentId, contentTypeId) => {
-        // ✅ Check permission
         if (!permissions?.can_edit) {
             showError('You do not have permission to edit content');
             return;
@@ -193,7 +188,6 @@ export default function Course({
     };
 
     const handleViewContent = (courseId, contentId, contentTypeId) => {
-        // ✅ Check permission
         if (!permissions?.can_view) {
             showError('You do not have permission to view content');
             return;
@@ -207,8 +201,7 @@ export default function Course({
             return;
         }
         
-        // Determine target type based on current type
-        const targetTypeId = 7; // Assuming 7 is the ID for Post Test
+        const targetTypeId = 7;
         const targetTypeName = 'Post Test';
         
         const result = await confirmAction({
@@ -223,7 +216,6 @@ export default function Course({
         try {
             showLoading(`Duplicating to ${targetTypeName}...`);
             
-            // Call parent handler dengan target type id
             await onDuplicateTest({
                 courseId,
                 contentId,
@@ -231,7 +223,6 @@ export default function Course({
                 targetTypeName
             });
             
-            // Refresh data
             if (onDeleteContentSuccess) {
                 await onDeleteContentSuccess();
             }
@@ -239,6 +230,45 @@ export default function Course({
             await showSuccess(`Successfully duplicated as ${targetTypeName}!`);
         } catch (error) {
             showError('Failed to duplicate test: ' + error.message);
+        }
+    };
+
+    const handleToggleActiveStatus = async (course) => {
+        if (!permissions?.can_edit) {
+            showError('You do not have permission to update course status');
+            return;
+        }
+
+        const newStatus = !course.is_active;
+        const deviceInfo = getDeviceInfo();
+        
+        const result = await confirmAction({
+            title: `${newStatus ? 'Activate' : 'Deactivate'} this course?`,
+            text: `Course: ${course.course_title}`,
+            confirmButtonText: `Yes, ${newStatus ? 'activate' : 'deactivate'} it!`,
+            icon: 'question'
+        });
+        
+        if (!result.isConfirmed) return;
+        
+        try {
+            showLoading(`${newStatus ? 'Activating' : 'Deactivating'} course...`);
+            
+            const formData = new FormData();
+            formData.append('id_course', course.id_course);
+            formData.append('is_active', newStatus.toString());
+            formData.append('updated_by', dataKaryawan?.nama || 'System');
+            formData.append('updated_device', deviceInfo.device || 'Web');
+            
+            const result = await onSave(formData);
+            
+            if (result.success) {
+                await showSuccess(`Course ${newStatus ? 'activated' : 'deactivated'} successfully!`);
+            } else {
+                showError(result.message || 'Failed to update course status');
+            }
+        } catch (error) {
+            showError('Failed to update course status: ' + error.message);
         }
     };
 
@@ -255,26 +285,21 @@ export default function Course({
         setIsModalOpen(false);
     };
 
-    const isCoursePublished = (course) => {
-        const now = new Date();
-        const publishDate = course.publish_date ? new Date(course.publish_date) : null;
-        const endDate = course.end_date ? new Date(course.end_date) : null;
-        return publishDate && endDate && now >= publishDate && now <= endDate;
-    };
-
+    // ✅ Updated stats - hanya Active/Inactive
     const stats = {
         total: courses.length,
-        published: courses.filter(c => isCoursePublished(c)).length,
-        unpublished: courses.filter(c => !isCoursePublished(c)).length,
+        active: courses.filter(c => c.is_active).length,
+        inactive: courses.filter(c => !c.is_active).length,
         totalContent: courses.reduce((sum, c) => sum + (c.contents?.length || 0), 0)
     };
 
+    // ✅ Updated filter - berdasarkan is_active
     const filteredCourses = courses.filter(course => {
         const matchesSearch = course.course_title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             (course.course_description && course.course_description.toLowerCase().includes(searchTerm.toLowerCase()));
         const matchesFilter = filterStatus === 'all' || 
-                            (filterStatus === 'published' && isCoursePublished(course)) ||
-                            (filterStatus === 'unpublished' && !isCoursePublished(course));
+                            (filterStatus === 'active' && course.is_active) ||
+                            (filterStatus === 'inactive' && !course.is_active);
         return matchesSearch && matchesFilter;
     });
 
@@ -292,10 +317,9 @@ export default function Course({
         return 'bg-gray-100 text-gray-600';
     };
 
-    // ✅ No permission check - Just show read-only view
     return (
         <div className="space-y-6">
-            {/* Statistics Cards */}
+            {/* ✅ Updated Statistics Cards */}
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {isLoading ? (
                     <>
@@ -321,11 +345,11 @@ export default function Course({
                         <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-gray-500 text-sm font-medium mb-1">Published</p>
-                                    <p className="text-2xl font-bold text-green-600">{stats.published}</p>
+                                    <p className="text-gray-500 text-sm font-medium mb-1">Active</p>
+                                    <p className="text-2xl font-bold text-green-600">{stats.active}</p>
                                 </div>
                                 <div className="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center">
-                                    <Globe className="w-6 h-6 text-green-600" />
+                                    <Check className="w-6 h-6 text-green-600" />
                                 </div>
                             </div>
                         </div>
@@ -333,11 +357,11 @@ export default function Course({
                         <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-gray-500 text-sm font-medium mb-1">Unpublished</p>
-                                    <p className="text-2xl font-bold text-gray-600">{stats.unpublished}</p>
+                                    <p className="text-gray-500 text-sm font-medium mb-1">Inactive</p>
+                                    <p className="text-2xl font-bold text-gray-600">{stats.inactive}</p>
                                 </div>
                                 <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
-                                    <GlobeLock className="w-6 h-6 text-gray-600" />
+                                    <XCircle className="w-6 h-6 text-gray-600" />
                                 </div>
                             </div>
                         </div>
@@ -357,7 +381,7 @@ export default function Course({
                 )}
             </div>
 
-            {/* Search & Filter Bar */}
+            {/* ✅ Updated Search & Filter Bar */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
                 <div className="flex flex-col lg:flex-row gap-4">
                     <div className="flex-1 relative">
@@ -373,7 +397,7 @@ export default function Course({
                     </div>
 
                     <div className="flex items-center gap-3 flex-wrap">
-                        {/* Status Filter */}
+                        {/* ✅ Updated Status Filter */}
                         <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
                             <button
                                 onClick={() => setFilterStatus('all')}
@@ -386,24 +410,24 @@ export default function Course({
                                 All
                             </button>
                             <button
-                                onClick={() => setFilterStatus('published')}
+                                onClick={() => setFilterStatus('active')}
                                 className={`px-3 py-2 rounded-md text-sm font-medium transition-all ${
-                                    filterStatus === 'published'
+                                    filterStatus === 'active'
                                         ? 'bg-white text-green-600 shadow-sm'
                                         : 'text-gray-600 hover:text-gray-900'
                                 }`}
                             >
-                                Published
+                                Active
                             </button>
                             <button
-                                onClick={() => setFilterStatus('unpublished')}
+                                onClick={() => setFilterStatus('inactive')}
                                 className={`px-3 py-2 rounded-md text-sm font-medium transition-all ${
-                                    filterStatus === 'unpublished'
+                                    filterStatus === 'inactive'
                                         ? 'bg-white text-gray-600 shadow-sm'
                                         : 'text-gray-600 hover:text-gray-900'
                                 }`}
                             >
-                                Unpublished
+                                Inactive
                             </button>
                         </div>
 
@@ -433,7 +457,6 @@ export default function Course({
                             </button>
                         </div>
 
-                        {/* ✅ Create Course Button - Conditional Render */}
                         {permissions?.can_create && (
                             <button 
                                 onClick={() => setIsModalOpen(true)}
@@ -528,36 +551,23 @@ export default function Course({
                                     </div>
                                 </div>
 
-                                {/* Actions */}
+                                {/* ✅ Updated Actions - Only Active/Inactive Badge */}
                                 <div className="flex items-center gap-2 ml-4 flex-shrink-0">
-                                    {(() => {
-                                        const now = new Date();
-                                        const publishDate = course.publish_date ? new Date(course.publish_date) : null;
-                                        const endDate = course.end_date ? new Date(course.end_date) : null;
-                                        const isPublished = publishDate && endDate && now >= publishDate && now <= endDate;
-                                        
-                                        return (
-                                            <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
-                                                isPublished
-                                                    ? 'bg-green-50 text-green-700 border border-green-200'
-                                                    : 'bg-gray-100 text-gray-600 border border-gray-200'
-                                            }`}>
-                                                {isPublished ? (
-                                                    <>
-                                                        <Globe className="w-3.5 h-3.5" />
-                                                        <span>Published</span>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <GlobeLock className="w-3.5 h-3.5" />
-                                                        <span>Unpublished</span>
-                                                    </>
-                                                )}
-                                            </div>
-                                        );
-                                    })()}
+                                    {permissions?.can_edit && (
+                                        <button
+                                            onClick={() => handleToggleActiveStatus(course)}
+                                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${
+                                                course.is_active
+                                                    ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
+                                                    : 'bg-gray-100 text-gray-600 border-gray-300 hover:bg-gray-200'
+                                            }`}
+                                            title={`Click to ${course.is_active ? 'deactivate' : 'activate'}`}
+                                        >
+                                            <div className={`w-2 h-2 rounded-full ${course.is_active ? 'bg-green-600' : 'bg-gray-400'}`} />
+                                            <span>{course.is_active ? 'Active' : 'Inactive'}</span>
+                                        </button>
+                                    )}
 
-                                    {/* ✅ Manage Button - Conditional based on create or edit permission */}
                                     {(permissions?.can_create || permissions?.can_edit) && (
                                         <button 
                                             onClick={() => handleAddContent(course.id_course)}
@@ -569,7 +579,6 @@ export default function Course({
                                         </button>
                                     )}
 
-                                    {/* ✅ Delete Button - Conditional */}
                                     {permissions?.can_delete && (
                                         <button 
                                             onClick={() => handleDelete(course.id_course)}
@@ -582,7 +591,7 @@ export default function Course({
                                 </div>
                             </div>
 
-                            {/* Expanded Content List */}
+                            {/* Content list sama seperti sebelumnya... */}
                             {expandedCourse === course.id_course && course.contents && course.contents.length > 0 && (
                                 <div className="border-t border-gray-100 bg-gray-50">
                                     <div className="px-4 py-3 bg-gray-100 border-b border-gray-200">
@@ -647,9 +656,7 @@ export default function Course({
                                                 </div>
                                             </div>
 
-                                            {/* Content Actions */}
                                             <div className="flex items-center gap-2">
-                                                {/* ✅ Edit Button - Conditional */}
                                                 {permissions?.can_view && (
                                                     <button
                                                         onClick={() => handleViewContent(course.id_course, content.id_course_content, content.id_content_type)}
@@ -685,7 +692,6 @@ export default function Course({
                                                     </button>
                                                 )}
                                                 
-                                                {/* ✅ Delete Button - Conditional */}
                                                 {permissions?.can_delete && (
                                                     <button 
                                                         onClick={() => handleDeleteContent(content.id_course_content)}
@@ -701,7 +707,6 @@ export default function Course({
                                 </div>
                             )}
 
-                            {/* Empty State */}
                             {expandedCourse === course.id_course && (!course.contents || course.contents.length === 0) && (
                                 <div className="border-t border-gray-100 bg-gray-50 px-6 py-12 text-center">
                                     <div className="w-16 h-16 bg-blue-50 rounded-lg flex items-center justify-center mx-auto mb-4">
@@ -714,7 +719,6 @@ export default function Course({
                                         Start building your course by adding videos, documents, or quizzes
                                     </p>
                                     
-                                    {/* ✅ Add Content Button - Conditional */}
                                     {permissions?.can_create && (
                                         <button 
                                             onClick={() => handleAddContent(course.id_course)}
@@ -731,7 +735,7 @@ export default function Course({
                     ))}
                 </div>
             ) : (
-                // Grid View - Similar permission checks
+                // ✅ Updated Grid View
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {filteredCourses.map((course) => (
                         <div
@@ -751,33 +755,25 @@ export default function Course({
                                     </div>
                                 )}
                                 
+                                {/* ✅ Updated Badge - Active/Inactive */}
                                 <div className="absolute top-3 right-3">
-                                    {(() => {
-                                        const now = new Date();
-                                        const publishDate = course.publish_date ? new Date(course.publish_date) : null;
-                                        const endDate = course.end_date ? new Date(course.end_date) : null;
-                                        const isPublished = publishDate && endDate && now >= publishDate && now <= endDate;
-                                        
-                                        return (
-                                            <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
-                                                isPublished
-                                                    ? 'bg-green-600 text-white'
-                                                    : 'bg-gray-700 text-white'
-                                            }`}>
-                                                {isPublished ? (
-                                                    <>
-                                                        <Globe className="w-3 h-3" />
-                                                        <span>Published</span>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <GlobeLock className="w-3 h-3" />
-                                                        <span>Unpublished</span>
-                                                    </>
-                                                )}
-                                            </div>
-                                        );
-                                    })()}
+                                    <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
+                                        course.is_active
+                                            ? 'bg-green-600 text-white'
+                                            : 'bg-gray-700 text-white'
+                                    }`}>
+                                        {course.is_active ? (
+                                            <>
+                                                <Check className="w-3 h-3" />
+                                                <span>Active</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <XCircle className="w-3 h-3" />
+                                                <span>Inactive</span>
+                                            </>
+                                        )}
+                                    </div>
                                 </div>
 
                                 {course.contents && course.contents.length > 0 && (
@@ -800,9 +796,8 @@ export default function Course({
                                         {course.course_description}
                                     </p>
                                 )}
-
+                                
                                 <div className="flex items-center gap-2 mt-4">
-                                    {/* ✅ Manage Button - Conditional */}
                                     {(permissions?.can_create || permissions?.can_edit) && (
                                         <button 
                                             onClick={() => handleAddContent(course.id_course)}
@@ -813,8 +808,7 @@ export default function Course({
                                             <span>Manage</span>
                                         </button>
                                     )}
-                                    
-                                    {/* ✅ Delete Button - Conditional */}
+
                                     {permissions?.can_delete && (
                                         <button 
                                             onClick={() => handleDelete(course.id_course)}
@@ -831,7 +825,7 @@ export default function Course({
                 </div>
             )}
 
-            {/* Empty State */}
+            {/* Empty State - sama seperti sebelumnya */}
             {filteredCourses.length === 0 && (
                 <div className="text-center py-16 bg-white rounded-lg border-2 border-dashed border-gray-300">
                     <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center mx-auto mb-4">
@@ -868,7 +862,7 @@ export default function Course({
                 </div>
             )}
 
-            {/* Create Course Modal - Same as before, no changes needed */}
+            {/* Create Course Modal - sama seperti sebelumnya */}
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
                     <div className="bg-white rounded-lg shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
