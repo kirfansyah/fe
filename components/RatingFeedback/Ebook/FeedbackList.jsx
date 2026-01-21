@@ -62,13 +62,13 @@ export default function FeedbackList({ feedbacks, isEbook = false }) {
                   {feedback[titleKey]}
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {feedback.company_id && (
+                  {feedback.company_name && (
                     <span className="flex items-center gap-1 px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700 rounded-full">
                       <Building2 className="w-3 h-3" />
-                      Company {feedback.company_id}
+                      {feedback.company_name}
                     </span>
                   )}
-                  {feedback.company_id === null && (
+                  {feedback.company_name === null && (
                     <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-600 rounded-full">
                       All Companies
                     </span>

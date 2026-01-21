@@ -99,6 +99,18 @@ export function useEmployees() {
       throw err;
     }
   }, []);
+  // send feedback
+  const closeSession = useCallback(async (data) => {
+    try {
+      const closeSession = await API.closeSession(data);
+
+      return closeSession;
+    } catch (err) {
+      //   setError(err.message || "Failed to complete course");
+      console.error("Error closeSession:", err);
+      throw err;
+    }
+  }, []);
 
   return {
     fetchEmployees,
@@ -108,5 +120,6 @@ export function useEmployees() {
     sendAswers,
     sendEnrollment,
     sendFeedback,
+    closeSession,
   };
 }

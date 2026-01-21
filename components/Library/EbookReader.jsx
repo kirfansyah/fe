@@ -250,14 +250,15 @@ export default function EbookReader({
     onClose(currentPage, totalPages, true);
   };
 
-  // Toggle fullscreen - Enhanced for iOS compatibility
+  // ✅ Toggle fullscreen - CSS-based only (FIXED & iOS Compatible)
   const toggleFullscreen = () => {
     if (!isFullscreen) {
-      // For iOS - use CSS-based fullscreen
+      // ENTER fullscreen
+      setIsFullscreen(true);
+      document.body.style.overflow = "hidden";
+
+      // iOS specific - prevent body scroll
       if (isIOS()) {
-        setIsFullscreen(true);
-        // Prevent body scroll on iOS
-        document.body.style.overflow = "hidden";
         document.body.style.position = "fixed";
         document.body.style.width = "100%";
         document.body.style.height = "100%";
@@ -268,93 +269,22 @@ export default function EbookReader({
             window.scrollTo(0, 1);
           }, 100);
         }
-      } else {
-        // For Android/Desktop - use native fullscreen API
-        if (readerContainerRef.current) {
-          if (readerContainerRef.current.requestFullscreen) {
-            readerContainerRef.current.requestFullscreen().catch((err) => {
-              console.error("Error attempting to enable fullscreen:", err);
-              // Fallback to CSS fullscreen
-              setIsFullscreen(true);
-            });
-          } else if (readerContainerRef.current.webkitRequestFullscreen) {
-            readerContainerRef.current.webkitRequestFullscreen();
-          } else if (readerContainerRef.current.mozRequestFullScreen) {
-            readerContainerRef.current.mozRequestFullScreen();
-          } else if (readerContainerRef.current.msRequestFullscreen) {
-            readerContainerRef.current.msRequestFullscreen();
-          } else {
-            // Fallback to CSS fullscreen
-            setIsFullscreen(true);
-          }
-        }
       }
     } else {
-      // Exit fullscreen
+      // EXIT fullscreen
+      setIsFullscreen(false);
+      document.body.style.overflow = "";
+
+      // iOS specific - restore body
       if (isIOS()) {
-        setIsFullscreen(false);
-        // Restore body scroll on iOS
-        document.body.style.overflow = "";
         document.body.style.position = "";
         document.body.style.width = "";
         document.body.style.height = "";
-      } else {
-        if (document.exitFullscreen) {
-          document.exitFullscreen().catch((err) => {
-            console.error("Error attempting to exit fullscreen:", err);
-            // Fallback to CSS exit
-            setIsFullscreen(false);
-          });
-        } else if (document.webkitExitFullscreen) {
-          document.webkitExitFullscreen();
-        } else if (document.mozCancelFullScreen) {
-          document.mozCancelFullScreen();
-        } else if (document.msExitFullscreen) {
-          document.msExitFullscreen();
-        } else {
-          // Fallback to CSS exit
-          setIsFullscreen(false);
-        }
       }
     }
   };
 
-  // Listen to fullscreen changes
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      // Only update if not iOS (iOS uses CSS fullscreen)
-      if (!isIOS()) {
-        const isNowFullscreen = !!(
-          document.fullscreenElement ||
-          document.webkitFullscreenElement ||
-          document.mozFullScreenElement ||
-          document.msFullscreenElement
-        );
-        setIsFullscreen(isNowFullscreen);
-      }
-    };
-
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
-    document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
-    document.addEventListener("mozfullscreenchange", handleFullscreenChange);
-    document.addEventListener("MSFullscreenChange", handleFullscreenChange);
-
-    return () => {
-      document.removeEventListener("fullscreenchange", handleFullscreenChange);
-      document.removeEventListener(
-        "webkitfullscreenchange",
-        handleFullscreenChange
-      );
-      document.removeEventListener(
-        "mozfullscreenchange",
-        handleFullscreenChange
-      );
-      document.removeEventListener(
-        "MSFullscreenChange",
-        handleFullscreenChange
-      );
-    };
-  }, []);
+  // ❌ REMOVED: useEffect fullscreenchange listener yang menyebabkan bug
 
   // Keyboard navigation
   useEffect(() => {
@@ -377,15 +307,17 @@ export default function EbookReader({
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (isIOS() && isFullscreen) {
-        // Restore body styles on unmount
-        document.body.style.overflow = "";
+      // Restore body styles on unmount
+      document.body.style.overflow = "";
+
+      // iOS specific cleanup
+      if (isIOS()) {
         document.body.style.position = "";
         document.body.style.width = "";
         document.body.style.height = "";
       }
     };
-  }, [isFullscreen]);
+  }, []);
 
   return (
     <div className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center">
