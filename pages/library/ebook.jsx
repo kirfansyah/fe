@@ -26,7 +26,7 @@ import { useMenuPermissions } from "@/hooks/useMenuPermissions"; // ✅ Import
 
 const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });
 
-export default function Management() {
+export default function eBook() {
   const permissions = useMenuPermissions();
   const { getKaryawan, dataKaryawan } = useContext(ProfileContext);
   const deviceInfo = getDeviceInfo();
@@ -919,4 +919,4 @@ export default function Management() {
   );
 }
 
-Management.layout = Admin;
+eBook.layout = Admin;
