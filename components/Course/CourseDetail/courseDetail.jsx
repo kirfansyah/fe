@@ -33,6 +33,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import Swal from "sweetalert2";
 
 export default function CourseDetail({ ...props }) {
   const { id, breadCrumb, startCourse } = props;
@@ -136,7 +137,7 @@ export default function CourseDetail({ ...props }) {
   }, [getCourseById, id, hasFeedback, userFeedback]);
 
   const sections = courseData?.sections || {};
-  console.log("coursedata a:", courseData);
+  //   console.log("coursedata a:", courseData);
 
   const handleStartCourse = async () => {
     try {
@@ -172,13 +173,51 @@ export default function CourseDetail({ ...props }) {
   const handleSendFeedback = async () => {
     if (!rating) {
       //   alert("Silakan beri rating terlebih dahulu.");
-      toast.warning("Silakan beri rating terlebih dahulu.");
+      //   toast.warning("Silakan beri rating terlebih dahulu.");
+      Swal.fire({
+        toast: true,
+        position: "top-end",
+        icon: "warning",
+        title: "Hampir Selesai ⭐",
+        text: "Yuk, beri rating terlebih dahulu agar kami bisa meningkatkan kualitas pembelajaran.",
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true,
+        confirmButtonColor: "#1e3a8a",
+        customClass: {
+          popup: "rounded-xl shadow-lg",
+        },
+        didOpen: (toast) => {
+          toast.addEventListener("mouseenter", Swal.stopTimer);
+          toast.addEventListener("mouseleave", Swal.resumeTimer);
+        },
+      });
+
       return;
     }
 
     if (!reviewText.trim()) {
-      toast.warning("Silakan isi komentar atau masukan Anda.");
+      //   toast.warning("Silakan isi komentar atau masukan Anda.");
       //   alert("Silakan isi komentar atau masukan Anda.");
+      Swal.fire({
+        toast: true,
+        position: "top-end",
+        icon: "warning",
+        title: "Masukan Diperlukan ✍️",
+        text: "Silakan isi komentar atau masukan Anda untuk membantu kami menjadi lebih baik.",
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true,
+        confirmButtonColor: "#1e3a8a",
+        customClass: {
+          popup: "rounded-xl shadow-lg",
+        },
+        didOpen: (toast) => {
+          toast.addEventListener("mouseenter", Swal.stopTimer);
+          toast.addEventListener("mouseleave", Swal.resumeTimer);
+        },
+      });
+
       return;
     }
     setIsSubmitting(true);
@@ -198,7 +237,26 @@ export default function CourseDetail({ ...props }) {
       const result = await sendFeedback(payload);
 
       if (result?.success) {
-        toast.success("Terima kasih atas feedback Anda! 🎉");
+        // toast.success("Terima kasih atas feedback Anda! 🎉");
+        Swal.fire({
+          toast: true,
+          position: "top-end",
+          icon: "success",
+          title: "Terima Kasih! 🎉",
+          text: "Masukan dan feedback Anda sangat berarti bagi kami.",
+          showConfirmButton: false,
+          timer: 3000,
+          timerProgressBar: true,
+          confirmButtonColor: "#1e3a8a",
+          customClass: {
+            popup: "rounded-xl shadow-lg",
+          },
+          didOpen: (toast) => {
+            toast.addEventListener("mouseenter", Swal.stopTimer);
+            toast.addEventListener("mouseleave", Swal.resumeTimer);
+          },
+        });
+
         setHasFeedback(true);
         setUserFeedback(reviewText);
         setUserRating(rating);
@@ -271,11 +329,11 @@ export default function CourseDetail({ ...props }) {
                 </span> */}
                 {/* Status or Progress */}
                 <Badge
-                  className={`mt-2 px-3 py-1 w-24 text-center justify-center ${
+                  className={`mt-2 px-3 py-1 w-24 text-center rounded-lg font-medium justify-center ${
                     courseData.status === "Passed"
                       ? "bg-green-600"
                       : courseData.status === "Failed"
-                      ? "bg-red-600"
+                      ? "bg-red-500"
                       : courseData.status === "Not Started"
                       ? "bg-blue-500 text-white"
                       : courseData.status === "In Progress"

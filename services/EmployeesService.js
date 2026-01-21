@@ -208,5 +208,54 @@ class EmployeesService {
       console.error("EmployeesService.sendFeedback Error:", error);
     }
   }
+
+  static async closeSession(data) {
+    try {
+      const response = await API.post(
+        `/learner/course/close-session/${data}`,
+        null,
+        {
+          validateStatus: (status) => status >= 200 && status <= 500,
+        }
+      );
+      //   console.log("service : ", response);
+
+      return {
+        success: response.data.success,
+        data: response.data.data,
+        message: response.data.message,
+      };
+    } catch (error) {
+      console.error("EmployeesService.closeSession Error:", error);
+    }
+  }
+
+  //   static async closeSession(data) {
+  //     try {
+  //       const response = await API.post("/learner/course/close-session", data, {
+  //         validateStatus: (status) => status >= 200 && status <= 500,
+  //       });
+
+  //       // safe parse
+  //       const resData = response.data || {}; // jika response.data undefined
+
+  //       return {
+  //         success: resData.success ?? false,
+  //         data: resData.data ?? null,
+  //         message: resData.message ?? "",
+  //         pagination: resData.pagination ?? null,
+  //         statusCode: resData.statusCode ?? response.status,
+  //       };
+  //     } catch (error) {
+  //       console.error("EmployeesService.closeSession Error:", error);
+  //       return {
+  //         success: false,
+  //         data: null,
+  //         message: error.message || "Failed to close session",
+  //         pagination: null,
+  //         statusCode: error.response?.status ?? 500,
+  //       };
+  //     }
+  //   }
 }
 export default EmployeesService;
