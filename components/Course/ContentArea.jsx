@@ -12,7 +12,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-
+import Swal from "sweetalert2";
 import { Button } from "@/components/ui/button";
 import Quiz from "./Quiz";
 import { CourseContext } from "@/contexts/CourseContext";
@@ -31,7 +31,7 @@ export default function ContentArea({ exitCourse }) {
   const { state, goNext, setStep, completeStep, refreshCourseProgress } =
     useContext(CourseContext);
   const { flow, currentStep, answers, courseData } = state;
-  const { completeCourse, sendAswers } = useEmployees();
+  const { completeCourse, sendAswers, getCourseById } = useEmployees();
   const preloadedVideosRef = useRef(new Set());
 
   const orderedKeys = [
@@ -76,7 +76,7 @@ export default function ContentArea({ exitCourse }) {
         };
       })
     );
-  //   console.log("flow allSteps :", flow);
+  //   console.log("courseData content Area:", courseData);
 
   let idx = allSteps.findIndex((s) => s.id === currentStep);
   if (idx === -1) idx = 0;
@@ -100,6 +100,7 @@ export default function ContentArea({ exitCourse }) {
   const [pdfFile, setPdfFile] = useState(null);
   const [videoFile, setVideoFile] = useState(null);
   const [pptFile, setPptFile] = useState(null);
+  const [statusCourse, setStatusCourse] = useState(null);
 
   //   const defaultPDF = "/uploads/pdf/default.pdf";
   //   const defaultPDF =
@@ -232,6 +233,27 @@ export default function ContentArea({ exitCourse }) {
     };
   }, [step]);
 
+  useEffect(() => {
+    if (!courseData?.id_course) return;
+    const loadData = async () => {
+      try {
+        const res = await getCourseById(courseData?.id_course);
+
+        if (res.data.data.length <= 0) {
+          toast.warning("Error API response : " + res.data.message);
+        }
+
+        setStatusCourse(res.data.data.status || null);
+      } catch (error) {
+        console.error("❌ Gagal memuat data:", error);
+      }
+    };
+
+    loadData();
+  }, [courseData]);
+
+  //   console.log("test:", statusCourse);
+
   if (!step) {
     return (
       <Card className="flex-1">
@@ -242,21 +264,90 @@ export default function ContentArea({ exitCourse }) {
     );
   }
 
-  const handleFinishLogic = async () => {
-    const navigate = router.push(`${exitCourse}${courseId}`);
+  //   const handleFinishLogic = async () => {
+  //     // const navigate = router.push(`${exitCourse}${courseId}`);
 
+  //     if (document.fullscreenElement) {
+  //       Promise.race([
+  //         document.exitFullscreen(),
+  //         new Promise((resolve) => setTimeout(resolve, 200)),
+  //       ])
+  //         .then(() => setIsFullscreen(false))
+  //         .catch((err) => console.warn("Gagal keluar fullscreen:", err));
+  //     }
+
+  //     Swal.fire({
+  //       toast: true,
+  //       position: "top-end",
+  //       icon: statusCourse === "Passed" ? "success" : "error",
+  //       title: statusCourse === "Passed" ? "Selamat! 🎉" : "Hampir Berhasil 💪",
+  //       text:
+  //         statusCourse === "Passed"
+  //           ? "Kerja bagus! Kamu berhasil lulus tes ini. Pertahankan semangat belajarmu."
+  //           : "Jangan menyerah. Pelajari kembali materinya dan coba lagi.",
+  //       showConfirmButton: false,
+  //       timer: 3000,
+  //       timerProgressBar: true,
+  //       confirmButtonColor: "#1e3a8a",
+  //       customClass: {
+  //         popup: "rounded-xl shadow-lg",
+  //       },
+  //       didOpen: (toast) => {
+  //         toast.addEventListener("mouseenter", Swal.stopTimer);
+  //         toast.addEventListener("mouseleave", Swal.resumeTimer);
+  //       },
+  //     }).then((result) => {
+  //       router.push(`${exitCourse}${courseId}`);
+  //     });
+
+  //     setOpen(false);
+
+  //     // await navigate;
+  //   };
+  const handleFinishLogic = async () => {
+    // 1️⃣ Keluar fullscreen dulu (kalau ada)
     if (document.fullscreenElement) {
-      Promise.race([
-        document.exitFullscreen(),
-        new Promise((resolve) => setTimeout(resolve, 200)),
-      ])
-        .then(() => setIsFullscreen(false))
-        .catch((err) => console.warn("Gagal keluar fullscreen:", err));
+      try {
+        await Promise.race([
+          document.exitFullscreen(),
+          new Promise((resolve) => setTimeout(resolve, 200)),
+        ]);
+        setIsFullscreen(false);
+      } catch (err) {
+        console.warn("Gagal keluar fullscreen:", err);
+      }
     }
 
+    // 2️⃣ Tutup modal setelah fullscreen selesai
     setOpen(false);
 
-    await navigate;
+    // 3️⃣ Tampilkan toast
+    Swal.fire({
+      toast: true,
+      position: "top-end",
+      icon: statusCourse === "Passed" ? "success" : "error",
+      title: statusCourse === "Passed" ? "Selamat! 🎉" : "Hampir Berhasil 💪",
+      text:
+        statusCourse === "Passed"
+          ? "Kerja bagus! Kamu berhasil lulus tes ini. Pertahankan semangat belajarmu."
+          : "Jangan menyerah. Pelajari kembali materinya dan coba lagi.",
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true,
+      confirmButtonColor: "#1e3a8a",
+      customClass: {
+        popup: "rounded-xl shadow-lg",
+      },
+      didOpen: (toast) => {
+        toast.addEventListener("mouseenter", Swal.stopTimer);
+        toast.addEventListener("mouseleave", Swal.resumeTimer);
+      },
+    });
+
+    // 4️⃣ Redirect setelah toast selesai
+    setTimeout(() => {
+      router.push(`${exitCourse}${courseId}`);
+    }, 3000);
   };
 
   const handleAutoSubmit = async () => {
@@ -304,6 +395,8 @@ export default function ContentArea({ exitCourse }) {
   };
 
   const handleNext = () => {
+    // Alert sukses normal
+
     if (step.type === "quiz") {
       if (currentQuiz < step.questions.length - 1) {
         setCurrentQuiz((c) => c + 1);
