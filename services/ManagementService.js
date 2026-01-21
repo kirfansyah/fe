@@ -148,6 +148,38 @@ class ManagementService {
     }
 
     /**
+     * Create new course
+     * @param {FormData} formData - Course form data
+     * @returns {Promise} API response
+     */
+    static async updateCourse(formData) {
+
+        try {
+            const courseId = formData.get('id_course');
+            const payload = {
+                is_active: formData.get('is_active') === 'true',
+                updated_by: formData.get('updated_by'),
+                updated_device: formData.get('updated_device')
+            };
+            const response = await API.post(`/trainer/course/${courseId}/status`, payload, {
+                headers: { 'Content-Type': 'application/json' }
+            });
+            return {
+                success: true,
+                data: response.data.data,
+                message: response.data.message || 'Course created successfully'
+            };
+        } catch (error) {
+            console.error('ManagementService.createCourse Error:', error);
+            return {
+                success: false,
+                data: null,
+                message: error.response?.data?.message || 'Failed to create course'
+            };
+        }
+    }
+
+    /**
      * Delete course
      * @param {number} courseId - Course ID
      * @param {string} deletedBy - User who deleted
@@ -406,7 +438,31 @@ class ManagementService {
         }
     }
 
-    
+    /**
+     * Create new course
+     * @param {FormData} formData - Course form data
+     * @returns {Promise} API response
+     */
+    static async updateEnrollmentStatus(enrollmentId, payload) {
+
+        try {
+            const response = await API.post(`/trainer/course/enrollment/${enrollmentId}/status`, payload, {
+                headers: { 'Content-Type': 'application/json' }
+            });
+            return {
+                success: true,
+                data: response.data.data,
+                message: response.data.message || 'Course created successfully'
+            };
+        } catch (error) {
+            console.error('ManagementService.createCourse Error:', error);
+            return {
+                success: false,
+                data: null,
+                message: error.response?.data?.message || 'Failed to create course'
+            };
+        }
+    }
 
     /**
      * Get all employees with pagination

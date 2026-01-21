@@ -4,7 +4,7 @@ import OfflineLearningView from "../../components/Report/OfflineLearning";
 import OnlineLearningView from "../../components/Report/OnlineLearning";
 import { useReport } from "../../hooks/useReport";
 import { useSweetAlert } from "../../hooks/useSweetAlert";
-import { GraduationCap, BookOpen, TrendingUp, Users } from "lucide-react";
+import { GraduationCap, BookOpen, TrendingUp, Users, CheckCircle,XCircle ,Clock   } from "lucide-react";
 import { ReportStatsSkeleton } from "../../components/Loading/Skeleton";
 import ErrorMessage from "../../components/Loading/ErrorMessage";
 
@@ -30,7 +30,6 @@ export default function Report() {
     deleteOfflineLearning,
 
     // Master Data
-    position,
     dept,
     company,
     loading,
@@ -85,9 +84,7 @@ export default function Report() {
     total: onlineLearning?.length || 0,
     passed: onlineLearning?.filter(l => l.status === "Passed")?.length || 0,
     failed: onlineLearning?.filter(l => l.status === "Failed")?.length || 0,
-    avgScore: onlineLearning?.length 
-      ? (onlineLearning.reduce((sum, l) => sum + (l.score || 0), 0) / onlineLearning.length).toFixed(1)
-      : 0
+    inProgress: onlineLearning?.filter(l => l.status === "In Progress")?.length || 0,
   };
 
   const offlineStats = {
@@ -167,45 +164,53 @@ export default function Report() {
           <ReportStatsSkeleton />
         ) : (
           <>
-            {activeTab === "online-learning" && (
+           {activeTab === "online-learning" && (
               <div className="grid grid-cols-4 gap-4">
+                {/* ✅ Total Learners - Users sudah tepat */}
                 <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-md p-4 text-white">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-blue-100 text-sm">Total Learners</p>
                       <p className="text-3xl font-bold mt-1">{onlineStats.total}</p>
                     </div>
-                    <Users size={40} className="opacity-20" />
+                    <Users size={40} className="opacity-20" /> {/* ✅ Sudah tepat */}
                   </div>
                 </div>
                 
+                {/* ✅ Passed - Ganti dengan CheckCircle atau Award */}
                 <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg shadow-md p-4 text-white">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-green-100 text-sm">Passed</p>
                       <p className="text-3xl font-bold mt-1">{onlineStats.passed}</p>
                     </div>
-                    <TrendingUp size={40} className="opacity-20" />
+                    <CheckCircle size={40} className="opacity-20" /> {/* ✅ Lebih tepat dari TrendingUp */}
+                    {/* Alternatif: <Award size={40} className="opacity-20" /> */}
                   </div>
                 </div>
                 
+                {/* ✅ Failed - Ganti dengan XCircle atau AlertCircle */}
                 <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-lg shadow-md p-4 text-white">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-red-100 text-sm">Failed</p>
                       <p className="text-3xl font-bold mt-1">{onlineStats.failed}</p>
                     </div>
-                    <BookOpen size={40} className="opacity-20" />
+                    <XCircle size={40} className="opacity-20" /> {/* ✅ Lebih tepat dari BookOpen */}
+                    {/* Alternatif: <AlertCircle size={40} className="opacity-20" /> */}
                   </div>
                 </div>
                 
+                {/* ✅ In Progress - Ganti dengan Clock atau Loader */}
                 <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg shadow-md p-4 text-white">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-purple-100 text-sm">Avg Score</p>
-                      <p className="text-3xl font-bold mt-1">{onlineStats.avgScore}%</p>
+                      <p className="text-purple-100 text-sm">In Progress</p>
+                      <p className="text-3xl font-bold mt-1">{onlineStats.inProgress}</p>
                     </div>
-                    <GraduationCap size={40} className="opacity-20" />
+                    <Clock size={40} className="opacity-20" /> {/* ✅ Lebih tepat dari GraduationCap */}
+                    {/* Alternatif: <Loader size={40} className="opacity-20" /> */}
+                    {/* Alternatif: <PlayCircle size={40} className="opacity-20" /> */}
                   </div>
                 </div>
               </div>
@@ -312,7 +317,7 @@ export default function Report() {
               onUpdate={handleUpdateOfflineLearning}
               onDelete={handleDeleteOfflineLearning}
               onFetch={fetchOfflineLearning}
-              position={position || []}
+              
               dept={dept || []}
               company={company || []}
               fetchEmployee={fetchEmployee}

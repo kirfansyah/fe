@@ -13,14 +13,19 @@ import {
     ChevronDown,
     BookMarked,
     Clock,
-    Calendar
+    Calendar,
+    Lock
 } from 'lucide-react';
 import Admin from "layouts/Admin.js";
 import { useRoles } from "@/hooks/useRoles";
 import { useCourses } from "@/hooks/useCourses";
+import { useMenuPermissions } from "@/hooks/useMenuPermissions";
 
 export default function DashboardAnalytics() {
-    const { fetchAnalytics, fetchEmployeeCourseResult,fetchOverallPassPercentage  } = useRoles();
+    // ✅ ADD PERMISSION CHECK
+    const permissions = useMenuPermissions();
+    
+    const { fetchAnalytics, fetchEmployeeCourseResult, fetchOverallPassPercentage } = useRoles();
     const { companies } = useCourses();
     
     const [employeeCourseData, setEmployeeCourseData] = useState(null);
@@ -38,6 +43,12 @@ export default function DashboardAnalytics() {
 
     
     const loadPassPercentage = async () => {
+        // ✅ CHECK PERMISSION
+        if (!permissions.can_view) {
+            console.log('No permission to view pass percentage');
+            return;
+        }
+
         try {
             setLoadingPassPercentage(true);
             
@@ -47,9 +58,8 @@ export default function DashboardAnalytics() {
                 filters.company_id = companyFilter;
             }
             
-            // ✅ Kirim id_course kalau bukan "All"
             if (courseFilterPassPercentage !== 'All') {
-                filters.id_course = courseFilterPassPercentage; // Ini sudah ID, bukan name
+                filters.id_course = courseFilterPassPercentage;
             }
             
             if (yearFilter !== 'All') {
@@ -63,13 +73,12 @@ export default function DashboardAnalytics() {
                 }
             }
             
-            console.log('Sending filters:', filters); // ✅ Debug
+            console.log('Sending filters:', filters);
             
             const result = await fetchOverallPassPercentage(filters);
             console.log('Pass Percentage Result:', result);
             
             if (result?.data && Array.isArray(result.data) && result.data.length > 0) {
-                // Aggregate semua data dari array
                 const totals = result.data.reduce((acc, course) => ({
                     in_progress: acc.in_progress + (course.in_progress || 0),
                     passed: acc.passed + (course.passed || 0),
@@ -91,43 +100,34 @@ export default function DashboardAnalytics() {
     // Get current year and month
     const currentDate = new Date();
     const currentYear = currentDate.getFullYear();
-    const currentMonthIndex = currentDate.getMonth() + 1; // 0-11 to 1-12
+    const currentMonthIndex = currentDate.getMonth() + 1;
     const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
                         'July', 'August', 'September', 'October', 'November', 'December'];
     const currentMonthName = monthNames[currentDate.getMonth()];
     
-    // Filter states - Set to current year and month
     const [yearFilter, setYearFilter] = useState(currentYear);
     const [monthFilter, setMonthFilter] = useState(currentMonthName);
     const [companyFilter, setCompanyFilter] = useState('All');
     const [courseFilterPassPercentage, setCourseFilterPassPercentage] = useState('All');
     
-    // Lists for dropdowns
-    
     const [companiesList, setCompaniesList] = useState([{ id: 'All', company_name: 'All' }]);
     
-    // Dropdown states
     const [showYearDropdown, setShowYearDropdown] = useState(false);
     const [showMonthDropdown, setShowMonthDropdown] = useState(false);
     const [showCompanyDropdown, setShowCompanyDropdown] = useState(false);
     const [showCoursePassDropdown, setShowCoursePassDropdown] = useState(false);
     
-    // Refs for click outside
     const yearDropdownRef = useRef(null);
     const monthDropdownRef = useRef(null);
     const companyDropdownRef = useRef(null);
     const coursePassDropdownRef = useRef(null);
     
-    // Data states
     const [analyticsData, setAnalyticsData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    // Year options (you can make this dynamic)
-    // const currentYear = new Date().getFullYear();
     const yearOptions = ['All', ...Array.from({length: 5}, (_, i) => currentYear - i)];
 
-    // Month options
     const monthOptions = [
         'All',
         'January',
@@ -144,7 +144,6 @@ export default function DashboardAnalytics() {
         'December'
     ];
 
-    // Populate companies list when companies data is available
     useEffect(() => {
         if (companies && companies.length > 0) {
             const formattedCompanies = [
@@ -156,13 +155,16 @@ export default function DashboardAnalytics() {
     }, [companies]);
 
     useEffect(() => {
-        loadPassPercentage();
-    }, [companyFilter, courseFilterPassPercentage, yearFilter, monthFilter]);
+        if (permissions.can_view) {
+            loadPassPercentage();
+        }
+    }, [companyFilter, courseFilterPassPercentage, yearFilter, monthFilter, permissions.can_view]);
 
-    // Fetch data when filters change
     useEffect(() => {
-        loadAnalyticsData();
-    }, [yearFilter, monthFilter, companyFilter]);
+        if (permissions.can_view) {
+            loadAnalyticsData();
+        }
+    }, [yearFilter, monthFilter, companyFilter, permissions.can_view]);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -186,8 +188,13 @@ export default function DashboardAnalytics() {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    // Tambah function untuk fetch employee course result
     const loadEmployeeCourseResult = async () => {
+        // ✅ CHECK PERMISSION
+        if (!permissions.can_view) {
+            console.log('No permission to view employee course result');
+            return;
+        }
+
         try {
             setLoadingEmployeeCourse(true);
             
@@ -201,12 +208,10 @@ export default function DashboardAnalytics() {
                 filters.id_course = courseFilterEmployee;
             }
             
-            // ✅ TAMBAH YEAR FILTER
             if (yearFilter !== 'All') {
                 filters.year = yearFilter;
             }
             
-            // ✅ TAMBAH MONTH FILTER
             if (monthFilter !== 'All') {
                 const monthIndex = monthOptions.indexOf(monthFilter);
                 if (monthIndex > 0) {
@@ -214,7 +219,7 @@ export default function DashboardAnalytics() {
                 }
             }
             
-            console.log('Employee Course Filters:', filters); // Debug
+            console.log('Employee Course Filters:', filters);
             
             const result = await fetchEmployeeCourseResult(filters);
             console.log('Employee Course Result:', result);
@@ -233,8 +238,10 @@ export default function DashboardAnalytics() {
     };
     
     useEffect(() => {
-        loadEmployeeCourseResult();
-    }, [companyFilter, courseFilterEmployee, yearFilter, monthFilter]); // ✅ TAMBAH yearFilter & monthFilter
+        if (permissions.can_view) {
+            loadEmployeeCourseResult();
+        }
+    }, [companyFilter, courseFilterEmployee, yearFilter, monthFilter, permissions.can_view]);
 
     const handleCourseEmployeeSelect = (courseId) => {
         setCourseFilterEmployee(courseId);
@@ -242,6 +249,13 @@ export default function DashboardAnalytics() {
     };
 
     const loadAnalyticsData = async () => {
+        // ✅ CHECK PERMISSION
+        if (!permissions.can_view) {
+            setLoading(false);
+            setError('You do not have permission to view this page');
+            return;
+        }
+
         try {
             setLoading(true);
             setError(null);
@@ -265,17 +279,14 @@ export default function DashboardAnalytics() {
             if (result.data) {
                 const apiData = result.data;
                 
-                // ✅ Extract courses list dengan ID untuk dropdown
                 if (apiData.most_accessed_courses && Array.isArray(apiData.most_accessed_courses)) {
                     const coursesWithId = apiData.most_accessed_courses.map(c => ({
                         id: c.id_course,
                         name: c.course_title
                     }));
                     
-                    // Untuk dropdown yang butuh ID
                     setCoursesListWithId([{ id: 'All', name: 'All' }, ...coursesWithId]);
                     
-                    // Untuk dropdown yang cuma butuh name (Employee x Course)
                     const courseNames = apiData.most_accessed_courses.map(c => c.course_title);
                     setCoursesList(['All', ...courseNames]);
                 }
@@ -294,6 +305,7 @@ export default function DashboardAnalytics() {
         }
     };
 
+    // ... (rest of the helper functions remain the same: getEmptyData, transformApiData, etc.)
     const getEmptyData = () => {
         return {
             stats: [
@@ -375,14 +387,12 @@ export default function DashboardAnalytics() {
             average_ebook_read_month: 0
         };
 
-        // ✅ Helper to get trend from direction
         const getTrend = (direction) => {
             if (direction === 'up') return 'up';
             if (direction === 'down') return 'down';
             return 'neutral';
         };
 
-        // ✅ Helper to format growth text
         const formatGrowth = (growth) => {
             if (!growth) return '0% this month';
             
@@ -401,7 +411,6 @@ export default function DashboardAnalytics() {
             }
         };
 
-        // ✅ Build stats from API data
         const stats = [
             {
                 id: 1,
@@ -460,7 +469,6 @@ export default function DashboardAnalytics() {
             }
         ];
 
-        // ✅ Transform Most Accessed Courses
         const colors = ['bg-teal-600', 'bg-amber-500', 'bg-blue-500', 'bg-purple-500', 'bg-pink-500'];
         const transformedMostAccessed = mostAccessed
             .filter(course => course && course.percentage > 0)
@@ -471,7 +479,6 @@ export default function DashboardAnalytics() {
                 color: colors[index % colors.length]
             }));
 
-        // ✅ Transform Average Results
         const transformedAvgResults = avgResults
             .filter(result => result && result.avg_score !== null && result.avg_score !== undefined)
             .map(result => ({
@@ -503,7 +510,7 @@ export default function DashboardAnalytics() {
     };
 
     const handleCoursePassSelect = (courseId) => {
-        setCourseFilterPassPercentage(courseId); // Simpan ID, bukan name
+        setCourseFilterPassPercentage(courseId);
         setShowCoursePassDropdown(false);
     };
 
@@ -518,6 +525,21 @@ export default function DashboardAnalytics() {
         setMonthFilter(currentMonthName);
         setCompanyFilter('All');
     };
+
+    // ✅ HANDLE NO PERMISSION STATE
+    if (!permissions.can_view) {
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-gray-50">
+                <div className="text-center bg-white p-8 rounded-lg shadow-lg max-w-md">
+                    <Lock className="w-16 h-16 text-red-500 mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">Access Denied</h3>
+                    <p className="text-gray-600 mb-4">
+                        You don't have permission to view this dashboard. Please contact your administrator for access.
+                    </p>
+                </div>
+            </div>
+        );
+    }
 
     if (loading) {
         return (

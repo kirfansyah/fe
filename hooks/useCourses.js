@@ -44,7 +44,12 @@ export function useCourses(contentId = null) {
         setIsSaving(true);
         setError(null);
         
-        const result = await ManagementService.createCourse(formData);
+        let result;
+        if (formData.get('id_course')) {
+            result = await ManagementService.updateCourse(formData);
+        } else {
+            result = await ManagementService.createCourse(formData);
+        }
         
         if (result.success) {
             await fetchCourses();
@@ -284,6 +289,23 @@ export function useCourses(contentId = null) {
         return result;
     }, [fetchEnrollData]);
 
+    const updateEnrollmentStatus = useCallback(async (enrollmentId, payload) => {
+        setIsSaving(true);
+        setError(null);
+        
+        const result = await ManagementService.updateEnrollmentStatus(enrollmentId, payload);
+        
+        if (result.success) {
+            await fetchCourses(); // Refresh data
+            await fetchEnrollData(); // Refresh enroll data jika ada
+        } else {
+            setError(result.message);
+        }
+        
+        setIsSaving(false);
+        return result;
+    }, [fetchCourses, fetchEnrollData]);
+
     // ✅ DELETE course
     const deleteEnrolls = useCallback(async (enrollmentId) => {
         setIsDeleting(enrollmentId);
@@ -412,6 +434,7 @@ export function useCourses(contentId = null) {
         handleSavePreTest,
         handleSaveEnroll,
         handleSaveAssignEmployeeGrouping,
+        updateEnrollmentStatus,
         fetchContentByID,
         fetchProfileInfo,
         fetchCompanyUnits,

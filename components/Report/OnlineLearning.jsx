@@ -11,6 +11,7 @@ import ExcelJS from "exceljs";
 import { useSweetAlert } from "@/hooks/useSweetAlert";
 import { useDebounce } from "@/hooks/useDebounce";
 import { ReportTableSkeleton } from "@/components/Loading/Skeleton";
+import API from '../../services/api';
 
 export default function OnlineLearningView({ 
   onlineLearning = [], 
@@ -26,49 +27,112 @@ export default function OnlineLearningView({
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Filters
-  const [selectedCompany, setSelectedCompany] = useState("");
-  const [selectedDepartment, setSelectedDepartment] = useState("");
-  const [selectedCourse, setSelectedCourse] = useState("");
+  const [selectedCompanyId, setSelectedCompanyId] = useState("");
+  const [selectedDeptId, setSelectedDeptId] = useState("");
+  const [selectedCourseId, setSelectedCourseId] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("");
-  const [dateFrom, setDateFrom] = useState(""); // ✅ Date From
-  const [dateTo, setDateTo] = useState("");     // ✅ Date To
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
   const { showWarning, showSuccess, showError } = useSweetAlert();
 
-  // ✅ Get unique values from ALL data (untuk dropdown options)
-  const [allData, setAllData] = useState([]);
-  
+  // ✅ State untuk master data filters
+  const [filterOptions, setFilterOptions] = useState({
+    companies: [],    // [{id: 1, name: "PT ABC"}]
+    departments: [],  // [{id: 2, name: "IT"}]
+    courses: [],      // [{id: 3, name: "Safety Training"}]
+    statuses: ["Passed", "Failed", "In Progress"] // Static
+  });
+
+  // ✅ Fetch master data untuk filters saat component mount
   useEffect(() => {
-    if (onlineLearning.length > 0) {
-      setAllData(onlineLearning);
-    }
-  }, [onlineLearning]);
+    const fetchFilterOptions = async () => {
+      try {
+        // Fetch dengan limit besar atau endpoint khusus untuk master data
+        const response = await API.get('/report/online-learning', { 
+                    params: { page: 1, limit: 99999 } 
+                });
+        
+        const data = response.data.data || [];
+        
+        // Build unique lists dengan ID dan Name
+        const uniqueCompanies = [];
+        const uniqueDepartments = [];
+        const uniqueCourses = [];
+        
+        const companySet = new Set();
+        const deptSet = new Set();
+        const courseSet = new Set();
+        
+        data.forEach(item => {
+          // Companies
+          if (item.company_id && item.company_name && !companySet.has(item.company_id)) {
+            companySet.add(item.company_id);
+            uniqueCompanies.push({
+              id: item.company_id,
+              name: item.company_name
+            });
+          }
+          
+          // Departments
+          if (item.department_id && item.dept_abbr && !deptSet.has(item.department_id)) {
+            deptSet.add(item.department_id);
+            uniqueDepartments.push({
+              id: item.department_id,
+              name: item.dept_abbr
+            });
+          }
+          
+          // Courses
+          if (item.id_course && item.course_title && !courseSet.has(item.id_course)) {
+            courseSet.add(item.id_course);
+            uniqueCourses.push({
+              id: item.id_course,
+              name: item.course_title
+            });
+          }
+        });
+        
+        // Sort alphabetically
+        uniqueCompanies.sort((a, b) => a.name.localeCompare(b.name));
+        uniqueDepartments.sort((a, b) => a.name.localeCompare(b.name));
+        uniqueCourses.sort((a, b) => a.name.localeCompare(b.name));
+        
+        setFilterOptions({
+          companies: uniqueCompanies,
+          departments: uniqueDepartments,
+          courses: uniqueCourses,
+          statuses: ["Passed", "Failed", "In Progress"]
+        });
+        
+      } catch (error) {
+        console.error("Error fetching filter options:", error);
+      }
+    };
+    
+    fetchFilterOptions();
+  }, []); // Run once on mount
 
-  const companies = [...new Set(allData.map((e) => e.company_name))].filter(Boolean);
-  const departments = [...new Set(allData.map((e) => e.dept_abbr))].filter(Boolean);
-  const courses = [...new Set(allData.map((e) => e.course_title))].filter(Boolean);
-  const statuses = [...new Set(allData.map((e) => e.status))].filter(Boolean);
-
-  // ✅ Fetch data with server-side filters
+  // ✅ Fetch data with filters
   useEffect(() => {
     const filters = {
       search: debouncedSearch,
-      company_name: selectedCompany,
-      dept_abbr: selectedDepartment,
-      course_title: selectedCourse,
+      company_id: selectedCompanyId,
+      department_id: selectedDeptId,
+      id_course: selectedCourseId,
       status: selectedStatus,
-      date_from: dateFrom,  // ✅ Send to backend
-      date_to: dateTo       // ✅ Send to backend
+      start_date: startDate,
+      end_date: endDate
     };
     
     onFetch(currentPage, pageSize, filters);
-  }, [currentPage, pageSize, debouncedSearch, selectedCompany, selectedDepartment, selectedCourse, selectedStatus, dateFrom, dateTo]);
+  }, [currentPage, pageSize, debouncedSearch, selectedCompanyId, selectedDeptId, selectedCourseId, selectedStatus, startDate, endDate]);
 
   // ✅ Reset page on filter change
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearch, selectedCompany, selectedDepartment, selectedCourse, selectedStatus, dateFrom, dateTo]);
+  }, [debouncedSearch, selectedCompanyId, selectedDeptId, selectedCourseId, selectedStatus, startDate, endDate]);
+
 
   const handleSelectAll = (checked) => {
     if (checked) {
@@ -98,12 +162,12 @@ export default function OnlineLearningView({
   };
 
   const clearAllFilters = () => {
-    setSelectedCompany("");
-    setSelectedDepartment("");
-    setSelectedCourse("");
+    setSelectedCompanyId("");
+    setSelectedDeptId("");
+    setSelectedCourseId("");
     setSelectedStatus("");
-    setDateFrom("");
-    setDateTo("");
+    setStartDate("");
+    setEndDate("");
     setSearchQuery("");
   };
 
@@ -121,15 +185,14 @@ export default function OnlineLearningView({
   };
 
   const activeFiltersCount = [
-    selectedCompany,
-    selectedDepartment,
-    selectedCourse,
+    selectedCompanyId,
+    selectedDeptId,
+    selectedCourseId,
     selectedStatus,
-    dateFrom,
-    dateTo
+    startDate,
+    endDate
   ].filter(Boolean).length;
 
-  // ✅ Format date for display
   const formatDateDisplay = (dateString) => {
     if (!dateString) return '';
     const date = new Date(dateString);
@@ -140,7 +203,25 @@ export default function OnlineLearningView({
     });
   };
 
-  // ✅ Export to Excel (selected items only)
+  // ✅ Helper to get name from ID (menggunakan == untuk type coercion)
+  const getCompanyName = (id) => {
+    if (!id) return '';
+    const company = filterOptions.companies.find(c => c.id == id); // ✅ == instead of ===
+    return company ? company.name : `Company ${id}`;
+  };
+
+  const getDeptName = (id) => {
+    if (!id) return '';
+    const dept = filterOptions.departments.find(d => d.id == id); // ✅ == instead of ===
+    return dept ? dept.name : `Dept ${id}`;
+  };
+
+  const getCourseName = (id) => {
+    if (!id) return '';
+    const course = filterOptions.courses.find(c => c.id == id); // ✅ == instead of ===
+    return course ? course.name : `Course ${id}`;
+  };
+
   const handleExportExcel = async () => {
     if (selectedItems.length === 0) {
       showWarning("Please select at least one record to export");
@@ -293,7 +374,7 @@ export default function OnlineLearningView({
     );
   }
 
-  return (
+   return (
     <div className="w-full mx-auto bg-white rounded-lg">
       {/* Header with Search and Filters */}
       <div className="mb-6 space-y-4">
@@ -330,38 +411,44 @@ export default function OnlineLearningView({
           </button>
         </div>
 
-        {/* Filters Row */}
+        {/* ✅ Updated Filters Row - Pakai filterOptions */}
         <div className="flex items-center gap-2 flex-wrap">
           <select
-            value={selectedCompany}
-            onChange={(e) => setSelectedCompany(e.target.value)}
+            value={selectedCompanyId}
+            onChange={(e) => setSelectedCompanyId(e.target.value)}
             className="py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
           >
             <option value="">All Companies</option>
-            {companies.map((company) => (
-              <option key={company} value={company}>{company}</option>
+            {filterOptions.companies.map((company) => (
+              <option key={company.id} value={company.id}>
+                {company.name}
+              </option>
             ))}
           </select>
 
           <select
-            value={selectedDepartment}
-            onChange={(e) => setSelectedDepartment(e.target.value)}
+            value={selectedDeptId}
+            onChange={(e) => setSelectedDeptId(e.target.value)}
             className="py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
           >
             <option value="">All Departments</option>
-            {departments.map((dept) => (
-              <option key={dept} value={dept}>{dept}</option>
+            {filterOptions.departments.map((dept) => (
+              <option key={dept.id} value={dept.id}>
+                {dept.name}
+              </option>
             ))}
           </select>
 
           <select
-            value={selectedCourse}
-            onChange={(e) => setSelectedCourse(e.target.value)}
+            value={selectedCourseId}
+            onChange={(e) => setSelectedCourseId(e.target.value)}
             className="py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
           >
             <option value="">All Courses</option>
-            {courses.map((course) => (
-              <option key={course} value={course}>{course}</option>
+            {filterOptions.courses.map((course) => (
+              <option key={course.id} value={course.id}>
+                {course.name}
+              </option>
             ))}
           </select>
 
@@ -371,26 +458,26 @@ export default function OnlineLearningView({
             className="py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
           >
             <option value="">All Status</option>
-            {statuses.map((status) => (
+            {filterOptions.statuses.map((status) => (
               <option key={status} value={status}>{status}</option>
             ))}
           </select>
 
-          {/* ✅ Date Range Picker */}
+          {/* Date Range Picker */}
           <div className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
             <Calendar size={16} className="text-gray-500" />
             <input
               type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
               className="text-sm focus:outline-none bg-transparent"
               placeholder="From"
             />
             <span className="text-gray-500">-</span>
             <input
               type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
               className="text-sm focus:outline-none bg-transparent"
               placeholder="To"
             />
@@ -411,26 +498,26 @@ export default function OnlineLearningView({
       {activeFiltersCount > 0 && (
         <div className="mb-4 flex items-center gap-2 flex-wrap">
           <span className="text-sm font-medium text-gray-600">Active filters:</span>
-          {selectedCompany && (
+          {selectedCompanyId && (
             <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
-              Company: {selectedCompany}
-              <button onClick={() => setSelectedCompany("")} className="hover:text-blue-900">
+              Company: {getCompanyName(selectedCompanyId)}
+              <button onClick={() => setSelectedCompanyId("")} className="hover:text-blue-900">
                 <X size={14} />
               </button>
             </span>
           )}
-          {selectedDepartment && (
+          {selectedDeptId && (
             <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
-              Dept: {selectedDepartment}
-              <button onClick={() => setSelectedDepartment("")} className="hover:text-green-900">
+              Dept: {getDeptName(selectedDeptId)}
+              <button onClick={() => setSelectedDeptId("")} className="hover:text-green-900">
                 <X size={14} />
               </button>
             </span>
           )}
-          {selectedCourse && (
+          {selectedCourseId && (
             <span className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm">
-              Course: {selectedCourse}
-              <button onClick={() => setSelectedCourse("")} className="hover:text-purple-900">
+              Course: {getCourseName(selectedCourseId)}
+              <button onClick={() => setSelectedCourseId("")} className="hover:text-purple-900">
                 <X size={14} />
               </button>
             </span>
@@ -443,13 +530,13 @@ export default function OnlineLearningView({
               </button>
             </span>
           )}
-          {(dateFrom || dateTo) && (
+          {(startDate || endDate) && (
             <span className="inline-flex items-center gap-1 px-3 py-1 bg-pink-100 text-pink-800 rounded-full text-sm">
               <Calendar size={12} />
-              {dateFrom && formatDateDisplay(dateFrom)}
-              {dateFrom && dateTo && ' - '}
-              {dateTo && formatDateDisplay(dateTo)}
-              <button onClick={() => { setDateFrom(""); setDateTo(""); }} className="hover:text-pink-900">
+              {startDate && formatDateDisplay(startDate)}
+              {startDate && endDate && ' - '}
+              {endDate && formatDateDisplay(endDate)}
+              <button onClick={() => { setStartDate(""); setEndDate(""); }} className="hover:text-pink-900">
                 <X size={14} />
               </button>
             </span>
@@ -457,10 +544,11 @@ export default function OnlineLearningView({
         </div>
       )}
 
-      {/* Table */}
+      {/* Table - No changes needed */}
       <div className="border border-gray-200 rounded-lg overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="min-w-[1400px] w-full">
+            {/* ... Table content sama seperti sebelumnya ... */}
             <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
               <tr className="border-b border-gray-200">
                 <th className="w-12 px-4 py-3">
@@ -577,7 +665,7 @@ export default function OnlineLearningView({
         </div>
       </div>
 
-      {/* Pagination */}
+      {/* Pagination - No changes needed */}
       <div className="flex items-center justify-between mt-4 flex-wrap gap-4">
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-600">Rows per page:</span>

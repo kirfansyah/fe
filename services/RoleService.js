@@ -488,28 +488,40 @@ class RoleService {
     }
   }
 
-  /**
-   * Dashboard Schedule
-   * @returns {Promise} API response
-   */
-  static async getNotification() {
-    try {
-      const response = await API.get("/dashboard/notifications");
-      return {
-        success: true,
-        data: response.data.data || [],
-        message: response.data.message || "Success",
-      };
-    } catch (error) {
-      console.error("RoleService.getNotification Error:", error);
-      return {
-        success: false,
-        data: [],
-        message:
-          error.response?.data?.message || "Failed to fetch notification",
-      };
+    /** 
+     * Dashboard Schedule
+     * @returns {Promise} API response
+     */
+    static async getNotification(filters = {})
+    {   
+        try {
+            const queryParams = new URLSearchParams();
+            
+            
+            if (filters.is_read !== undefined && filters.is_read !== null) {
+                queryParams.append('is_read', filters.is_read);
+            }
+
+            const queryString = queryParams.toString();
+            const endpoint = queryString 
+                ? `/dashboard/notifications?${queryString}` 
+                : '/dashboard/notifications';
+
+            const response = await API.get(endpoint);
+            return {
+                success: true,
+                data: response.data.data || [],
+                message: response.data.message || 'Success'
+            };
+        } catch (error) {
+            console.error('RoleService.getNotification Error:', error);
+            return {
+                success: false,
+                data: [],
+                message: error.response?.data?.message || 'Failed to fetch notification'
+            };
+        }   
     }
-  }
 
   /**
    * Dashboard Schedule

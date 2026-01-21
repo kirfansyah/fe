@@ -21,7 +21,7 @@ export default function Enroll({
 }) {
     const [loading, setLoading] = useState(false);
     const { showLoading, showSuccess, showError, confirmAction } = useSweetAlert();
-    const { handleSaveEnroll, fetchCourses, fetchEnrollData, deleteEnrolls } = useCourses();
+    const { handleSaveEnroll, fetchCourses, fetchEnrollData, deleteEnrolls,updateEnrollmentStatus } = useCourses();
     const { dataKaryawan } = useContext(ProfileContext);
     const deviceInfo = getDeviceInfo();
     const [enrollmentData, setEnrollmentData] = useState(() => {
@@ -483,7 +483,9 @@ export default function Enroll({
                             enrollmentData={enrollmentData}
                             deleteEnrolls={deleteEnrolls}
                             onDeleteContentSuccess={onDeleteContentSuccess}
+                            onUpdateEnrollmentStatus={updateEnrollmentStatus} 
                             permissions={permissions} // ✅ Pass permissions to child
+                            created_by={dataKaryawan?.nama || 'System'}
                         />
                     </div>
                 )}
