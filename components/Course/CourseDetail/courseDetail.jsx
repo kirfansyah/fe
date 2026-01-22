@@ -33,6 +33,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import Swal from "sweetalert2";
 
 export default function CourseDetail({ ...props }) {
   const { id, breadCrumb, startCourse } = props;
@@ -54,6 +55,8 @@ export default function CourseDetail({ ...props }) {
   const [openConfirm, setOpenConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [createdBy, setCreatedBy] = useState("system");
+  const [createdDevice, setCreatedDevice] = useState("web");
 
   const orderedKeys = [
     "courseGuide",
@@ -62,6 +65,20 @@ export default function CourseDetail({ ...props }) {
     "courseContent",
     "postTest",
   ];
+
+  const getCookie = (name) => {
+    if (typeof document === "undefined") return null;
+    const match = document.cookie.match(
+      new RegExp("(^| )" + name + "=([^;]+)")
+    );
+    return match ? decodeURIComponent(match[2]) : null;
+  };
+
+  const getDeviceType = () => {
+    if (typeof navigator === "undefined") return "web";
+    const ua = navigator.userAgent.toLowerCase();
+    return /mobile|android|iphone|ipad/.test(ua) ? "mobile" : "web";
+  };
 
   const formatDate = (dateStr) => {
     if (!dateStr) return "-";
@@ -75,6 +92,15 @@ export default function CourseDetail({ ...props }) {
 
     return `${day}-${month}-${year}`;
   };
+
+  useEffect(() => {
+    const nama = getCookie("nama");
+    if (nama) {
+      setCreatedBy(nama);
+    }
+
+    setCreatedDevice(getDeviceType());
+  }, []);
 
   useEffect(() => {
     if (typeof document !== "undefined") {
@@ -111,6 +137,7 @@ export default function CourseDetail({ ...props }) {
   }, [getCourseById, id, hasFeedback, userFeedback]);
 
   const sections = courseData?.sections || {};
+  //   console.log("coursedata a:", courseData);
 
   const handleStartCourse = async () => {
     try {
@@ -141,15 +168,56 @@ export default function CourseDetail({ ...props }) {
       //   toast.warning(error);
     }
   };
+  //   console.log(createdBy, createdDevice);
 
   const handleSendFeedback = async () => {
     if (!rating) {
-      alert("Silakan beri rating terlebih dahulu.");
+      //   alert("Silakan beri rating terlebih dahulu.");
+      //   toast.warning("Silakan beri rating terlebih dahulu.");
+      Swal.fire({
+        toast: true,
+        position: "top-end",
+        icon: "warning",
+        title: "Hampir Selesai ⭐",
+        text: "Yuk, beri rating terlebih dahulu agar kami bisa meningkatkan kualitas pembelajaran.",
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true,
+        confirmButtonColor: "#1e3a8a",
+        customClass: {
+          popup: "rounded-xl shadow-lg",
+        },
+        didOpen: (toast) => {
+          toast.addEventListener("mouseenter", Swal.stopTimer);
+          toast.addEventListener("mouseleave", Swal.resumeTimer);
+        },
+      });
+
       return;
     }
 
     if (!reviewText.trim()) {
-      alert("Silakan isi komentar atau masukan Anda.");
+      //   toast.warning("Silakan isi komentar atau masukan Anda.");
+      //   alert("Silakan isi komentar atau masukan Anda.");
+      Swal.fire({
+        toast: true,
+        position: "top-end",
+        icon: "warning",
+        title: "Masukan Diperlukan ✍️",
+        text: "Silakan isi komentar atau masukan Anda untuk membantu kami menjadi lebih baik.",
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true,
+        confirmButtonColor: "#1e3a8a",
+        customClass: {
+          popup: "rounded-xl shadow-lg",
+        },
+        didOpen: (toast) => {
+          toast.addEventListener("mouseenter", Swal.stopTimer);
+          toast.addEventListener("mouseleave", Swal.resumeTimer);
+        },
+      });
+
       return;
     }
     setIsSubmitting(true);
@@ -157,16 +225,38 @@ export default function CourseDetail({ ...props }) {
     try {
       const payload = {
         id_course: courseData.id_course,
+        id_course_enrollment: courseData.id_course_enrollment,
         rating: rating,
         feedback: reviewText,
-        created_by: "system", // nanti bisa diganti user login
-        created_device: "web",
+        // created_by: "system", // nanti bisa diganti user login
+        // created_device: "web",
+        created_by: createdBy,
+        created_device: createdDevice,
       };
 
       const result = await sendFeedback(payload);
 
       if (result?.success) {
-        toast.success("Terima kasih atas feedback Anda! 🎉");
+        // toast.success("Terima kasih atas feedback Anda! 🎉");
+        Swal.fire({
+          toast: true,
+          position: "top-end",
+          icon: "success",
+          title: "Terima Kasih! 🎉",
+          text: "Masukan dan feedback Anda sangat berarti bagi kami.",
+          showConfirmButton: false,
+          timer: 3000,
+          timerProgressBar: true,
+          confirmButtonColor: "#1e3a8a",
+          customClass: {
+            popup: "rounded-xl shadow-lg",
+          },
+          didOpen: (toast) => {
+            toast.addEventListener("mouseenter", Swal.stopTimer);
+            toast.addEventListener("mouseleave", Swal.resumeTimer);
+          },
+        });
+
         setHasFeedback(true);
         setUserFeedback(reviewText);
         setUserRating(rating);
@@ -230,13 +320,29 @@ export default function CourseDetail({ ...props }) {
                 </Avatar>
 
                 {/* Teks Status */}
-                <span className="font-medium">
+                {/* <span className="font-medium">
                   {courseData.progress_percentage === 0
                     ? "Not Started Yet"
                     : courseData.progress_percentage === 100
                     ? "Completed 🎉"
                     : "In Progress"}
-                </span>
+                </span> */}
+                {/* Status or Progress */}
+                <Badge
+                  className={`mt-2 px-3 py-1 w-24 text-center rounded-lg font-medium justify-center ${
+                    courseData.status === "Passed"
+                      ? "bg-green-600"
+                      : courseData.status === "Failed"
+                      ? "bg-red-500"
+                      : courseData.status === "Not Started"
+                      ? "bg-blue-500 text-white"
+                      : courseData.status === "In Progress"
+                      ? "bg-blue-500"
+                      : ""
+                  }`}
+                >
+                  {courseData.status}
+                </Badge>
 
                 {/* Badge sesuai status */}
                 {courseData.progress_percentage === 100 ? (
@@ -297,14 +403,18 @@ export default function CourseDetail({ ...props }) {
                       )}
                     </AlertDialogDescription>
                   </AlertDialogHeader>
-                  <AlertDialogFooter className="flex-row justify-center gap-2 sm:justify-end">
-                    <AlertDialogCancel>Batal</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={handleStartCourse}
-                      className="bg-blue-900 hover:bg-blue-700 text-white"
-                    >
-                      {loading ? "Memulai..." : "Mulai"}
-                    </AlertDialogAction>
+                  <AlertDialogFooter className="!flex !flex-row justify-center gap-3 sm:justify-end">
+                    <div className="flex w-full flex-row gap-3 justify-center">
+                      <AlertDialogCancel className="w-1/2 sm:w-auto h-11 !mt-0">
+                        Batal
+                      </AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleStartCourse}
+                        className="w-1/2 sm:w-auto h-11 bg-blue-900 hover:bg-blue-700 text-white"
+                      >
+                        {loading ? "Memulai..." : "Mulai"}
+                      </AlertDialogAction>
+                    </div>
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
@@ -457,33 +567,35 @@ export default function CourseDetail({ ...props }) {
                                 );
                               })
                           ) : (
-                            <Card className="flex items-center justify-between p-4">
-                              <FileText className="w-5 h-5 text-gray-400 mr-4" />
-                              <span className="flex-1 text-gray-500 italic">
-                                No content available.
-                              </span>
-                              <Checkbox
-                                checked={v.is_completed}
-                                className="w-5 h-5 border-gray-300 rounded bg-white 
-                                        data-[state=checked]:bg-blue-600 
-                                        data-[state=checked]:border-blue-600 focus:ring-0"
-                              />
-                            </Card>
+                            // <Card className="flex items-center justify-between p-4">
+                            //   <FileText className="w-5 h-5 text-gray-400 mr-4" />
+                            //   <span className="flex-1 text-gray-500 italic">
+                            //     No content available.
+                            //   </span>
+                            //   <Checkbox
+                            //     checked={v.is_completed}
+                            //     className="w-5 h-5 border-gray-300 rounded bg-white
+                            //             data-[state=checked]:bg-blue-600
+                            //             data-[state=checked]:border-blue-600 focus:ring-0"
+                            //   />
+                            // </Card>
+                            <></>
                           )}
                         </div>
                       ))
                     ) : (
-                      <Card className="flex items-center justify-between p-4">
-                        <FileText className="w-5 h-5 text-gray-400 mr-4" />
-                        <span className="flex-1 text-gray-500 italic">
-                          No content available.
-                        </span>
-                        <Checkbox
-                          className="w-5 h-5 border-gray-300 rounded bg-white 
-              data-[state=checked]:bg-blue-600 
-              data-[state=checked]:border-blue-600 focus:ring-0"
-                        />
-                      </Card>
+                      //           <Card className="flex items-center justify-between p-4">
+                      //             <FileText className="w-5 h-5 text-gray-400 mr-4" />
+                      //             <span className="flex-1 text-gray-500 italic">
+                      //               No content available.
+                      //             </span>
+                      //             <Checkbox
+                      //               className="w-5 h-5 border-gray-300 rounded bg-white
+                      //   data-[state=checked]:bg-blue-600
+                      //   data-[state=checked]:border-blue-600 focus:ring-0"
+                      //             />
+                      //           </Card>
+                      <></>
                     )}
                   </div>
                 );

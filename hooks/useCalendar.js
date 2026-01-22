@@ -30,8 +30,22 @@ export function useCalendar() {
     }
   }, []);
 
+  const getKaryawan = useCallback(async () => {
+    try {
+      const result = await API.getKaryawan();
+      //   console.log("Usecalendar: ", result);
+
+      return {
+        data: result,
+      };
+    } catch (err) {
+      console.error("❌ getKaryawan error:", err);
+      return { data: [] };
+    }
+  }, []);
   return {
     fetchCalendar,
     fetchHoliday,
+    getKaryawan,
   };
 }
