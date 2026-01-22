@@ -40,7 +40,8 @@ export function useReport() {
           department_id: filters.department_id || '',
           id_course: filters.id_course || '',
           end_date: filters.end_date || '',
-          start_date: filters.start_date || ''
+          start_date: filters.start_date || '',
+          status: filters.status || ''
         };
 
         const response = await API.getAllOnlineLearning(params);
@@ -116,6 +117,7 @@ export function useReport() {
       try {
         const response = await API.createOfflineLearning(offlineLearningData);
         return response.data;
+        
       } catch (err) {
         const errorMessage = err.message || "Failed to create offline learning";
         setErrorOffline(errorMessage);
@@ -145,12 +147,12 @@ export function useReport() {
     }, []);
 
     // ✅ Delete Offline Learning
-    const deleteOfflineLearning = useCallback(async (id) => {
+    const deleteOfflineLearning = useCallback(async (payload) => {
       setLoadingOffline(true);
       setErrorOffline(null);
 
       try {
-        await API.deleteOfflineLearning(id);
+        await API.deleteOfflineLearning(payload);
         return { success: true };
       } catch (err) {
         const errorMessage = err.message || "Failed to delete certificate";

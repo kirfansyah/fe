@@ -148,9 +148,11 @@ class ReportService {
    * @param {number} id - Certificate ID
    * @returns {Promise} API response
    */
-  static async deleteOfflineLearning(id) {
+  static async deleteOfflineLearning(payload) {
     try {
-      const response = await API.delete(`/report/offline-learning/${id}`);
+      const response = await API.delete("/report/offline-learning/delete", {
+        data: payload
+      });
 
       return {
         success: response.data.success,

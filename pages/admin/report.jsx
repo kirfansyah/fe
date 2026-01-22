@@ -7,10 +7,13 @@ import { useSweetAlert } from "../../hooks/useSweetAlert";
 import { GraduationCap, BookOpen, TrendingUp, Users, CheckCircle,XCircle ,Clock   } from "lucide-react";
 import { ReportStatsSkeleton } from "../../components/Loading/Skeleton";
 import ErrorMessage from "../../components/Loading/ErrorMessage";
-
+import { useMenuPermissions } from '@/hooks/useMenuPermissions'; // ✅ Import
+import { ShieldAlert } from 'lucide-react';
+import { useRouter } from "next/router";
 export default function Report() {
   const [activeTab, setActiveTab] = useState("online-learning");
   
+  const permissions = useMenuPermissions();
   const {
     // Online Learning
     onlineLearning,
@@ -41,12 +44,25 @@ export default function Report() {
   const { showSuccess, showError } = useSweetAlert();
 
   const handleSaveOfflineLearning = async (offlineLearningData) => {
+    if (!permissions.can_create) {
+      showError("You don't have permission to create certificates");
+      return;
+    }
     try {
       await addOfflineLearning(offlineLearningData);
       showSuccess("Training certificate added successfully!");
       
       // ✅ Refresh offline learning data after add
-      fetchOfflineLearning(1, 10);
+      await fetchOfflineLearning(1, 100, {
+        search: '',
+        company_id: '',
+        department_id: '',
+        training_title: '',
+        issuing_organization: '',
+        start_date: '',
+        end_date: ''
+      });
+      
     } catch (error) {
       console.error("Error creating certificate:", error);
       showError(error.message || "Failed to add training certificate");
@@ -54,25 +70,27 @@ export default function Report() {
   };
 
   const handleUpdateOfflineLearning = async (id, offlineLearningData) => {
+    if (!permissions.can_delete) {
+      showError("You don't have permission to delete certificates");
+      return;
+    }
+    if (!permissions.can_edit) {
+      showError("You don't have permission to update certificates");
+      return;
+    }
     try {
       await updateOfflineLearning(id, offlineLearningData);
       showSuccess("Training certificate updated successfully!");
-      
-      // ✅ Refresh offline learning data after update
-      fetchOfflineLearning(1, 10);
     } catch (error) {
       console.error("Error updating certificate:", error);
       showError(error.message || "Failed to update training certificate");
     }
   };
 
-  const handleDeleteOfflineLearning = async (id) => {
+  const handleDeleteOfflineLearning = async (payload) => {
     try {
-      await deleteOfflineLearning(id);
+      await deleteOfflineLearning(payload);
       showSuccess("Training certificate deleted successfully!");
-      
-      // ✅ Refresh offline learning data after delete
-      fetchOfflineLearning(1, 10);
     } catch (error) {
       console.error("Error deleting certificate:", error);
       showError(error.message || "Failed to delete training certificate");
@@ -102,6 +120,31 @@ export default function Report() {
           onRetry={refetch}
           fullScreen 
         />
+      </div>
+    );
+  }
+  const router = useRouter();
+  
+  if (!permissions.can_view) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-2xl mx-auto">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <ShieldAlert className="w-8 h-8 text-red-600" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
+            <p className="text-gray-600 mb-4">
+              You don't have permission to view this page.
+            </p>
+            <button
+                onClick={() => router.push('/dashboard')}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+                Back to Dashboard
+            </button>
+          </div>
+        </div>
       </div>
     );
   }

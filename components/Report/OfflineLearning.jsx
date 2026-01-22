@@ -21,7 +21,7 @@ import { ReportTableSkeleton } from "@/components/Loading/Skeleton";
 import { getDeviceInfo } from '@/lib/deviceHelper';
 import { ProfileContext } from '@/contexts/profile/ProfileContext';
 import API from '../../services/api';
-
+import { useMenuPermissions } from '@/hooks/useMenuPermissions';
 export default function OfflineLearningView({
   offlineLearning = [],
   pagination,
@@ -37,7 +37,7 @@ export default function OfflineLearningView({
   fetchEmployee
 }) {
   const { showWarning, showSuccess, showError, confirmAction } = useSweetAlert();
-  
+  const permissions = useMenuPermissions(); // ✅ Get permissions
   const [selectedItems, setSelectedItems] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearch = useDebounce(searchQuery, 500);
@@ -110,97 +110,98 @@ export default function OfflineLearningView({
     trainings: [],    // [Training titles as strings]
     providers: []     // [Provider names as strings]
   });
-
+   const { dataKaryawan } = useContext(ProfileContext);
+   const [refreshTrigger, setRefreshTrigger] = useState(0);
   // ✅ Fetch master data untuk filters saat component mount
-  useEffect(() => {
-    const fetchFilterOptions = async () => {
-      try {
-        const response = await API.get('/report/offline-learning', { 
-          params: { page: 1, limit: 99999 } 
-        });
-        
-        const data = response.data.data || [];
-        
-        // Build unique lists
-        const uniqueCompanies = [];
-        const uniqueDepartments = [];
-        const uniqueTrainings = new Set();
-        const uniqueProviders = new Set();
-        
-        const companySet = new Set();
-        const deptSet = new Set();
-        
-        data.forEach(item => {
-          // Companies
-          if (item.company_id && item.company_name && !companySet.has(item.company_id)) {
-            companySet.add(item.company_id);
-            uniqueCompanies.push({
-              id: item.company_id,
-              name: item.company_name
-            });
-          }
-          
-          // Departments
-          if (item.department_id && item.dept_abbr && !deptSet.has(item.department_id)) {
-            deptSet.add(item.department_id);
-            uniqueDepartments.push({
-              id: item.department_id,
-              name: item.dept_abbr
-            });
-          }
-          
-          // Trainings (tetap string karena backend filter by name)
-          if (item.training_title) {
-            uniqueTrainings.add(item.training_title);
-          }
-          
-          // Providers (tetap string)
-          if (item.issuing_organization) {
-            uniqueProviders.add(item.issuing_organization);
-          }
-        });
-        
-        // Sort
-        uniqueCompanies.sort((a, b) => a.name.localeCompare(b.name));
-        uniqueDepartments.sort((a, b) => a.name.localeCompare(b.name));
-        
-        setFilterOptions({
-          companies: uniqueCompanies,
-          departments: uniqueDepartments,
-          trainings: Array.from(uniqueTrainings).sort(),
-          providers: Array.from(uniqueProviders).sort()
-        });
-        
-      } catch (error) {
-        console.error("Error fetching filter options:", error);
-        setFilterOptions({
-          companies: [],
-          departments: [],
-          trainings: [],
-          providers: []
+  const fetchFilterOptions = async () => {
+  try {
+    const response = await API.get('/report/offline-learning', { 
+      params: { page: 1, limit: 99999 } 
+    });
+    
+    const data = response.data.data || [];
+    
+    // Build unique lists
+    const uniqueCompanies = [];
+    const uniqueDepartments = [];
+    const uniqueTrainings = new Set();
+    const uniqueProviders = new Set();
+    
+    const companySet = new Set();
+    const deptSet = new Set();
+    
+    data.forEach(item => {
+      // Companies
+      if (item.company_id && item.company_name && !companySet.has(item.company_id)) {
+        companySet.add(item.company_id);
+        uniqueCompanies.push({
+          id: item.company_id,
+          name: item.company_name
         });
       }
-    };
+      
+      // Departments
+      if (item.department_id && item.dept_abbr && !deptSet.has(item.department_id)) {
+        deptSet.add(item.department_id);
+        uniqueDepartments.push({
+          id: item.department_id,
+          name: item.dept_abbr
+        });
+      }
+      
+      // Trainings
+      if (item.training_title) {
+        uniqueTrainings.add(item.training_title);
+      }
+      
+      // Providers
+      if (item.issuing_organization) {
+        uniqueProviders.add(item.issuing_organization);
+      }
+    });
     
-    fetchFilterOptions();
-  }, []);
-
-  const { dataKaryawan } = useContext(ProfileContext);
-
-  // ✅ Fetch data with server-side filters (kirim IDs untuk company & dept)
-  useEffect(() => {
-    const filters = {
-      search: debouncedSearch,
-      company_id: selectedCompanyId,        // ✅ Kirim ID
-      department_id: selectedDeptId,        // ✅ Kirim ID
-      training_title: selectedTraining,      // ✅ String (backend filter by name)
-      issuing_organization: selectedProvider, // ✅ String (backend filter by name)
-      start_date: dateFrom,
-      end_date: dateTo
-    };
+    // Sort
+    uniqueCompanies.sort((a, b) => a.name.localeCompare(b.name));
+    uniqueDepartments.sort((a, b) => a.name.localeCompare(b.name));
     
-    onFetch(currentPage, pageSize, filters);
-  }, [currentPage, pageSize, debouncedSearch, selectedCompanyId, selectedDeptId, selectedTraining, selectedProvider, dateFrom, dateTo]);
+    setFilterOptions({
+      companies: uniqueCompanies,
+      departments: uniqueDepartments,
+      trainings: Array.from(uniqueTrainings).sort(),
+      providers: Array.from(uniqueProviders).sort()
+    });
+    
+  } catch (error) {
+    console.error("Error fetching filter options:", error);
+    setFilterOptions({
+      companies: [],
+      departments: [],
+      trainings: [],
+      providers: []
+    });
+  }
+};
+
+// ✅ Fetch filter options saat component mount
+useEffect(() => {
+  fetchFilterOptions();
+}, []);
+
+// ✅ Fetch data with filters + refresh filter options
+useEffect(() => {
+  const filters = {
+    search: debouncedSearch,
+    company_id: selectedCompanyId,
+    department_id: selectedDeptId,
+    training_title: selectedTraining,
+    issuing_organization: selectedProvider,
+    start_date: dateFrom,
+    end_date: dateTo
+  };
+  
+  onFetch(currentPage, pageSize, filters);
+}, [currentPage, pageSize, debouncedSearch, selectedCompanyId, selectedDeptId, selectedTraining, selectedProvider, dateFrom, dateTo, refreshTrigger]);
+
 
   // ✅ Reset page on filter change
   useEffect(() => {
@@ -326,8 +327,16 @@ export default function OfflineLearningView({
           updated_by: deviceInfo.device,
           updated_device: "Web"
         };
+        
         await onDelete(payload);
         showSuccess('Certificate deleted successfully');
+        
+        // ✅ Refresh filter options dulu
+        await fetchFilterOptions();
+        
+        // ✅ Baru trigger refresh data
+        setRefreshTrigger(prev => prev + 1);
+        
       } catch (error) {
         showError('Failed to delete certificate: ' + error.message);
       }
@@ -645,7 +654,15 @@ export default function OfflineLearningView({
       } else {
         await onSave(offlineLearningData);
       }
-      handleCancel();
+      
+      handleCancel(); // Close modal
+      
+      // ✅ Refresh filter options dulu
+      await fetchFilterOptions();
+      
+      // ✅ Baru trigger refresh data
+      setRefreshTrigger(prev => prev + 1);
+      
     } catch (error) {
       console.error("Error saving certificate:", error);
     }
@@ -856,27 +873,32 @@ export default function OfflineLearningView({
       <div className="mb-6 space-y-4">
         {/* Top Row: Add Button + Search + Export */}
         <div className="flex items-center justify-between gap-4">
-          <button
-            onClick={handleOpenAddModal}
-            className="flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
-          >
-            <CirclePlus size={18} />
-            Add Certificate
-          </button>
+          {permissions.can_create && (
+            <button
+              onClick={handleOpenAddModal}
+              className="flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+            >
+              <CirclePlus size={18} />
+              Add Certificate
+            </button>
+          )}
 
-          <button
-            onClick={handleExportExcel}
-            disabled={selectedItems.length === 0}
-            className="flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
-          >
-            <FileSpreadsheet size={16} />
-            <span>Export Excel</span>
-            {selectedItems.length > 0 && (
-              <span className="ml-1 px-2 py-0.5 bg-green-700 rounded-full text-xs">
-                {selectedItems.length}
-              </span>
-            )}
-          </button>
+          {/* ✅ Export - Check can_view permission */}
+          {permissions.can_view && (
+            <button
+              onClick={handleExportExcel}
+              disabled={selectedItems.length === 0}
+              className="flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+            >
+              <FileSpreadsheet size={16} />
+              <span>Export Excel</span>
+              {selectedItems.length > 0 && (
+                <span className="ml-1 px-2 py-0.5 bg-green-700 rounded-full text-xs">
+                  {selectedItems.length}
+                </span>
+              )}
+            </button>
+          )}
         </div>
 
         {/* ✅ Filters Row - Pakai filterOptions dengan ID untuk company & dept */}
@@ -1036,15 +1058,24 @@ export default function OfflineLearningView({
           <table className="min-w-[1600px] w-full">
             <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
               <tr className="border-b border-gray-200">
-                <th className="w-12 px-4 py-3">
-                  <input
-                    type="checkbox"
-                    checked={selectedItems.length === offlineLearning.length && offlineLearning.length > 0}
-                    onChange={(e) => handleSelectAll(e.target.checked)}
-                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                </th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">Action</th>
+                {/* ✅ Checkbox column - only if can export */}
+                {permissions.can_view && (
+                  <th className="w-12 px-4 py-3">
+                    <input
+                      type="checkbox"
+                      checked={selectedItems.length === offlineLearning.length && offlineLearning.length > 0}
+                      onChange={(e) => handleSelectAll(e.target.checked)}
+                      className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                  </th>
+                )}
+                
+                {/* ✅ Action column - only if can edit or delete */}
+                {(permissions.can_edit || permissions.can_delete) && (
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    Action
+                  </th>
+                )}
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">Employee Name</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">Employee ID</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">Position</th>
@@ -1067,32 +1098,43 @@ export default function OfflineLearningView({
                       selectedItems.includes(item.id_training_certificate) ? 'bg-blue-50' : index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
                     }`}
                   >
-                    <td className="px-4 py-3">
-                      <input
-                        type="checkbox"
-                        checked={selectedItems.includes(item.id_training_certificate)}
-                        onChange={(e) => handleSelectItem(item.id_training_certificate, e.target.checked)}
-                        className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      />
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleOpenEditModal(item)}
-                          className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                          title="Edit"
-                        >
-                          <Edit size={16} />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(item.id_training_certificate)}
-                          className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
-                          title="Delete"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
+                    {/* ✅ Checkbox - only if can export */}
+                    {permissions.can_view && (
+                      <td className="px-4 py-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedItems.includes(item.id_training_certificate)}
+                          onChange={(e) => handleSelectItem(item.id_training_certificate, e.target.checked)}
+                          className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                      </td>
+                    )}
+                    
+                    {/* ✅ Action buttons with permission checks */}
+                    {(permissions.can_edit || permissions.can_delete) && (
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          {permissions.can_edit && (
+                            <button
+                              onClick={() => handleOpenEditModal(item)}
+                              className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                              title="Edit"
+                            >
+                              <Edit size={16} />
+                            </button>
+                          )}
+                          {permissions.can_delete && (
+                            <button
+                              onClick={() => handleDelete(item.id_training_certificate)}
+                              className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
+                              title="Delete"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    )}
                     <td className="px-4 py-3">
                       <div className="text-sm font-semibold text-gray-900">{item.full_name}</div>
                     </td>

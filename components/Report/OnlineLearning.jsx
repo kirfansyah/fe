@@ -12,6 +12,7 @@ import { useSweetAlert } from "@/hooks/useSweetAlert";
 import { useDebounce } from "@/hooks/useDebounce";
 import { ReportTableSkeleton } from "@/components/Loading/Skeleton";
 import API from '../../services/api';
+import { useMenuPermissions } from '@/hooks/useMenuPermissions';
 
 export default function OnlineLearningView({ 
   onlineLearning = [], 
@@ -23,7 +24,7 @@ export default function OnlineLearningView({
   const [selectedItems, setSelectedItems] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearch = useDebounce(searchQuery, 500);
-  
+  const permissions = useMenuPermissions();
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -122,7 +123,8 @@ export default function OnlineLearningView({
       id_course: selectedCourseId,
       status: selectedStatus,
       start_date: startDate,
-      end_date: endDate
+      end_date: endDate,
+      status: selectedStatus
     };
     
     onFetch(currentPage, pageSize, filters);
@@ -243,6 +245,7 @@ export default function OnlineLearningView({
         views: [{ state: "frozen", ySplit: 1 }],
       });
 
+      // ✅ UPDATE: Kolom Excel
       worksheet.columns = [
         { header: "No", key: "no", width: 6 },
         { header: "Company Unit", key: "company", width: 28 },
@@ -251,11 +254,14 @@ export default function OnlineLearningView({
         { header: "Employee Name", key: "name", width: 28 },
         { header: "Position", key: "position", width: 18 },
         { header: "Course Name", key: "course", width: 35 },
+        { header: "Published Date", key: "publishDate", width: 16 },
+        { header: "End Date", key: "endDate", width: 16 },
+        { header: "Started At", key: "startedAt", width: 18 },
+        { header: "Completed At", key: "completedAt", width: 18 },
         { header: "Pretest", key: "pretest", width: 10 },
         { header: "Posttest", key: "posttest", width: 10 },
         { header: "Status", key: "status", width: 12 },
         { header: "Course Attempt", key: "attempt", width: 14 },
-        { header: "Date", key: "date", width: 14 },
         { header: "Refreshment Date", key: "refDate", width: 18 },
       ];
 
@@ -286,15 +292,19 @@ export default function OnlineLearningView({
           name: item.full_name || "-",
           position: item.position_name || "-",
           course: item.course_title || "-",
+          publishDate: item.publish_date ? new Date(item.publish_date) : "-",
+          endDate: item.end_date ? new Date(item.end_date) : "-",
+          startedAt: item.started_at ? new Date(item.started_at) : "-",
+          completedAt: item.completed_at ? new Date(item.completed_at) : "-",
           pretest: item.pretest ?? "-",
           posttest: item.posttest ?? "-",
           status: item.status || "-",
           attempt: item.course_attempt ?? "-",
-          date: item.date ? new Date(item.date) : "-",
           refDate: item.refreshment_date ? new Date(item.refreshment_date) : "-",
         });
 
-        const statusCell = row.getCell(10);
+        // ✅ UPDATE: Status cell index berubah ke kolom 14
+        const statusCell = row.getCell(14);
         if (item.status === "Passed") {
           statusCell.fill = {
             type: "pattern",
@@ -307,6 +317,13 @@ export default function OnlineLearningView({
             type: "pattern",
             pattern: "solid",
             fgColor: { argb: "FFFF0000" },
+          };
+          statusCell.font = { color: { argb: "FFFFFFFF" }, bold: true };
+        } else if (item.status === "In Progress") {
+          statusCell.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: "FF4472C4" },
           };
           statusCell.font = { color: { argb: "FFFFFFFF" }, bold: true };
         }
@@ -323,13 +340,18 @@ export default function OnlineLearningView({
             right: { style: "thin" },
           };
 
-          if ([1, 3, 4, 8, 9, 10, 11, 12, 13].includes(colNumber)) {
+          // ✅ UPDATE: Center alignment columns
+          if ([1, 3, 4, 8, 9, 10, 11, 12, 13, 14, 15, 16].includes(colNumber)) {
             cell.alignment = { horizontal: "center", vertical: "middle" };
           }
         });
       });
 
-      worksheet.getColumn("date").numFmt = "dd-mm-yyyy";
+      // ✅ UPDATE: Format tanggal untuk kolom baru
+      worksheet.getColumn("publishDate").numFmt = "dd-mm-yyyy";
+      worksheet.getColumn("endDate").numFmt = "dd-mm-yyyy";
+      worksheet.getColumn("startedAt").numFmt = "dd-mm-yyyy hh:mm";
+      worksheet.getColumn("completedAt").numFmt = "dd-mm-yyyy hh:mm";
       worksheet.getColumn("refDate").numFmt = "dd-mm-yyyy";
 
       const buffer = await workbook.xlsx.writeBuffer();
@@ -396,19 +418,21 @@ export default function OnlineLearningView({
             )}
           </div>
 
-          <button
-            onClick={handleExportExcel}
-            disabled={selectedItems.length === 0}
-            className="flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-green-500 text-sm font-medium"
-          >
-            <FileSpreadsheet size={16} />
-            <span>Export Excel</span>
-            {selectedItems.length > 0 && (
-              <span className="ml-1 px-2 py-0.5 bg-green-700 rounded-full text-xs">
-                {selectedItems.length}
-              </span>
-            )}
-          </button>
+          {permissions.can_view && (
+            <button
+              onClick={handleExportExcel}
+              disabled={selectedItems.length === 0}
+              className="flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-green-500 text-sm font-medium"
+            >
+              <FileSpreadsheet size={16} />
+              <span>Export Excel</span>
+              {selectedItems.length > 0 && (
+                <span className="ml-1 px-2 py-0.5 bg-green-700 rounded-full text-xs">
+                  {selectedItems.length}
+                </span>
+              )}
+            </button>
+          )}
         </div>
 
         {/* ✅ Updated Filters Row - Pakai filterOptions */}
@@ -551,26 +575,31 @@ export default function OnlineLearningView({
             {/* ... Table content sama seperti sebelumnya ... */}
             <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
               <tr className="border-b border-gray-200">
-                <th className="w-12 px-4 py-3">
-                  <input
-                    type="checkbox"
-                    checked={selectedItems.length === onlineLearning.length && onlineLearning.length > 0}
-                    onChange={(e) => handleSelectAll(e.target.checked)}
-                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                </th>
+                {permissions.can_view && (
+                  <th className="w-12 px-4 py-3">
+                    <input
+                      type="checkbox"
+                      checked={selectedItems.length === onlineLearning.length && onlineLearning.length > 0}
+                      onChange={(e) => handleSelectAll(e.target.checked)}
+                      className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                  </th>
+                )}
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">Employee Name</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">Employee ID</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">Position</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">Department</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">Company</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">Course Name</th>
+                <th className="text-center px-4 py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">Published Date</th>
+                <th className="text-center px-4 py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">End Date</th>
+                <th className="text-center px-4 py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">Started At</th>
+                <th className="text-center px-4 py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">Completed At</th>
                 <th className="text-center px-4 py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">Pretest</th>
                 <th className="text-center px-4 py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">Posttest</th>
                 <th className="text-center px-4 py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">Status</th>
                 <th className="text-center px-4 py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">Attempt</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">Date</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">Refreshment</th>
+                <th className="text-center px-4 py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">Refreshment</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -582,14 +611,16 @@ export default function OnlineLearningView({
                       selectedItems.includes(item.id_user_enrollment) ? 'bg-blue-50' : index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
                     }`}
                   >
-                    <td className="px-4 py-3">
-                      <input
-                        type="checkbox"
-                        checked={selectedItems.includes(item.id_user_enrollment)}
-                        onChange={(e) => handleSelectItem(item.id_user_enrollment, e.target.checked)}
-                        className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      />
-                    </td>
+                    {permissions.can_view && (
+                      <td className="px-4 py-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedItems.includes(item.id_user_enrollment)}
+                          onChange={(e) => handleSelectItem(item.id_user_enrollment, e.target.checked)}
+                          className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                      </td>
+                    )}
                     <td className="px-4 py-3">
                       <div className="text-sm font-semibold text-gray-900">{item.full_name}</div>
                     </td>
@@ -614,11 +645,80 @@ export default function OnlineLearningView({
                         {item.course_title}
                       </div>
                     </td>
+                    
+                    {/* ✅ UBAH: Kolom Published Date */}
                     <td className="px-4 py-3 text-center">
-                      <span className="text-sm text-gray-600">{item.pretest ?? '-'}</span>
+                      <div className="text-sm text-gray-600">
+                        {item.publish_date ? new Date(item.publish_date).toLocaleDateString("id-ID", {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric'
+                        }) : '-'}
+                      </div>
+                    </td>
+                    
+                    {/* ✅ UBAH: Kolom End Date */}
+                    <td className="px-4 py-3 text-center">
+                      <div className="text-sm text-gray-600">
+                        {item.end_date ? new Date(item.end_date).toLocaleDateString("id-ID", {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric'
+                        }) : '-'}
+                      </div>
+                    </td>
+                    
+                    {/* ✅ TAMBAH: Kolom Started At */}
+                    <td className="px-4 py-3 text-center">
+                      <div className="text-sm text-gray-600">
+                        {item.started_at ? (
+                          <div className="flex flex-col">
+                            <span>{new Date(item.started_at).toLocaleDateString("id-ID", {
+                              day: '2-digit',
+                              month: 'short',
+                              year: 'numeric'
+                            })}</span>
+                            <span className="text-xs text-gray-500">
+                              {new Date(item.started_at).toLocaleTimeString("id-ID", {
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 italic">Not started</span>
+                        )}
+                      </div>
+                    </td>
+                    
+                    {/* ✅ TAMBAH: Kolom Completed At */}
+                    <td className="px-4 py-3 text-center">
+                      <div className="text-sm text-gray-600">
+                        {item.completed_at ? (
+                          <div className="flex flex-col">
+                            <span>{new Date(item.completed_at).toLocaleDateString("id-ID", {
+                              day: '2-digit',
+                              month: 'short',
+                              year: 'numeric'
+                            })}</span>
+                            <span className="text-xs text-gray-500">
+                              {new Date(item.completed_at).toLocaleTimeString("id-ID", {
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 italic">Not completed</span>
+                        )}
+                      </div>
+                    </td>
+                    
+                    <td className="px-4 py-3 text-center">
+                      <span className="text-sm font-medium text-gray-900">{item.pretest ?? '-'}</span>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <span className="text-sm text-gray-600">{item.posttest ?? '-'}</span>
+                      <span className="text-sm font-medium text-gray-900">{item.posttest ?? '-'}</span>
                     </td>
                     <td className="px-4 py-3 text-center">
                       <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(item.status)}`}>
@@ -628,21 +728,20 @@ export default function OnlineLearningView({
                     <td className="px-4 py-3 text-center">
                       <span className="text-sm text-gray-600">{item.course_attempt ?? '-'}</span>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 text-center">
                       <div className="text-sm text-gray-600">
-                        {item.date ? new Date(item.date).toLocaleDateString("id-ID") : '-'}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="text-sm text-gray-600">
-                        {item.refreshment_date ? new Date(item.refreshment_date).toLocaleDateString("id-ID") : '-'}
+                        {item.refreshment_date ? new Date(item.refreshment_date).toLocaleDateString("id-ID", {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric'
+                        }) : '-'}
                       </div>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="13" className="px-4 py-12 text-center">
+                  <td colSpan="16" className="px-4 py-12 text-center">
                     <div className="flex flex-col items-center justify-center">
                       <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
                         <Search className="w-8 h-8 text-gray-400" />

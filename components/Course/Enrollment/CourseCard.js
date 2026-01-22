@@ -35,7 +35,8 @@ export default function CourseCard({
     onDeleteEnrollment,
     onUpdateEnrollmentStatus,
     permissions,
-    created_by
+    created_by,
+    onSuccess
 }) {
     const [modalState, setModalState] = useState({
         isOpen: false,
@@ -150,6 +151,7 @@ export default function CourseCard({
         );
         
         if (saveResult.success) {
+            await onSuccess();
             await Swal.fire({
                 icon: 'success',
                 toast: true,
@@ -277,39 +279,9 @@ export default function CourseCard({
             year: 'numeric' 
         });
     };
-
-    // ✅ Helper function to get enrollment status
     const getEnrollmentStatus = (enrollment) => {
-        if (!enrollment.publish_date || !enrollment.end_date) {
-            return { status: 'draft', label: 'Draft', color: 'gray' };
-        }
-
-        const now = new Date();
-        const publishDate = new Date(enrollment.publish_date);
-        const endDate = new Date(enrollment.end_date);
-
-        // Scheduled (belum publish)
-        if (now < publishDate) {
-            return { 
-                status: 'scheduled', 
-                label: 'Scheduled', 
-                color: 'blue',
-                icon: Clock 
-            };
-        }
-
-        // Active (sedang publish)
-        if (now >= publishDate && now <= endDate) {
-            return { 
-                status: 'published', 
-                label: 'Published', 
-                color: 'green',
-                icon: Globe 
-            };
-        }
-
-        // Expired (sudah lewat end_date)
-        if (now > endDate) {
+        // ✅ Unpublished (dari backend)
+        if (enrollment.is_unpublish) {
             return { 
                 status: 'unpublished', 
                 label: 'Unpublished', 
@@ -318,7 +290,23 @@ export default function CourseCard({
             };
         }
 
-        return { status: 'draft', label: 'Draft', color: 'gray' };
+        // ✅ Published (dari backend)
+        if (enrollment.publish_date && enrollment.end_date) {
+            return { 
+                status: 'published', 
+                label: 'Published', 
+                color: 'green',
+                icon: Globe 
+            };
+        }
+
+        // ✅ Draft (belum ada tanggal)
+        return { 
+            status: 'draft', 
+            label: 'Draft', 
+            color: 'gray',
+            icon: AlertCircle 
+        };
     };
 
     const canInteract = permissions?.can_create || permissions?.can_edit || permissions?.can_delete;
@@ -463,7 +451,6 @@ export default function CourseCard({
 
                                 // Color mapping for status
                                 const statusColorMap = {
-                                    'scheduled': { bg: 'bg-blue-100', text: 'text-blue-700', border: 'border-blue-200' },
                                     'published': { bg: 'bg-green-100', text: 'text-green-700', border: 'border-green-200' },
                                     'unpublished': { bg: 'bg-red-100', text: 'text-red-700', border: 'border-red-200' },
                                     'draft': { bg: 'bg-gray-100', text: 'text-gray-600', border: 'border-gray-200' },
