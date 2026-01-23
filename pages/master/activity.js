@@ -33,7 +33,7 @@ export default function AuditTrail() {
     const [searchQuery, setSearchQuery] = useState('');
     const debouncedSearch = useDebounce(searchQuery, 500);
     
-    const [filterLevel, setFilterLevel] = useState('INFO'); // INFO, WARNING, ERROR
+    const [filterLevel, setFilterLevel] = useState('INFO'); // INFO, WARN, ERROR
     const [dateFrom, setDateFrom] = useState('');
     const [dateTo, setDateTo] = useState('');
     const [showModal, setShowModal] = useState(false);
@@ -113,7 +113,7 @@ export default function AuditTrail() {
         switch (level) {
             case 'INFO':
                 return <Activity className="w-4 h-4" />;
-            case 'WARNING':
+            case 'WARN':
                 return <AlertCircle className="w-4 h-4" />;
             case 'ERROR':
                 return <XCircle className="w-4 h-4" />;
@@ -127,7 +127,7 @@ export default function AuditTrail() {
         switch (level) {
             case 'INFO':
                 return 'bg-blue-100 text-blue-800';
-            case 'WARNING':
+            case 'WARN':
                 return 'bg-yellow-100 text-yellow-800';
             case 'ERROR':
                 return 'bg-red-100 text-red-800';
@@ -141,7 +141,7 @@ export default function AuditTrail() {
         switch (level) {
             case 'INFO':
                 return <CheckCircle className="w-4 h-4 text-blue-600" />;
-            case 'WARNING':
+            case 'WARN':
                 return <AlertCircle className="w-4 h-4 text-yellow-600" />;
             case 'ERROR':
                 return <XCircle className="w-4 h-4 text-red-600" />;
@@ -332,7 +332,7 @@ export default function AuditTrail() {
                                 >
                                     <option value="all">All Levels</option>
                                     <option value="INFO">INFO</option>
-                                    <option value="WARNING">WARNING</option>
+                                    <option value="WARN">WARNING</option>
                                     <option value="ERROR">ERROR</option>
                                 </select>
                             </div>
@@ -664,7 +664,7 @@ export default function AuditTrail() {
                                         {getStatusIcon(selectedLog.level)}
                                         <span className={`text-sm font-semibold ${
                                             selectedLog.level === 'INFO' ? 'text-blue-700' :
-                                            selectedLog.level === 'WARNING' ? 'text-yellow-700' :
+                                            selectedLog.level === 'WARN' ? 'text-yellow-700' :
                                             'text-red-700'
                                         }`}>
                                             {selectedLog.level}

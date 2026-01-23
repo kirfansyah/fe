@@ -382,19 +382,7 @@ export default function OnlineLearningView({
     return <ReportTableSkeleton />;
   }
 
-  if (error) {
-    return (
-      <div className="text-center py-12">
-        <div className="text-red-600 mb-4">{error}</div>
-        <button
-          onClick={() => onFetch(1, 10)}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-        >
-          Retry
-        </button>
-      </div>
-    );
-  }
+  
 
    return (
     <div className="w-full mx-auto bg-white rounded-lg">
