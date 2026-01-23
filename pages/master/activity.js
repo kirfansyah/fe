@@ -56,28 +56,7 @@ export default function AuditTrail() {
         hasPrevious: false
     });
 
-    // ✅ PERMISSION GUARD - Block entire page if no view permission
-    if (!permissions.can_view) {
-        return (
-            <div className="flex items-center justify-center min-h-screen bg-gray-50">
-                <div className="text-center bg-white p-8 rounded-xl shadow-lg max-w-md border border-red-200">
-                    <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <ShieldAlert className="w-10 h-10 text-red-500" />
-                    </div>
-                    <h3 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h3>
-                    <p className="text-gray-600 mb-4">
-                        You do not have permission to view the Audit Trail. This section is restricted to authorized personnel only.
-                    </p>
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-4 mt-4">
-                        <p className="text-sm text-red-700 flex items-center gap-2">
-                            <Lock className="w-4 h-4" />
-                            Please contact your system administrator if you believe you should have access.
-                        </p>
-                    </div>
-                </div>
-            </div>
-        );
-    }
+    
 
     // Fetch audit logs dengan server-side filtering
     const fetchAuditLogs = async () => {
@@ -259,7 +238,28 @@ export default function AuditTrail() {
             setCurrentPage(currentPage - 1);
         }
     };
-
+    // ✅ PERMISSION GUARD - Block entire page if no view permission
+    if (!permissions.can_view) {
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-gray-50">
+                <div className="text-center bg-white p-8 rounded-xl shadow-lg max-w-md border border-red-200">
+                    <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <ShieldAlert className="w-10 h-10 text-red-500" />
+                    </div>
+                    <h3 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h3>
+                    <p className="text-gray-600 mb-4">
+                        You do not have permission to view the Audit Trail. This section is restricted to authorized personnel only.
+                    </p>
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4 mt-4">
+                        <p className="text-sm text-red-700 flex items-center gap-2">
+                            <Lock className="w-4 h-4" />
+                            Please contact your system administrator if you believe you should have access.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
     return (
         <div className="p-6 bg-gray-50 min-h-screen">
             {/* Header */}
