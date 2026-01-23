@@ -8,6 +8,7 @@ import Link from "next/link";
 import { Maximize, LogOut, Home, Minimize } from "lucide-react";
 import { CourseContext } from "@/contexts/CourseContext";
 import { useEmployees } from "@/hooks/useEmployees";
+import { decodeId, encodeId } from "@/lib/id64";
 
 export default function TopBar({ exitCourse, mainCourse }) {
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -119,7 +120,7 @@ export default function TopBar({ exitCourse, mainCourse }) {
     }
 
     // 3️⃣ Baru navigasi
-    router.push(`${exitCourse}${courseId}`);
+    router.push(`${exitCourse}${encodeId(courseId)}`);
   };
 
   //   const handleMainCourse = async () => {

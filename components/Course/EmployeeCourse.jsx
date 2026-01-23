@@ -24,7 +24,7 @@ import Link from "next/link";
 import { useEmployees } from "@/hooks/useEmployees";
 import { BookOpen, Clock, Star } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { toast } from "sonner";
+import { encodeId } from "@/lib/id64";
 
 export default function CoursePage({ link }) {
   const { fetchEmployees } = useEmployees();
@@ -268,99 +268,6 @@ export default function CoursePage({ link }) {
                 >
                   {/* ================= LIST MODE ================= */}
                   {viewMode === "list" ? (
-                    // <Card className="w-full relative hover:shadow-lg transition-all duration-300 border-l-4 border-blue-600">
-                    //   <div className="flex items-center gap-4 p-4">
-                    //     {/* Thumbnail */}
-                    //     <div className="w-32 flex-shrink-0">
-                    //       <img
-                    //         src={
-                    //           course?.thumbnail_url ||
-                    //           "/img/course/Course app-bro.png"
-                    //         }
-                    //         onError={(e) =>
-                    //           (e.target.src = "/img/course/Course app-bro.png")
-                    //         }
-                    //         className="w-32 h-20 object-cover rounded-lg shadow-sm"
-                    //       />
-                    //     </div>
-
-                    //     {/* Middle Content */}
-                    //     <div className="flex flex-col justify-between flex-1">
-                    //       <div className="flex flex-col gap-1">
-                    //         <Link href={`${link}${course.id_course}`}>
-                    //           <span className="text-xl font-semibold text-blue-700 hover:underline cursor-pointer">
-                    //             {course.course_title}
-                    //           </span>
-                    //         </Link>
-
-                    //         {/* Badges */}
-                    //         <div className="flex gap-2 mt-1 flex-wrap">
-                    //           {course.enrollment_categories?.map((cat, i) => (
-                    //             <Badge key={i} variant="secondary">
-                    //               {cat}
-                    //             </Badge>
-                    //           ))}
-                    //         </div>
-                    //       </div>
-                    //       {/* Stats */}
-                    //       <div className="flex items-center gap-4 text-sm text-gray-700">
-                    //         <span className="flex items-center gap-1">
-                    //           <BookOpen size={16} />
-                    //           {course.total_lessons} Lessons
-                    //         </span>
-
-                    //         <span className="flex items-center gap-1">
-                    //           <Clock size={16} />
-                    //           {course.total_duration}
-                    //         </span>
-
-                    //         <span className="flex items-center gap-1">
-                    //           <Star
-                    //             size={16}
-                    //             className="text-yellow-500 fill-yellow-500"
-                    //           />
-                    //           {course.average_rating || "No review"}
-                    //         </span>
-                    //       </div>
-                    //       {/* Status or Progress */}
-                    //       <Badge
-                    //         className={`mt-2 px-3 py-1 w-24 text-center justify-center ${
-                    //           course.status === "Passed"
-                    //             ? "bg-green-600"
-                    //             : course.status === "Failed"
-                    //             ? "bg-red-600"
-                    //             : course.status === "Not Started"
-                    //             ? "bg-blue-500 text-white"
-                    //             : course.status === "In Progress"
-                    //             ? "bg-gray-500"
-                    //             : ""
-                    //         }`}
-                    //       >
-                    //         {course.status}
-                    //       </Badge>
-                    //     </div>
-
-                    //     {/* Right Actions */}
-                    //     <div className="flex flex-col justify-center items-end gap-2">
-                    //       {/* <DropdownMenu>
-                    //       <DropdownMenuTrigger asChild>
-                    //         <Button variant="ghost" size="icon">
-                    //           <MoreVertical className="h-5 w-5" />
-                    //         </Button>
-                    //       </DropdownMenuTrigger>
-                    //       <DropdownMenuContent align="end"> */}
-                    //       {/* <DropdownMenuItem>Edit</DropdownMenuItem>
-                    //         <DropdownMenuItem>Delete</DropdownMenuItem> */}
-                    //       {/* </DropdownMenuContent>
-                    //     </DropdownMenu> */}
-                    //       <Link href={`${link}${course.id_course}`}>
-                    //         <Button className="bg-blue-900 hover:bg-blue-700">
-                    //           View
-                    //         </Button>
-                    //       </Link>
-                    //     </div>
-                    //   </div>
-                    // </Card>
                     <>
                       {/* ================= DESKTOP CARD ================= */}
                       <div className="hidden md:block">
@@ -498,22 +405,6 @@ export default function CoursePage({ link }) {
                     /* ================= TILES MODE (ORIGINAL CARD) ================= */
                     // <Card className="w-96 relative">
                     <Card className="md:w-96 sm:w-full xs:w-full relative">
-                      {/* <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="absolute top-2 right-2 h-8 w-8 p-0"
-                        >
-                          <MoreVertical className="h-5 w-5" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end"> */}
-                      {/* <DropdownMenuItem>Edit</DropdownMenuItem>
-                        <DropdownMenuItem>Delete</DropdownMenuItem> */}
-                      {/* </DropdownMenuContent>
-                    </DropdownMenu> */}
-
                       <CardHeader className="mt-1">
                         <CardTitle className="text-2xl text-blue-600">
                           {(() => {
@@ -554,7 +445,10 @@ export default function CoursePage({ link }) {
                               }
                               className="w-full h-40 object-cover rounded-md"
                             />
-                            <Link href={`${link}${course.id_course}`} passHref>
+                            <Link
+                              href={`${link}${encodeId(course.id_course)}`}
+                              passHref
+                            >
                               <Button className="mt-3 w-full bg-blue-900 hover:bg-blue-700 text-white">
                                 View Course
                               </Button>
@@ -564,7 +458,7 @@ export default function CoursePage({ link }) {
                           <div className="md:w-1/2 flex flex-col justify-start space-y-2 text-gray-700">
                             <div className="flex justify-between">
                               <span className="font-semibold">Release</span>{" "}
-                              {course.release}
+                              {course.publish_date}
                             </div>
                             <div className="flex justify-between">
                               <span className="font-semibold">Lesson</span>{" "}
@@ -576,7 +470,9 @@ export default function CoursePage({ link }) {
                             </div>
                             <div className="flex justify-between">
                               <span className="font-semibold">Reviews</span>{" "}
-                              {course.review ? course.review + "/5" : ""}
+                              {course.average_rating
+                                ? course.average_rating + "/5"
+                                : ""}
                             </div>
                             <div className="flex justify-between">
                               <span className="font-semibold">Status</span>

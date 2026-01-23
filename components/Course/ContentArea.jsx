@@ -684,7 +684,7 @@ export default function ContentArea({ exitCourse }) {
               >
                 {currentQuiz < step.questions.length - 1
                   ? "Next Soal"
-                  : `Next: ${nextStep?.content_title}`}
+                  : `Next: ${nextStep?.content_type_name}`}
               </Button>
             ) : !step.is_completed ? (
               <Button
@@ -743,7 +743,7 @@ export default function ContentArea({ exitCourse }) {
               (step.type === "video" && !videoFinished)
             }
           >
-            Next: {nextStep.content_title}
+            Next: {nextStep.content_type_name}
           </Button>
         ) : step.section === "postTest" && step.is_completed ? (
           <Button

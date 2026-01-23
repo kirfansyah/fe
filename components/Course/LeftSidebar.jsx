@@ -72,9 +72,10 @@ export default function LeftSidebar() {
                       />
 
                       <span className="flex-1 ml-2 text-lg">
-                        {item.content_title == "Pre Test (Copy)"
+                        {/* {item.content_title == "Pre Test (Copy)"
                           ? "Post Test"
-                          : item.content_title}
+                          : item.content_title} */}
+                        {item.content_type_name}
                       </span>
                     </div>
                   ))}

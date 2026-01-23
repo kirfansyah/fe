@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import Swal from "sweetalert2";
+import { decodeId, encodeId } from "@/lib/id64";
 
 export default function CourseDetail({ ...props }) {
   const { id, breadCrumb, startCourse } = props;
@@ -158,7 +159,7 @@ export default function CourseDetail({ ...props }) {
         }
       }
       setCourseId(courseData.id_course);
-      router.push(`${startCourse}${courseData.id_course}`);
+      router.push(`${startCourse}${encodeId(courseData.id_course)}`);
     } catch (error) {
       console.error("❌ Gagal melakukan enrollment:", error);
       console.log(
@@ -484,7 +485,7 @@ export default function CourseDetail({ ...props }) {
                               ? index === 0
                                 ? "Course Content"
                                 : ""
-                              : v.content_title}
+                              : v.content_type_name}
                           </h2>
 
                           {isCourseContent ? (

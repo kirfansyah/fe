@@ -309,7 +309,7 @@
 import dynamic from "next/dynamic";
 import { useState, useEffect, useRef } from "react";
 import { pdfjs } from "react-pdf";
-import { ChevronLeft, ChevronRight, Minimize, Maximize } from "lucide-react";
+import { ChevronLeft, ChevronRight, Minimize, Maximize, X } from "lucide-react";
 import { toast } from "sonner";
 
 const Document = dynamic(
@@ -487,7 +487,47 @@ export default function PdfViewer({
             isFullscreen ? "text-white" : "text-black"
           } md:opacity-0 md:group-hover:opacity-100 focus:outline-none focus:ring-0 outline-none ring-0`}
         >
-          {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
+          {isFullscreen ? (
+            <button
+              onClick={() => setIsFullscreen(false)}
+              aria-label="Close fullscreen"
+              className="
+                    flex items-center justify-center
+                    w-8 h-8
+                    rounded-md
+                    bg-red-500
+                    transition-colors
+                    bg-red-500/90 hover:bg-red-600
+                    shadow-sm hover:shadow-md
+
+                    outline-none
+                    focus:outline-none
+                    focus:ring-0
+                    focus-visible:outline-none
+                    "
+            >
+              <X size={18} className="text-white" />
+            </button>
+          ) : (
+            <button
+              onClick={() => setIsFullscreen(true)}
+              aria-label="Enter fullscreen"
+              className="
+                    flex items-center justify-center
+                    w-8 h-8
+                    rounded-md
+                    hover:bg-gray-100
+                    transition-colors
+                    shadow-sm hover:shadow-md
+                    outline-none
+                    focus:outline-none
+                    focus:ring-0
+                    focus-visible:outline-none
+                    "
+            >
+              <Maximize size={18} />
+            </button>
+          )}
         </button>
 
         {/* ===== PDF DOCUMENT ===== */}
