@@ -20,27 +20,32 @@ import {
     FileText,
     Database,
     ChevronDown,
-    ChevronUp
+    ChevronUp,
+    Lock,
+    ShieldAlert
 } from 'lucide-react';
 import Admin from "layouts/Admin.js";
 import { useDebounce } from '@/hooks/useDebounce';
 import API from '@/services/api';
+import { useMenuPermissions } from '@/hooks/useMenuPermissions';
 
 export default function AuditTrail() {
+    // ✅ GET PERMISSIONS FIRST
+    const permissions = useMenuPermissions();
+    
     const [loading, setLoading] = useState(false);
     const [pageSize, setPageSize] = useState(10);
     const [currentPage, setCurrentPage] = useState(1);
     const [searchQuery, setSearchQuery] = useState('');
     const debouncedSearch = useDebounce(searchQuery, 500);
     
-    const [filterLevel, setFilterLevel] = useState('INFO'); // INFO, WARN, ERROR
+    const [filterLevel, setFilterLevel] = useState('all');
     const [dateFrom, setDateFrom] = useState('');
     const [dateTo, setDateTo] = useState('');
     const [showModal, setShowModal] = useState(false);
     const [selectedLog, setSelectedLog] = useState(null);
     const [showFilters, setShowFilters] = useState(true);
 
-    // ✅ State untuk data
     const [auditData, setAuditData] = useState([]);
     const [pagination, setPagination] = useState({
         currentPage: 1,
@@ -51,7 +56,30 @@ export default function AuditTrail() {
         hasPrevious: false
     });
 
-    // ✅ Fetch audit logs dengan server-side filtering
+    // ✅ PERMISSION GUARD - Block entire page if no view permission
+    if (!permissions.can_view) {
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-gray-50">
+                <div className="text-center bg-white p-8 rounded-xl shadow-lg max-w-md border border-red-200">
+                    <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <ShieldAlert className="w-10 h-10 text-red-500" />
+                    </div>
+                    <h3 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h3>
+                    <p className="text-gray-600 mb-4">
+                        You do not have permission to view the Audit Trail. This section is restricted to authorized personnel only.
+                    </p>
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4 mt-4">
+                        <p className="text-sm text-red-700 flex items-center gap-2">
+                            <Lock className="w-4 h-4" />
+                            Please contact your system administrator if you believe you should have access.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // Fetch audit logs dengan server-side filtering
     const fetchAuditLogs = async () => {
         try {
             setLoading(true);
@@ -84,17 +112,14 @@ export default function AuditTrail() {
         }
     };
 
-    // ✅ Fetch on mount & when filters change
     useEffect(() => {
         fetchAuditLogs();
     }, [currentPage, pageSize, debouncedSearch, filterLevel, dateFrom, dateTo]);
 
-    // ✅ Reset page on filter change
     useEffect(() => {
         setCurrentPage(1);
     }, [debouncedSearch, filterLevel, dateFrom, dateTo]);
 
-    // Format datetime
     const formatDateTime = (dateTimeString) => {
         if (!dateTimeString) return '-';
         const date = new Date(dateTimeString);
@@ -108,7 +133,6 @@ export default function AuditTrail() {
         });
     };
 
-    // Get action icon based on level
     const getActionIcon = (level) => {
         switch (level) {
             case 'INFO':
@@ -122,7 +146,6 @@ export default function AuditTrail() {
         }
     };
 
-    // Get action badge color based on level
     const getActionBadgeColor = (level) => {
         switch (level) {
             case 'INFO':
@@ -136,7 +159,6 @@ export default function AuditTrail() {
         }
     };
 
-    // Get status icon based on level
     const getStatusIcon = (level) => {
         switch (level) {
             case 'INFO':
@@ -150,14 +172,18 @@ export default function AuditTrail() {
         }
     };
 
-    // Handle view detail
     const handleViewDetail = (log) => {
         setSelectedLog(log);
         setShowModal(true);
     };
 
-    // Handle export
+    // ✅ PERMISSION CHECK: Export hanya untuk yang punya view permission
     const handleExport = async () => {
+        if (!permissions.can_view) {
+            alert('You do not have permission to export audit logs');
+            return;
+        }
+
         try {
             setLoading(true);
             const params = {
@@ -172,7 +198,6 @@ export default function AuditTrail() {
             const response = await API.get('/audit-trails', { params });
             const data = response.data?.data || [];
 
-            // Convert to CSV
             const headers = ['ID', 'Date', 'Level', 'User (NIK)', 'Message', 'IP Address', 'Method'];
             const csvData = data.map(log => [
                 log.id,
@@ -189,7 +214,6 @@ export default function AuditTrail() {
                 ...csvData.map(row => row.map(cell => `"${cell}"`).join(','))
             ].join('\n');
 
-            // Download
             const blob = new Blob([csv], { type: 'text/csv' });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -204,17 +228,14 @@ export default function AuditTrail() {
         }
     };
 
-    // Handle refresh
     const handleRefresh = () => {
         fetchAuditLogs();
     };
 
-    // Check if any filter is active
     const hasActiveFilters = () => {
         return filterLevel !== 'all' || dateFrom !== '' || dateTo !== '';
     };
 
-    // Clear all filters
     const clearAllFilters = () => {
         setFilterLevel('all');
         setDateFrom('');
@@ -245,8 +266,17 @@ export default function AuditTrail() {
             <div className="mb-6 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 <div className="flex justify-between items-center">
                     <div>
-                        <h1 className="text-2xl font-bold text-gray-900 mb-1">Audit Trail</h1>
-                        <p className="text-gray-600 text-sm">Track all system activities and changes</p>
+                        <div className="flex items-center gap-3">
+                            <h1 className="text-2xl font-bold text-gray-900">Audit Trail</h1>
+                            {/* ✅ VIEW ONLY BADGE if no other permissions */}
+                            {permissions.can_view && !permissions.can_create && !permissions.can_edit && !permissions.can_delete && (
+                                <span className="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full flex items-center gap-1">
+                                    <Eye className="w-3 h-3" />
+                                    View Only
+                                </span>
+                            )}
+                        </div>
+                        <p className="text-gray-600 text-sm mt-1">Track all system activities and changes</p>
                     </div>
                     
                     <div className="flex items-center gap-2 text-sm">
@@ -260,9 +290,8 @@ export default function AuditTrail() {
                 </div>
             </div>
 
-            {/* Filters Section - Collapsible */}
+            {/* Filters Section */}
             <div className="bg-white rounded-lg shadow-sm mb-6">
-                {/* Filter Header */}
                 <div className="p-4 border-b border-gray-200">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
@@ -293,11 +322,9 @@ export default function AuditTrail() {
                     </div>
                 </div>
 
-                {/* Filter Content */}
                 {showFilters && (
                     <div className="p-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {/* Date Range */}
                             <div className="col-span-2">
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                     <Calendar className="w-4 h-4 inline mr-1" />
@@ -320,7 +347,6 @@ export default function AuditTrail() {
                                 </div>
                             </div>
 
-                            {/* Level Filter */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                     Log Level
@@ -338,7 +364,6 @@ export default function AuditTrail() {
                             </div>
                         </div>
 
-                        {/* Clear Filters Button */}
                         {hasActiveFilters() && (
                             <div className="mt-4 flex justify-end">
                                 <button
@@ -358,7 +383,6 @@ export default function AuditTrail() {
                 <div className="p-6">
                     {/* Controls */}
                     <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
-                        {/* Left Controls */}
                         <div className="flex items-center gap-4">
                             <div className="flex items-center gap-2">
                                 <span className="text-sm text-gray-600">Show</span>
@@ -376,7 +400,6 @@ export default function AuditTrail() {
                             </div>
                         </div>
 
-                        {/* Right Controls */}
                         <div className="flex items-center gap-4">
                             <button
                                 onClick={handleRefresh}
@@ -387,16 +410,18 @@ export default function AuditTrail() {
                                 <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
                             </button>
 
-                            <button
-                                onClick={handleExport}
-                                disabled={loading}
-                                className="px-4 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 transition-colors flex items-center gap-2 disabled:opacity-50"
-                            >
-                                <Download className="w-4 h-4" />
-                                Export
-                            </button>
+                            {/* ✅ PERMISSION CHECK: Export button */}
+                            {permissions.can_view && (
+                                <button
+                                    onClick={handleExport}
+                                    disabled={loading}
+                                    className="px-4 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 transition-colors flex items-center gap-2 disabled:opacity-50"
+                                >
+                                    <Download className="w-4 h-4" />
+                                    Export
+                                </button>
+                            )}
 
-                            {/* Search with debounce indicator */}
                             <div className="relative">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                                 <input
@@ -458,7 +483,6 @@ export default function AuditTrail() {
                                                         {formatDateTime(log.log_date)}
                                                     </div>
                                                 </td>
-                                                {/* Di bagian Table Body - kolom User */}
                                                 <td className="px-4 py-3">
                                                     <div className="flex items-center gap-2">
                                                         <User className="w-4 h-4 text-gray-400 flex-shrink-0" />
@@ -498,20 +522,34 @@ export default function AuditTrail() {
                                                     </div>
                                                 </td>
                                                 <td className="px-4 py-3 text-center">
-                                                    <button
-                                                        onClick={() => handleViewDetail(log)}
-                                                        className="p-1.5 text-gray-600 hover:text-blue-600 transition-colors"
-                                                        title="View Details"
-                                                    >
-                                                        <Eye className="w-4 h-4" />
-                                                    </button>
+                                                    {/* ✅ PERMISSION CHECK: View detail button */}
+                                                    {permissions.can_view && (
+                                                        <button
+                                                            onClick={() => handleViewDetail(log)}
+                                                            className="p-1.5 text-gray-600 hover:text-blue-600 transition-colors"
+                                                            title="View Details"
+                                                        >
+                                                            <Eye className="w-4 h-4" />
+                                                        </button>
+                                                    )}
                                                 </td>
                                             </tr>
                                         ))}
                                         {auditData.length === 0 && (
                                             <tr>
-                                                <td colSpan="7" className="px-4 py-8 text-center text-gray-500">
-                                                    No audit logs available
+                                                <td colSpan="7" className="px-4 py-12 text-center">
+                                                    <div className="flex flex-col items-center justify-center">
+                                                        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                                                            <FileText className="w-8 h-8 text-gray-400" />
+                                                        </div>
+                                                        <p className="text-gray-500 font-medium mb-1">No audit logs available</p>
+                                                        <p className="text-sm text-gray-400">
+                                                            {hasActiveFilters() || searchQuery 
+                                                                ? 'Try adjusting your filters or search query'
+                                                                : 'System activities will appear here'
+                                                            }
+                                                        </p>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         )}
