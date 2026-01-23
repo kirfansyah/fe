@@ -112,8 +112,12 @@ export default function CompleteModernProfile() {
       read: apiData.ebook_read || 0,
       completed: apiData.ebook_completed || 0,
       incomplete: apiData.ebook_incomplete || 0,
-      readingHours: Math.floor(apiData.ebook_reading_time / 60) || 0,
-      readingMinutes: apiData.ebook_reading_time % 60 || 0,
+      readingHours: apiData.ebook_reading_time 
+        ? parseInt(apiData.ebook_reading_time.split(':')[0]) 
+        : 0,
+      readingMinutes: apiData.ebook_reading_time 
+        ? parseInt(apiData.ebook_reading_time.split(':')[1]) 
+        : 0,
     },
   };
 
