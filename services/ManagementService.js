@@ -27,6 +27,30 @@ class ManagementService {
     }
 
     /**
+     * Get all courses
+     * @returns {Promise} API response
+     */
+    static async getAllCoursesList() {
+        try {
+            const response = await API.get("/dashboard/courses/list");
+            return {
+                success: true,
+                data: response.data.data || [],
+                message: response.data.message || 'Success',
+                pagination: response.data.pagination
+            };
+        } catch (error) {
+            console.error('ManagementService.getAllCoursesList Error:', error);
+            return {
+                success: false,
+                data: [],
+                message: error.response?.data?.message || 'Failed to fetch courses',
+                pagination: null
+            };
+        }
+    }
+
+    /**
      * Get all content types
      * @returns {Promise} API response
      */

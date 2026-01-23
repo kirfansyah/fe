@@ -1,3 +1,4 @@
+import React from 'react';
 import { useState, useEffect, useRef } from 'react';
 import { 
     BookOpen, 
@@ -14,7 +15,8 @@ import {
     BookMarked,
     Clock,
     Calendar,
-    Lock
+    Lock,
+    Award
 } from 'lucide-react';
 import Admin from "layouts/Admin.js";
 import { useRoles } from "@/hooks/useRoles";
@@ -1144,6 +1146,19 @@ export default function DashboardAnalytics() {
                         
                         {showCourseEmployeeDropdown && (
                             <div className="absolute top-full right-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                                {/* ✅ TAMBAH: All Courses option */}
+                                <button
+                                    onClick={() => handleCourseEmployeeSelect('All')}
+                                    className={`w-full text-left px-3 py-2 hover:bg-gray-50 transition-colors text-xs border-b border-gray-100 ${
+                                        courseFilterEmployee === 'All' ? 'bg-indigo-50 text-indigo-600 font-medium' : 'text-gray-700'
+                                    }`}
+                                >
+                                    <span className="flex items-center gap-2">
+                                        <BarChart3 className="w-3 h-3" />
+                                        All Courses
+                                    </span>
+                                </button>
+                                
                                 {coursesListWithId.length > 0 ? (
                                     coursesListWithId.map((course) => (
                                         <button
@@ -1173,13 +1188,37 @@ export default function DashboardAnalytics() {
                     </div>
                 ) : employeeCourseData && employeeCourseData.employee_groups?.length > 0 ? (
                     <>
-                        {/* Summary Stats */}
-                        <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                            <div className="flex items-center gap-4">
+                        {/* ✅ IMPROVED: Enhanced Summary Stats */}
+                        <div className="mb-6 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg border border-indigo-100">
+                            <div className="flex items-center gap-6 flex-wrap">
                                 <div className="flex items-center gap-2">
                                     <Users className="w-5 h-5 text-indigo-600" />
                                     <span className="text-sm text-gray-600">Total Employees:</span>
                                     <span className="text-lg font-bold text-gray-900">{employeeCourseData.total_employee}</span>
+                                </div>
+                                
+                                {/* ✅ NEW: Total unique courses */}
+                                <div className="flex items-center gap-2">
+                                    <BookOpen className="w-5 h-5 text-purple-600" />
+                                    <span className="text-sm text-gray-600">Unique Courses:</span>
+                                    <span className="text-lg font-bold text-gray-900">
+                                        {(() => {
+                                            const allCourses = new Set();
+                                            employeeCourseData.employee_groups.forEach(group => {
+                                                Object.keys(group.employees_by_course || {}).forEach(course => {
+                                                    allCourses.add(course);
+                                                });
+                                            });
+                                            return allCourses.size;
+                                        })()}
+                                    </span>
+                                </div>
+                                
+                                {/* ✅ NEW: Total score groups */}
+                                <div className="flex items-center gap-2">
+                                    <BarChart3 className="w-5 h-5 text-teal-600" />
+                                    <span className="text-sm text-gray-600">Score Groups:</span>
+                                    <span className="text-lg font-bold text-gray-900">{employeeCourseData.employee_groups.length}</span>
                                 </div>
                             </div>
                         </div>
@@ -1197,10 +1236,10 @@ export default function DashboardAnalytics() {
                             const colors = ['bg-pink-400', 'bg-purple-400', 'bg-indigo-500', 'bg-teal-400', 'bg-amber-400', 'bg-green-400'];
                             
                             return (
-                                <div className="flex items-center justify-center gap-4 mb-6 flex-wrap">
+                                <div className="flex items-center justify-center gap-4 mb-6 flex-wrap p-3 bg-gray-50 rounded-lg">
                                     {courseArray.map((course, index) => (
                                         <div key={course} className="flex items-center gap-2">
-                                            <div className={`w-3 h-3 rounded ${colors[index % colors.length]}`}></div>
+                                            <div className={`w-3 h-3 rounded ${colors[index % colors.length]} shadow-sm`}></div>
                                             <span className="text-xs text-gray-600 max-w-[150px] truncate" title={course}>
                                                 {course}
                                             </span>
@@ -1210,8 +1249,8 @@ export default function DashboardAnalytics() {
                             );
                         })()}
 
-                        {/* Chart */}
-                        <div className="relative h-80 overflow-x-auto">
+                        {/* ✅ IMPROVED: Chart with better interaction */}
+                        <div className="relative h-80 overflow-x-auto bg-gray-50 rounded-lg p-4">
                             {(() => {
                                 // Collect all unique course names
                                 const allCourses = new Set();
@@ -1231,7 +1270,12 @@ export default function DashboardAnalytics() {
                                 });
                                 maxValue = Math.max(maxValue, 10); // Minimum scale of 10
                                 
-                                const chartWidth = Math.max(600, employeeCourseData.employee_groups.length * 80 + 100);
+                                // ✅ Filter empty groups
+                                const validGroups = employeeCourseData.employee_groups.filter(group => 
+                                    Object.keys(group.employees_by_course || {}).length > 0
+                                );
+                                
+                                const chartWidth = Math.max(600, validGroups.length * 80 + 100);
                                 
                                 return (
                                     <svg className="w-full h-full" viewBox={`0 0 ${chartWidth} 300`} preserveAspectRatio="xMinYMid meet">
@@ -1241,7 +1285,7 @@ export default function DashboardAnalytics() {
                                             const y = 20 + i * 60;
                                             return (
                                                 <g key={i}>
-                                                    <text x="25" y={y + 5} fontSize="11" fill="#9ca3af" textAnchor="end">
+                                                    <text x="25" y={y + 5} fontSize="11" fill="#9ca3af" textAnchor="end" fontWeight="500">
                                                         {value}
                                                     </text>
                                                     <line x1="40" y1={y} x2={chartWidth - 20} y2={y} stroke="#e5e7eb" strokeWidth="1" strokeDasharray={i > 0 ? "3,3" : "0"} />
@@ -1250,12 +1294,12 @@ export default function DashboardAnalytics() {
                                         })}
                                         
                                         {/* X-axis line */}
-                                        <line x1="40" y1="260" x2={chartWidth - 20} y2="260" stroke="#e5e7eb" strokeWidth="1" />
+                                        <line x1="40" y1="260" x2={chartWidth - 20} y2="260" stroke="#9ca3af" strokeWidth="2" />
                                         
                                         {/* Bars */}
-                                        {employeeCourseData.employee_groups.map((group, groupIndex) => {
+                                        {validGroups.map((group, groupIndex) => {
                                             const barWidth = 50;
-                                            const x = 60 + groupIndex * 70;
+                                            const x = 60 + groupIndex * 80;
                                             const scale = 220 / maxValue;
                                             let currentY = 260;
                                             
@@ -1271,22 +1315,31 @@ export default function DashboardAnalytics() {
                                                         
                                                         return (
                                                             <g key={`${groupIndex}-${courseIndex}`}>
+                                                                {/* ✅ IMPROVED: Better hover effect */}
                                                                 <rect
                                                                     x={x}
                                                                     y={currentY}
                                                                     width={barWidth}
                                                                     height={barHeight}
                                                                     fill={colors[courseIndex % colors.length]}
-                                                                    rx="2"
-                                                                />
+                                                                    rx="3"
+                                                                    className="cursor-pointer transition-opacity hover:opacity-80"
+                                                                    style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))' }}
+                                                                >
+                                                                    {/* ✅ IMPROVED: Native SVG tooltip */}
+                                                                    <title>{`${course}: ${value} employee${value > 1 ? 's' : ''} (Score: ${group.best_score})`}</title>
+                                                                </rect>
+                                                                
                                                                 {/* Value label inside bar if space allows */}
-                                                                {barHeight > 15 && (
+                                                                {barHeight > 18 && (
                                                                     <text
                                                                         x={x + barWidth / 2}
-                                                                        y={currentY + barHeight / 2 + 4}
-                                                                        fontSize="10"
+                                                                        y={currentY + barHeight / 2 + 5}
+                                                                        fontSize="11"
                                                                         fill="white"
                                                                         textAnchor="middle"
+                                                                        fontWeight="bold"
+                                                                        style={{ pointerEvents: 'none' }}
                                                                     >
                                                                         {value}
                                                                     </text>
@@ -1299,9 +1352,10 @@ export default function DashboardAnalytics() {
                                                     <text
                                                         x={x + barWidth / 2}
                                                         y="278"
-                                                        fontSize="10"
-                                                        fill="#6b7280"
+                                                        fontSize="11"
+                                                        fill="#4b5563"
                                                         textAnchor="middle"
+                                                        fontWeight="600"
                                                     >
                                                         Score: {group.best_score}
                                                     </text>
@@ -1313,40 +1367,14 @@ export default function DashboardAnalytics() {
                             })()}
                         </div>
                         
-                        {/* Data Table */}
-                        <div className="mt-6 overflow-x-auto">
-                            <table className="w-full text-sm">
-                                <thead>
-                                    <tr className="border-b border-gray-200">
-                                        <th className="text-left py-2 px-3 font-semibold text-gray-700">Best Score</th>
-                                        <th className="text-left py-2 px-3 font-semibold text-gray-700">Course</th>
-                                        <th className="text-right py-2 px-3 font-semibold text-gray-700">Employees</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {employeeCourseData.employee_groups.map((group, groupIndex) => (
-                                        Object.entries(group.employees_by_course || {}).map(([course, count], courseIndex) => (
-                                            <tr key={`${groupIndex}-${courseIndex}`} className="border-b border-gray-100 hover:bg-gray-50">
-                                                {courseIndex === 0 && (
-                                                    <td 
-                                                        className="py-2 px-3 font-medium text-gray-900"
-                                                        rowSpan={Object.keys(group.employees_by_course || {}).length}
-                                                    >
-                                                        {group.best_score}
-                                                    </td>
-                                                )}
-                                                <td className="py-2 px-3 text-gray-600">{course}</td>
-                                                <td className="py-2 px-3 text-right font-medium text-gray-900">{count}</td>
-                                            </tr>
-                                        ))
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
                     </>
                 ) : (
-                    <div className="flex items-center justify-center h-80">
-                        <p className="text-gray-400 text-sm">No employee course data available</p>
+                    <div className="flex flex-col items-center justify-center h-80">
+                        <div className="bg-gray-100 p-6 rounded-full mb-4">
+                            <BarChart3 className="w-12 h-12 text-gray-300" />
+                        </div>
+                        <p className="text-gray-400 text-sm font-medium">No employee course data available</p>
+                        <p className="text-gray-400 text-xs mt-1">Try selecting a different course filter</p>
                     </div>
                 )}
             </div>

@@ -44,7 +44,7 @@ export default function ListEmployee({ created_by }) {
         const fetchAllForFilters = async () => {
             try {
                 const response = await API.post('/employee', { 
-                    params: { page: 1, limit: 99999 } 
+                    params: { page: 1, limit: 99999, employment_status: 1, } 
                 });
                 const data = response.data?.data || [];
                 setAllEmployees(data);

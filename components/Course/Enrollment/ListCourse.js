@@ -26,7 +26,8 @@ export default function ListCourses({
     loading = false,
     error = null,
     permissions, // ✅ Receive permissions
-    created_by
+    created_by,
+    onSuccess
 }) {
     const [expanded, setExpanded] = useState(null);
     const [searchQuery, setSearchQuery] = useState("");
@@ -514,6 +515,7 @@ export default function ListCourses({
                         onUpdateEnrollmentStatus={onUpdateEnrollmentStatus}
                         permissions={permissions} // ✅ Pass to child
                         created_by={created_by}
+                        onSuccess={onSuccess}
                     />
                 ))}
             </div>

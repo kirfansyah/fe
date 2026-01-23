@@ -6,6 +6,7 @@ import { ProfileContext } from '@/contexts/profile/ProfileContext';
 import { getDeviceInfo } from '@/lib/deviceHelper';
 export function useCourses(contentId = null) {
     const [courses, setCourses] = useState([]);
+    const [coursesList, setCoursesList] = useState([]);
     const [contentTypes, setContentTypes] = useState([]);
     const [groupEnroll, setGroupEnroll] = useState([]);
     const [contentData, setContentData] = useState(null);
@@ -32,6 +33,21 @@ export function useCourses(contentId = null) {
         
         if (result.success) {
             setCourses(result.data);
+        } else {
+            setError(result.message);
+        }
+        
+        setIsLoading(false);
+    }, []);
+
+    const fetchCoursesList = useCallback(async () => {
+        setIsLoading(true);
+        setError(null);
+        
+        const result = await ManagementService.getAllCoursesList();
+        
+        if (result.success) {
+            setCoursesList(result.data);
         } else {
             setError(result.message);
         }
@@ -355,7 +371,7 @@ export function useCourses(contentId = null) {
             const newContentData = {
                 id_course: duplicateData.courseId,
                 id_content_type: duplicateData.targetTypeId, 
-                content_title: `${originalContent.content_title} (Copy)`,
+                content_title: 'Post Test',
                 total_points: originalContent.total_points,
                 total_number: originalContent.total_number,
                 point_distribution_type: originalContent.point_distribution_type,
@@ -401,9 +417,10 @@ export function useCourses(contentId = null) {
             fetchEmployeeData(),
             fetchProfileInfo(),
             fetchCompanyUnits(),
-            fetchEnrollData()
+            fetchEnrollData(),
+            fetchCoursesList()
         ]);
-    }, [fetchCourses, fetchContentTypes, fetchGroupEnroll, fetchEmployeeData, fetchProfileInfo, fetchCompanyUnits, fetchEnrollData]);
+    }, [fetchCourses, fetchContentTypes, fetchGroupEnroll, fetchEmployeeData, fetchProfileInfo, fetchCompanyUnits, fetchEnrollData, fetchCoursesList]);
 
     useEffect(() => {
         if (contentId) {
@@ -413,6 +430,7 @@ export function useCourses(contentId = null) {
 
     return {
         courses,
+        coursesList,
         contentTypes,
         contentData,
         groupEnroll,
@@ -425,6 +443,7 @@ export function useCourses(contentId = null) {
         isDeleting,
         error,
         fetchCourses,
+        fetchCoursesList,
         addCourse,
         fetchContentTypes,
         fetchGroupEnroll,

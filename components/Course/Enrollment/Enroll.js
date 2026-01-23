@@ -486,6 +486,7 @@ export default function Enroll({
                             onUpdateEnrollmentStatus={updateEnrollmentStatus} 
                             permissions={permissions} // ✅ Pass permissions to child
                             created_by={dataKaryawan?.nama || 'System'}
+                            onSuccess={onSuccess}
                         />
                     </div>
                 )}
