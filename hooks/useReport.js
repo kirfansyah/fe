@@ -36,11 +36,12 @@ export function useReport() {
           page,
           limit: pageSize,
           search: filters.search || '',
-          company_id: filters.company_id || [],
-          dept_id: filters.dept_id || [],
-          course_id: filters.course_id || [],
-          status: filters.status || '',
-          issue_date: filters.issue_date || ''
+          company_id: filters.company_id || '',
+          department_id: filters.department_id || '',
+          id_course: filters.id_course || '',
+          end_date: filters.end_date || '',
+          start_date: filters.start_date || '',
+          status: filters.status || ''
         };
 
         const response = await API.getAllOnlineLearning(params);
@@ -77,10 +78,12 @@ export function useReport() {
           limit: pageSize,
           search: filters.search || '',
           company_id: filters.company_id || [],
-          dept_id: filters.dept_id || [],
+          department_id: filters.department_id || [],
           training_title: filters.training_title || '',
-          provider: filters.provider || '',
-          status: filters.status || ''
+          issuing_organization: filters.issuing_organization || '',
+          status: filters.status || '',
+          end_date: filters.end_date || '',
+          start_date: filters.start_date || ''
         };
 
         const response = await API.getAllOfflineLearning(params);
@@ -114,6 +117,7 @@ export function useReport() {
       try {
         const response = await API.createOfflineLearning(offlineLearningData);
         return response.data;
+        
       } catch (err) {
         const errorMessage = err.message || "Failed to create offline learning";
         setErrorOffline(errorMessage);
@@ -143,12 +147,12 @@ export function useReport() {
     }, []);
 
     // ✅ Delete Offline Learning
-    const deleteOfflineLearning = useCallback(async (id) => {
+    const deleteOfflineLearning = useCallback(async (payload) => {
       setLoadingOffline(true);
       setErrorOffline(null);
 
       try {
-        await API.deleteOfflineLearning(id);
+        await API.deleteOfflineLearning(payload);
         return { success: true };
       } catch (err) {
         const errorMessage = err.message || "Failed to delete certificate";
@@ -160,22 +164,7 @@ export function useReport() {
       }
     }, []);
 
-    // ✅ Fetch Position
-    const fetchPosition = useCallback(async () => {
-      setLoading(true);
-      setError(null);
-
-      try {
-        const res = await API.getAllPosition();
-        setPosition(res.data || []);
-      } catch (err) {
-        setError(err.message || "Failed to fetch Position");
-        console.error("Error fetching Position:", err);
-        setPosition([]);
-      } finally {
-        setLoading(false);
-      }
-    }, []);
+    
 
     // ✅ Fetch Department
     const fetchDept = useCallback(async () => {
@@ -231,17 +220,17 @@ export function useReport() {
 
     // ✅ Initial Load - Only Master Data
     useEffect(() => {
-      fetchPosition();
+      
       fetchDept();
       fetchCompany();
-    }, [fetchPosition, fetchDept, fetchCompany]);
+    }, [fetchDept, fetchCompany]);
 
     // ✅ Refetch function for manual refresh
     const refetch = useCallback(() => {
-      fetchPosition();
+      
       fetchDept();
       fetchCompany();
-    }, [fetchPosition, fetchDept, fetchCompany]);
+    }, [fetchDept, fetchCompany]);
 
     return {
       // Online Learning

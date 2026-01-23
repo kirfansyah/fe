@@ -5,7 +5,6 @@ import {
   CheckCircle, 
   Clock, 
   AlertCircle, 
-  Trash2,
   BookOpen,
   Award,
   Calendar,
@@ -14,42 +13,36 @@ import {
   XCircle,
   Loader2,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  CheckCheck,
+  Info
 } from "lucide-react";
 import { AuthContext } from "../contexts/AuthContext";
 import { LanguageContext } from "../contexts/LanguageContext";
 import { useRoles } from "../hooks/useRoles";
+import { useSweetAlert } from "../hooks/useSweetAlert";
 import WebLayout from "../layouts/WebLayout";
 
 const NotificationsPage = () => {
   const [notifications, setNotifications] = useState([]);
-  const [filter, setFilter] = useState("all"); // all, unread, read
+  const [filter, setFilter] = useState("all");
   const [loading, setLoading] = useState(false);
   
-  // ✅ Pagination states
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20); // 20 per page
+  const [pageSize, setPageSize] = useState(20);
   const [totalCount, setTotalCount] = useState(0);
   
   const router = useRouter();
   const { stateAuth } = useContext(AuthContext);
   const { stateLanguage } = useContext(LanguageContext);
   const { listLanguage } = stateLanguage;
-  const { fetchNotification } = useRoles();
+  const { fetchNotification, handleNotificationRead } = useRoles();
+  const { showSuccess, showError, confirmAction } = useSweetAlert();
 
-  // ✅ Redirect jika belum login
-  useEffect(() => {
-    if (!stateAuth.isAuthenticated) {
-      router.push('/login');
-    }
-  }, [stateAuth.isAuthenticated]);
-
-  // ✅ Load notifications when filter or page changes
   useEffect(() => {
     loadNotifications();
   }, [filter, currentPage, pageSize]);
 
-  // ✅ Reset page when filter changes
   useEffect(() => {
     setCurrentPage(1);
   }, [filter]);
@@ -57,25 +50,51 @@ const NotificationsPage = () => {
   const loadNotifications = async () => {
     setLoading(true);
     try {
-      // ✅ Call API dengan pagination
-      const result = await fetchNotification({
+      const params = {
         page: currentPage,
-        limit: pageSize,
-        status: filter === 'all' ? undefined : filter
-      });
+        limit: pageSize
+      };
       
-      if (result?.data) {
-        setNotifications(result.data);
-        setTotalCount(result.pagination?.totalCount || result.data.length);
+      if (filter === 'unread') {
+        params.is_read = false;
+      } else if (filter === 'read') {
+        params.is_read = true;
+      }
+      
+      const result = await fetchNotification(params);
+      
+      // ✅ Handle null/undefined result
+      if (!result) {
+        console.warn('fetchNotification returned null/undefined');
+        setNotifications([]);
+        setTotalCount(0);
+        return;
+      }
+      
+      // ✅ Handle result.data null/undefined
+      if (result.data) {
+        setNotifications(Array.isArray(result.data) ? result.data : []);
+        setTotalCount(result.pagination?.totalCount || result.data.length || 0);
+      } else {
+        console.warn('result.data is null/undefined');
+        setNotifications([]);
+        setTotalCount(0);
       }
     } catch (error) {
       console.error('Error loading notifications:', error);
+      showError('Failed to load notifications');
+      // ✅ Set empty state on error
+      setNotifications([]);
+      setTotalCount(0);
     } finally {
       setLoading(false);
     }
   };
 
   const getNotificationIcon = (category) => {
+    // ✅ Handle null/undefined category
+    if (!category) return <Bell className="w-6 h-6 text-gray-500" />;
+    
     const iconMap = {
       'course': BookOpen,
       'certificate': Award,
@@ -84,7 +103,8 @@ const NotificationsPage = () => {
       'training': Calendar,
       'group': Users,
       'test': FileText,
-      'expired': XCircle
+      'expired': XCircle,
+      'compliance': AlertCircle
     };
     
     const IconComponent = iconMap[category] || Bell;
@@ -96,110 +116,94 @@ const NotificationsPage = () => {
       'training': 'text-purple-500',
       'group': 'text-indigo-500',
       'test': 'text-blue-600',
-      'expired': 'text-red-500'
+      'expired': 'text-red-500',
+      'compliance': 'text-red-600'
     };
     
     return <IconComponent className={`w-6 h-6 ${colorMap[category] || 'text-gray-500'}`} />;
   };
 
   const formatTimeAgo = (dateString) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffInSeconds = Math.floor((now - date) / 1000);
+    // ✅ Handle null/undefined dateString
+    if (!dateString) return 'Unknown';
     
-    if (diffInSeconds < 60) return listLanguage.just_now || 'Baru saja';
-    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} ${listLanguage.minutes_ago || 'menit lalu'}`;
-    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} ${listLanguage.hours_ago || 'jam lalu'}`;
-    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} ${listLanguage.days_ago || 'hari lalu'}`;
-    return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+    try {
+      const date = new Date(dateString);
+      
+      // ✅ Check if date is valid
+      if (isNaN(date.getTime())) {
+        return 'Invalid date';
+      }
+      
+      const now = new Date();
+      const diffInSeconds = Math.floor((now - date) / 1000);
+      
+      if (diffInSeconds < 60) return listLanguage.just_now || 'Baru saja';
+      if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} ${listLanguage.minutes_ago || 'menit lalu'}`;
+      if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} ${listLanguage.hours_ago || 'jam lalu'}`;
+      if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} ${listLanguage.days_ago || 'hari lalu'}`;
+      
+      const daysDiff = Math.floor(diffInSeconds / 86400);
+      if (daysDiff < 30) return `${daysDiff} hari lalu`;
+      if (daysDiff < 90) return `${Math.floor(daysDiff / 30)} bulan lalu`;
+      
+      return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Invalid date';
+    }
   };
 
   const handleNotificationClick = async (notification) => {
+    // ✅ Handle null/undefined notification
+    if (!notification) return;
+    
     try {
-      // Mark as read jika belum dibaca
-      if (!notification.is_read) {
-        // TODO: Call API to mark as read
-        // await markNotificationRead(notification.id_notification);
+      if (!notification.is_read && markNotificationAsRead) {
+        await markNotificationAsRead(notification.id_notification);
+        
         setNotifications(prev =>
           prev.map(n => n.id_notification === notification.id_notification ? { ...n, is_read: true } : n)
         );
       }
       
-      // ✅ Navigate berdasarkan kategori/redirect_to
-    //   if (notification.redirect_to) {
-    //     router.push(notification.redirect_to);
-    //   } else {
-    //     // Fallback routing based on role
-    //     const userRole = stateAuth.user?.role;
-        
-    //     if (userRole === 'admin' || userRole === 'hr') {
-    //       // Admin routing
-    //       switch (notification.category) {
-    //         case 'approval':
-    //           router.push('/admin/courses?status=pending');
-    //           break;
-    //         case 'user':
-    //           router.push('/admin/users?status=pending');
-    //           break;
-    //         case 'certificate':
-    //           router.push('/admin/reports/offline-learning?filter=expiring');
-    //           break;
-    //         case 'compliance':
-    //           router.push('/admin/compliance?status=expired');
-    //           break;
-    //         default:
-    //           router.push('/admin/dashboard');
-    //       }
-    //     } else {
-    //       // User routing
-    //       switch (notification.category) {
-    //         case 'course':
-    //           router.push(`/courses/${notification.data?.course_id}`);
-    //           break;
-    //         case 'certificate':
-    //           router.push('/my-learning/certificates');
-    //           break;
-    //         case 'test':
-    //           router.push(`/courses/${notification.data?.course_id}/test`);
-    //           break;
-    //         case 'training':
-    //           router.push('/trainings');
-    //           break;
-    //         default:
-    //           // Stay on page
-    //           break;
-    //       }
-    //     }
-    //   }
+      if (notification.redirect_to) {
+        router.push(notification.redirect_to);
+      } else if (notification.data?.url) {
+        router.push(notification.data.url);
+      }
+      
     } catch (error) {
       console.error('Error handling notification:', error);
+      showError('Failed to update notification');
     }
   };
 
   const handleMarkAllAsRead = async () => {
+    const result = await confirmAction({
+      title: 'Mark All as Read?',
+      text: 'This will mark all unread notifications as read.',
+      icon: 'question',
+      confirmButtonText: 'Yes, mark all'
+    });
+    
+    if (!result.isConfirmed) return;
+    
     try {
-      // TODO: Call API to mark all as read
-      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+      if (handleNotificationRead) {
+        await handleNotificationRead();
+        await loadNotifications();
+        showSuccess('All notifications marked as read');
+      } else {
+        setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+        showSuccess('All notifications marked as read');
+      }
     } catch (error) {
       console.error('Error marking all as read:', error);
+      showError('Failed to mark all as read');
     }
   };
 
-  const handleDeleteNotification = async (e, notificationId) => {
-    e.stopPropagation();
-    
-    if (confirm(listLanguage.confirm_delete_notification || 'Hapus notifikasi ini?')) {
-      try {
-        // TODO: Call API to delete
-        setNotifications(prev => prev.filter(n => n.id_notification !== notificationId));
-        setTotalCount(prev => prev - 1);
-      } catch (error) {
-        console.error('Error deleting notification:', error);
-      }
-    }
-  };
-
-  // ✅ Pagination handlers
   const handlePageChange = (newPage) => {
     const totalPages = Math.ceil(totalCount / pageSize);
     if (newPage >= 1 && newPage <= totalPages) {
@@ -213,9 +217,13 @@ const NotificationsPage = () => {
     setCurrentPage(1);
   };
 
-  const unreadCount = notifications.filter(n => !n.is_read).length;
-  const totalPages = Math.ceil(totalCount / pageSize);
-  const startIndex = (currentPage - 1) * pageSize + 1;
+  // ✅ Safe calculation of unreadCount
+  const unreadCount = Array.isArray(notifications) 
+    ? notifications.filter(n => n && !n.is_read).length 
+    : 0;
+    
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const startIndex = totalCount > 0 ? (currentPage - 1) * pageSize + 1 : 0;
   const endIndex = Math.min(currentPage * pageSize, totalCount);
 
   return (
@@ -234,21 +242,24 @@ const NotificationsPage = () => {
                     {listLanguage.all_notifications || 'Semua Notifikasi'}
                   </h1>
                   <p className="text-sm text-gray-600">
-                    {totalCount} total, {unreadCount} {listLanguage.unread_notifications || 'belum dibaca'}
+                    {totalCount} total{unreadCount > 0 && `, ${unreadCount} ${listLanguage.unread_notifications || 'belum dibaca'}`}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                    <Info className="w-3 h-3" />
+                    Notifications are automatically cleaned up after 30-90 days
                   </p>
                 </div>
               </div>
               
-              <div className="flex items-center gap-2">
-                {unreadCount > 0 && (
-                  <button
-                    onClick={handleMarkAllAsRead}
-                    className="px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors font-medium"
-                  >
-                    {listLanguage.mark_all_read || 'Tandai semua terbaca'}
-                  </button>
-                )}
-              </div>
+              {unreadCount > 0 && (
+                <button
+                  onClick={handleMarkAllAsRead}
+                  className="flex items-center gap-2 px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors font-medium"
+                >
+                  <CheckCheck size={16} />
+                  {listLanguage.mark_all_read || 'Tandai semua terbaca'}
+                </button>
+              )}
             </div>
 
             {/* Filters */}
@@ -261,17 +272,22 @@ const NotificationsPage = () => {
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
               >
-                {listLanguage.all || 'Semua'} ({totalCount})
+                {listLanguage.all || 'Semua'}
               </button>
               <button
                 onClick={() => setFilter("unread")}
-                className={`px-4 py-2 text-sm rounded-lg transition-colors font-medium ${
+                className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-colors font-medium ${
                   filter === "unread"
                     ? "bg-blue-600 text-white"
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
               >
                 {listLanguage.unread || 'Belum dibaca'}
+                {filter !== "unread" && unreadCount > 0 && (
+                  <span className="px-1.5 py-0.5 bg-red-500 text-white text-xs rounded-full">
+                    {unreadCount}
+                  </span>
+                )}
               </button>
               <button
                 onClick={() => setFilter("read")}
@@ -293,85 +309,92 @@ const NotificationsPage = () => {
                 <Loader2 className="w-8 h-8 animate-spin text-blue-600 mb-2" />
                 <p className="text-sm text-gray-600">Loading notifications...</p>
               </div>
-            ) : notifications.length > 0 ? (
-              notifications.map((notification) => (
-                <div
-                  key={notification.id_notification}
-                  onClick={() => handleNotificationClick(notification)}
-                  className={`bg-white rounded-lg shadow-sm border border-gray-200 p-4 cursor-pointer hover:shadow-md transition-all group ${
-                    !notification.is_read ? "border-l-4 border-l-blue-600 bg-blue-50" : ""
-                  }`}
-                >
-                  <div className="flex items-start gap-4">
-                    <div className="flex-shrink-0">
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                        notification.is_read ? 'bg-gray-100' : 'bg-white shadow-sm'
-                      }`}>
-                        {getNotificationIcon(notification.category)}
-                      </div>
-                    </div>
-                    
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2 mb-1">
-                        <h3 className={`font-semibold ${notification.is_read ? 'text-gray-600' : 'text-gray-900'}`}>
-                          {notification.title}
-                        </h3>
-                        <div className="flex items-center gap-2">
-                          {!notification.is_read && (
-                            <span className="flex-shrink-0 w-2 h-2 bg-blue-600 rounded-full"></span>
-                          )}
-                          <button
-                            onClick={(e) => handleDeleteNotification(e, notification.id_notification)}
-                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-50 rounded transition-all"
-                          >
-                            <Trash2 size={14} className="text-red-600" />
-                          </button>
+            ) : Array.isArray(notifications) && notifications.length > 0 ? (
+              notifications.map((notification) => {
+                // ✅ Skip null/undefined notifications
+                if (!notification) return null;
+                
+                return (
+                  <div
+                    key={notification.id_notification || Math.random()}
+                    onClick={() => handleNotificationClick(notification)}
+                    className={`bg-white rounded-lg shadow-sm border border-gray-200 p-4 cursor-pointer hover:shadow-md transition-all group ${
+                      !notification.is_read ? "border-l-4 border-l-blue-600 bg-blue-50" : ""
+                    }`}
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className="flex-shrink-0">
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                          notification.is_read ? 'bg-gray-100' : 'bg-white shadow-sm'
+                        }`}>
+                          {getNotificationIcon(notification.category)}
                         </div>
                       </div>
-                      <p className={`text-sm mb-2 ${notification.is_read ? 'text-gray-500' : 'text-gray-700'}`}>
-                        {notification.message}
-                      </p>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-gray-500">
-                          {formatTimeAgo(notification.created_at)}
-                        </span>
-                        {notification.action && (
-                          <span className="text-xs text-blue-600 font-medium">
-                            {notification.action} →
-                          </span>
-                        )}
+                      
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <h3 className={`font-semibold ${notification.is_read ? 'text-gray-600' : 'text-gray-900'}`}>
+                            {notification.title || 'No title'}
+                          </h3>
+                          <div className="flex items-center gap-2">
+                            {!notification.is_read && (
+                              <span className="flex-shrink-0 w-2 h-2 bg-blue-600 rounded-full animate-pulse"></span>
+                            )}
+                            
+                          </div>
+                        </div>
+                        <p className={`text-sm mb-2 ${notification.is_read ? 'text-gray-500' : 'text-gray-700'}`}>
+                          {notification.message || 'No message'}
+                        </p>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-xs text-gray-500">
+                            <Clock className="w-3 h-3" />
+                            <span>{formatTimeAgo(notification.created_at)}</span>
+                          </div>
+                          {(notification.redirect_to || notification.data?.url) && (
+                            <span className="text-xs text-blue-600 font-medium flex items-center gap-1">
+                              View details →
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             ) : (
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
-                <Bell className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Bell className="w-10 h-10 text-gray-300" />
+                </div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  {listLanguage.no_notifications || 'Tidak ada notifikasi'}
+                  {filter === "all" 
+                    ? (listLanguage.no_notifications || 'Tidak ada notifikasi')
+                    : `Tidak ada notifikasi ${filter === 'unread' ? 'belum dibaca' : 'yang sudah dibaca'}`
+                  }
                 </h3>
                 <p className="text-sm text-gray-600">
                   {filter === "all" 
                     ? (listLanguage.no_notifications_subtitle || 'Kamu akan menerima notifikasi di sini')
-                    : `Tidak ada notifikasi ${filter === 'unread' ? 'belum dibaca' : 'yang sudah dibaca'}`
+                    : filter === 'unread'
+                    ? 'Semua notifikasi sudah dibaca'
+                    : 'Belum ada notifikasi yang dibaca'
                   }
                 </p>
               </div>
             )}
           </div>
 
-          {/* ✅ Pagination */}
-          {!loading && notifications.length > 0 && totalPages > 1 && (
+          {/* Pagination */}
+          {!loading && Array.isArray(notifications) && notifications.length > 0 && totalPages > 1 && (
             <div className="mt-6 bg-white rounded-lg shadow-sm border border-gray-200 p-4">
               <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                {/* Page Size Selector */}
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-gray-600">Rows per page:</span>
                   <select
                     value={pageSize}
                     onChange={(e) => handlePageSizeChange(e.target.value)}
-                    className="py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-blue-500 focus:outline-none"
+                    className="py-1.5 px-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                   >
                     <option value={10}>10</option>
                     <option value={20}>20</option>
@@ -380,14 +403,12 @@ const NotificationsPage = () => {
                   </select>
                 </div>
 
-                {/* Info */}
                 <div className="text-sm text-gray-600">
                   Showing <span className="font-semibold text-gray-900">{startIndex}</span> to{' '}
                   <span className="font-semibold text-gray-900">{endIndex}</span> of{' '}
                   <span className="font-semibold text-gray-900">{totalCount}</span> notifications
                 </div>
 
-                {/* Page Navigation */}
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => handlePageChange(currentPage - 1)}

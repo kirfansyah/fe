@@ -237,11 +237,11 @@ export function useRoles() {
         return result;
     }, []);
 
-    const fetchNotification = useCallback(async () => {
+    const fetchNotification = useCallback(async (filters = {}) => {
         setLoading(true);
         setError(null);
 
-        const result = await RoleService.getNotification();
+        const result = await RoleService.getNotification(filters);
 
         if (!result.success) {
             setError(result.message);

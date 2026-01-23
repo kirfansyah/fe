@@ -6,23 +6,25 @@ import {
     Clock,
     ChevronLeft,
     ChevronRight,
-    Info,
     Loader2,
     Building2,
     CheckCircle2,
-    TrendingUp,
     Award,
     Users,
-    Target
+    Target,
+    Lock
 } from 'lucide-react';
 import Admin from "layouts/Admin.js";
 import { useRoles } from "@/hooks/useRoles";
 import { useCourses } from "@/hooks/useCourses";
 import { ProfileContext } from "@/contexts/profile/ProfileContext";
+import { useMenuPermissions } from "@/hooks/useMenuPermissions";
 
 export default function HomeAdmin() {
+    const permissions = useMenuPermissions();
+    
     const { fetchNotification, fetchSchedule, fetchCalenderHome } = useRoles();
-    const { enrollData, fetchEnrollData } = useCourses();
+    const { coursesList, fetchCoursesList } = useCourses(); // ✅ Ganti ke coursesList
     const { dataKaryawan } = useContext(ProfileContext);
     
     const [currentDate] = useState(new Date());
@@ -31,7 +33,7 @@ export default function HomeAdmin() {
     const [notifications, setNotifications] = useState([]);
     const [schedules, setSchedules] = useState([]);
     const [calendarData, setCalendarData] = useState(null);
-    const [coursesList, setCoursesList] = useState([]);
+    const [coursesListData, setCoursesListData] = useState([]);
     
     const [loadingNotifications, setLoadingNotifications] = useState(true);
     const [loadingSchedules, setLoadingSchedules] = useState(true);
@@ -55,6 +57,8 @@ export default function HomeAdmin() {
     };
 
     useEffect(() => {
+        if (!permissions.can_view) return;
+        
         const loadNotifications = async () => {
             try {
                 setLoadingNotifications(true);
@@ -69,9 +73,11 @@ export default function HomeAdmin() {
             }
         };
         loadNotifications();
-    }, []);
+    }, [permissions.can_view]);
 
     useEffect(() => {
+        if (!permissions.can_view) return;
+        
         const loadSchedules = async () => {
             try {
                 setLoadingSchedules(true);
@@ -86,9 +92,11 @@ export default function HomeAdmin() {
             }
         };
         loadSchedules();
-    }, []);
+    }, [permissions.can_view]);
 
     useEffect(() => {
+        if (!permissions.can_view) return;
+        
         const loadCalendar = async () => {
             try {
                 setLoadingCalendar(true);
@@ -105,14 +113,16 @@ export default function HomeAdmin() {
             }
         };
         loadCalendar();
-    }, [calendarDate]);
+    }, [calendarDate, permissions.can_view]);
 
-    // ✅ Load Courses - Ganti ke fetchEnrollData
+    // ✅ GANTI: Load courses dari coursesList
     useEffect(() => {
+        if (!permissions.can_view) return;
+        
         const loadCourses = async () => {
             try {
                 setLoadingCourses(true);
-                await fetchEnrollData(); // Fetch enrollment data
+                await fetchCoursesList(); // ✅ Ganti dari fetchEnrollData
             } catch (error) {
                 console.error('Error loading courses:', error);
             } finally {
@@ -120,64 +130,15 @@ export default function HomeAdmin() {
             }
         };
         loadCourses();
-    }, []);
+    }, [permissions.can_view]);
 
-    // ✅ Flatten enrollments data
+    // ✅ HAPUS: useEffect yang flatten enrollData, langsung pakai coursesList
     useEffect(() => {
-        if (enrollData && enrollData.length > 0) {
-            const flattened = [];
-            
-            enrollData.forEach(course => {
-                if (course.enrollments && course.enrollments.length > 0) {
-                    // Loop setiap enrollment (per company)
-                    course.enrollments.forEach(enrollment => {
-                        flattened.push({
-                            // Course info
-                            id_course: course.id_course,
-                            course_title: course.course_title,
-                            course_description: course.course_description,
-                            is_active: course.is_active,
-                            
-                            // Enrollment info
-                            id_course_enrollment: enrollment.id_course_enrollment,
-                            enroll_type_name: enrollment.enroll_type_name,
-                            course_status_name: enrollment.course_status_name,
-                            
-                            // Company info
-                            company_id: enrollment.company_id,
-                            company_name: enrollment.company_name,
-                            
-                            // Dates
-                            publish_date: enrollment.publish_date,
-                            end_date: enrollment.end_date,
-                            
-                            // Stats (you might need to add these from another API)
-                            enrolled_count: 0, // TODO: Get from API
-                            finished_count: 0  // TODO: Get from API
-                        });
-                    });
-                } else {
-                    // Course tanpa enrollment
-                    flattened.push({
-                        id_course: course.id_course,
-                        course_title: course.course_title,
-                        course_description: course.course_description,
-                        is_active: course.is_active,
-                        company_name: null,
-                        enroll_type_name: null,
-                        course_status_name: null,
-                        publish_date: course.created_at,
-                        end_date: null,
-                        enrolled_count: 0,
-                        finished_count: 0
-                    });
-                }
-            });
-            
-            setCoursesList(flattened);
-            console.log('Flattened courses:', flattened);
+        if (coursesList && coursesList.length > 0) {
+            setCoursesListData(coursesList); // ✅ Langsung set, sudah flat dari backend
+            console.log('Courses from API:', coursesList);
         }
-    }, [enrollData]);
+    }, [coursesList]);
 
     const handlePrevMonth = () => {
         setCalendarDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
@@ -236,23 +197,19 @@ export default function HomeAdmin() {
         return days;
     };
 
-    // Update fungsi getEventsForDate untuk return events dengan date range info
     const getEventsForDate = (dateStr) => {
         if (!calendarData?.events || !dateStr) return [];
         
         return calendarData.events.filter(event => {
             try {
-                // Parse start date
                 const [startDatePart] = event.date.split(' ');
                 const [startMonth, startDay, startYear] = startDatePart.split('/');
                 const eventStartStr = `${startYear}-${startMonth.padStart(2, '0')}-${startDay.padStart(2, '0')}`;
                 
-                // Parse end date
                 const [endDatePart] = event.end_date.split(' ');
                 const [endMonth, endDay, endYear] = endDatePart.split('/');
                 const eventEndStr = `${endYear}-${endMonth.padStart(2, '0')}-${endDay.padStart(2, '0')}`;
                 
-                // Check if dateStr is within range (inclusive)
                 return dateStr >= eventStartStr && dateStr <= eventEndStr;
             } catch (error) {
                 console.error('Error parsing event date:', event.date, error);
@@ -261,7 +218,6 @@ export default function HomeAdmin() {
         });
     };
 
-    // Tambah helper function untuk check posisi dalam range
     const getEventPosition = (dateStr, event) => {
         try {
             const [startDatePart] = event.date.split(' ');
@@ -316,16 +272,31 @@ export default function HomeAdmin() {
         return date.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' });
     };
 
-     const calculateStats = () => {
-        const totalCourses = coursesList.length;
-        const totalEnrolled = coursesList.reduce((sum, c) => sum + (c.enrolled_count || 0), 0);
-        const totalFinished = coursesList.reduce((sum, c) => sum + (c.finished_count || 0), 0);
+    // ✅ UPDATE: Gunakan field dari API
+    const calculateStats = () => {
+        const totalCourses = coursesListData.length;
+        const totalEnrolled = coursesListData.reduce((sum, c) => sum + (c.enrolled || 0), 0); // ✅ enrolled dari API
+        const totalFinished = coursesListData.reduce((sum, c) => sum + (c.finished || 0), 0); // ✅ finished dari API
         const completionRate = totalEnrolled > 0 ? Math.round((totalFinished / totalEnrolled) * 100) : 0;
         
         return { totalCourses, totalEnrolled, totalFinished, completionRate };
     };
 
     const stats = calculateStats();
+
+    if (!permissions.can_view) {
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-gray-50">
+                <div className="text-center bg-white p-8 rounded-lg shadow-lg max-w-md">
+                    <Lock className="w-16 h-16 text-red-500 mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">Access Denied</h3>
+                    <p className="text-gray-600 mb-4">
+                        This page is only accessible to administrators. Please contact your system administrator if you believe you should have access.
+                    </p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="bg-gray-50 min-h-screen">
@@ -515,7 +486,7 @@ export default function HomeAdmin() {
                                         </div>
                                     </div>
                                     <div className="bg-purple-100 px-3 py-1.5 rounded-lg">
-                                        <span className="text-sm font-bold text-purple-700">{coursesList.length} Total</span>
+                                        <span className="text-sm font-bold text-purple-700">{coursesListData.length} Total</span>
                                     </div>
                                 </div>
                             </div>
@@ -525,22 +496,22 @@ export default function HomeAdmin() {
                                     <div className="flex items-center justify-center h-48">
                                         <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
                                     </div>
-                                ) : coursesList.length > 0 ? (
-                                    paginateData(coursesList, coursePage, itemsPerPage).map((course) => {
-                                        const completionRate = course.enrolled_count > 0 
-                                            ? Math.round((course.finished_count / course.enrolled_count) * 100) 
+                                ) : coursesListData.length > 0 ? (
+                                    paginateData(coursesListData, coursePage, itemsPerPage).map((course) => {
+                                        // ✅ UPDATE: Gunakan field dari API
+                                        const completionRate = course.enrolled > 0 
+                                            ? Math.round((course.finished / course.enrolled) * 100) 
                                             : 0;
                                         
                                         return (
                                             <div
-                                                key={`${course.id_course}-${course.id_course_enrollment || 'no-enrollment'}`}
+                                                key={course.id_course_enrollment}
                                                 className="group flex gap-4 p-4 rounded-xl border-2 border-gray-100 hover:border-purple-300 hover:shadow-lg transition-all duration-200 cursor-pointer hover:scale-[1.02]"
                                             >
                                                 <div className="w-20 h-20 rounded-xl bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center flex-shrink-0 shadow-lg group-hover:scale-110 transition-transform">
                                                     <BookOpen className="w-8 h-8 text-white" />
                                                 </div>
                                                 <div className="flex-1 min-w-0">
-                                                    {/* ✅ Company Badge */}
                                                     {course.company_name && (
                                                         <div className="mb-2">
                                                             <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-700 rounded-lg text-xs font-semibold border border-blue-200">
@@ -568,25 +539,27 @@ export default function HomeAdmin() {
                                                         {course.course_status_name && (
                                                             <span className="px-2 py-0.5 bg-gray-100 rounded">{course.course_status_name}</span>
                                                         )}
-                                                        {!course.is_active && (
-                                                            <span className="px-2 py-0.5 bg-red-100 text-red-700 rounded">Inactive</span>
-                                                        )}
                                                     </p>
                                                     
                                                     <div className="flex items-center gap-4 text-xs mb-3">
                                                         <div className="flex items-center gap-1">
                                                             <Users className="w-4 h-4 text-blue-500" />
-                                                            <span className="font-bold text-gray-900">{course.enrolled_count || 0}</span>
+                                                            <span className="font-bold text-gray-900">{course.enrolled || 0}</span>
                                                             <span className="text-gray-500">Enrolled</span>
                                                         </div>
                                                         <div className="flex items-center gap-1">
                                                             <CheckCircle2 className="w-4 h-4 text-green-500" />
-                                                            <span className="font-bold text-gray-900">{course.finished_count || 0}</span>
+                                                            <span className="font-bold text-gray-900">{course.finished || 0}</span>
                                                             <span className="text-gray-500">Finished</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-1">
+                                                            <Clock className="w-4 h-4 text-orange-500" />
+                                                            <span className="font-bold text-gray-900">{course.in_progress || 0}</span>
+                                                            <span className="text-gray-500">In Progress</span>
                                                         </div>
                                                     </div>
 
-                                                    {course.enrolled_count > 0 && (
+                                                    {course.enrolled > 0 && (
                                                         <div>
                                                             <div className="flex items-center justify-between text-xs mb-1">
                                                                 <span className="text-gray-600 flex items-center gap-1">
@@ -618,7 +591,7 @@ export default function HomeAdmin() {
                                 )}
                             </div>
 
-                            {coursesList.length > itemsPerPage && (
+                            {coursesListData.length > itemsPerPage && (
                                 <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
                                     <button 
                                         onClick={() => setCoursePage(prev => Math.max(1, prev - 1))}
@@ -629,7 +602,7 @@ export default function HomeAdmin() {
                                         Previous
                                     </button>
                                     <div className="flex gap-2">
-                                        {Array.from({ length: getTotalPages(coursesList, itemsPerPage) }, (_, i) => (
+                                        {Array.from({ length: getTotalPages(coursesListData, itemsPerPage) }, (_, i) => (
                                             <button
                                                 key={`course-page-${i}`}
                                                 onClick={() => setCoursePage(i + 1)}
@@ -638,8 +611,8 @@ export default function HomeAdmin() {
                                         ))}
                                     </div>
                                     <button 
-                                        onClick={() => setCoursePage(prev => Math.min(getTotalPages(coursesList, itemsPerPage), prev + 1))}
-                                        disabled={coursePage === getTotalPages(coursesList, itemsPerPage)}
+                                        onClick={() => setCoursePage(prev => Math.min(getTotalPages(coursesListData, itemsPerPage), prev + 1))}
+                                        disabled={coursePage === getTotalPages(coursesListData, itemsPerPage)}
                                         className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         Next
@@ -932,7 +905,7 @@ export default function HomeAdmin() {
                                                                 `}
                                                             >
                                                                 <div className="bg-gray-900 text-white text-xs rounded-xl p-4 shadow-2xl min-w-[240px] max-w-[300px] border border-gray-700">
-                                                                    <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-700">
+                                                                    <div className="flex items-center justify-between mb-3 pb-2 ">
                                                                         <p className="font-bold text-sm flex items-center gap-2">
                                                                             <Calendar className="w-4 h-4 text-orange-400" />
                                                                             {events.length} Event{events.length > 1 ? 's' : ''}
@@ -959,7 +932,7 @@ export default function HomeAdmin() {
                                                                             const [endDatePart] = event.end_date.split(' ');
                                                                             
                                                                             return (
-                                                                                <div key={`event-${day.fullDate}-${i}`} className="pb-3 last:pb-0 border-b border-gray-800 last:border-0">
+                                                                                <div key={`event-${day.fullDate}-${i}`} className="pb-3 last:pb-0 last:border-0">
                                                                                     <p className="font-semibold text-orange-300 leading-tight mb-2">
                                                                                         {event.title}
                                                                                     </p>

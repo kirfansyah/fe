@@ -33,7 +33,7 @@ export default function AuditTrail() {
     const [searchQuery, setSearchQuery] = useState('');
     const debouncedSearch = useDebounce(searchQuery, 500);
     
-    const [filterLevel, setFilterLevel] = useState('all'); // INFO, WARNING, ERROR
+    const [filterLevel, setFilterLevel] = useState('INFO'); // INFO, WARN, ERROR
     const [dateFrom, setDateFrom] = useState('');
     const [dateTo, setDateTo] = useState('');
     const [showModal, setShowModal] = useState(false);
@@ -113,7 +113,7 @@ export default function AuditTrail() {
         switch (level) {
             case 'INFO':
                 return <Activity className="w-4 h-4" />;
-            case 'WARNING':
+            case 'WARN':
                 return <AlertCircle className="w-4 h-4" />;
             case 'ERROR':
                 return <XCircle className="w-4 h-4" />;
@@ -127,7 +127,7 @@ export default function AuditTrail() {
         switch (level) {
             case 'INFO':
                 return 'bg-blue-100 text-blue-800';
-            case 'WARNING':
+            case 'WARN':
                 return 'bg-yellow-100 text-yellow-800';
             case 'ERROR':
                 return 'bg-red-100 text-red-800';
@@ -141,7 +141,7 @@ export default function AuditTrail() {
         switch (level) {
             case 'INFO':
                 return <CheckCircle className="w-4 h-4 text-blue-600" />;
-            case 'WARNING':
+            case 'WARN':
                 return <AlertCircle className="w-4 h-4 text-yellow-600" />;
             case 'ERROR':
                 return <XCircle className="w-4 h-4 text-red-600" />;
@@ -332,7 +332,7 @@ export default function AuditTrail() {
                                 >
                                     <option value="all">All Levels</option>
                                     <option value="INFO">INFO</option>
-                                    <option value="WARNING">WARNING</option>
+                                    <option value="WARN">WARNING</option>
                                     <option value="ERROR">ERROR</option>
                                 </select>
                             </div>
@@ -363,7 +363,7 @@ export default function AuditTrail() {
                             <div className="flex items-center gap-2">
                                 <span className="text-sm text-gray-600">Show</span>
                                 <select 
-                                    className="px-2 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    className="py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                                     value={pageSize}
                                     onChange={(e) => handlePageSizeChange(Number(e.target.value))}
                                 >
@@ -458,13 +458,20 @@ export default function AuditTrail() {
                                                         {formatDateTime(log.log_date)}
                                                     </div>
                                                 </td>
+                                                {/* Di bagian Table Body - kolom User */}
                                                 <td className="px-4 py-3">
-                                                    <div>
-                                                        <div className="text-sm font-medium text-gray-900">
-                                                            {log.user_id}
-                                                        </div>
-                                                        <div className="text-xs text-gray-500">
-                                                            NIK: {log.nik || 'N/A'}
+                                                    <div className="flex items-center gap-2">
+                                                        <User className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                                        <div>
+                                                            <div className="text-sm font-medium text-gray-900">
+                                                                {log.full_name || 'Unknown User'}
+                                                            </div>
+                                                            <div className="text-xs text-gray-500">
+                                                                NIK: {log.nik || 'N/A'}
+                                                            </div>
+                                                            <div className="text-xs text-gray-500">
+                                                                {log.company_name || 'No Company'}
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </td>
@@ -563,13 +570,22 @@ export default function AuditTrail() {
                                     </label>
                                     <p className="text-sm text-gray-900">{formatDateTime(selectedLog.log_date)}</p>
                                 </div>
-                                <div className="p-4 bg-gray-50 rounded-lg">
+                               <div className="p-4 bg-gray-50 rounded-lg">
                                     <label className="block text-xs font-medium text-gray-500 mb-1">
                                         <User className="w-3 h-3 inline mr-1" />
-                                        User
+                                        User Information
                                     </label>
-                                    <p className="text-sm text-gray-900">{selectedLog.user_id}</p>
-                                    <p className="text-xs text-gray-500">NIK: {selectedLog.nik || 'N/A'}</p>
+                                    <div className="space-y-1">
+                                        <p className="text-sm font-medium text-gray-900">
+                                            {selectedLog.full_name || 'Unknown User'}
+                                        </p>
+                                        <p className="text-xs text-gray-600">
+                                            NIK: {selectedLog.nik || 'N/A'}
+                                        </p>
+                                        <p className="text-xs text-gray-600">
+                                            {selectedLog.company_name || 'No Company'}
+                                        </p>
+                                    </div>
                                 </div>
                                 <div className="p-4 bg-gray-50 rounded-lg">
                                     <label className="block text-xs font-medium text-gray-500 mb-1">
@@ -648,7 +664,7 @@ export default function AuditTrail() {
                                         {getStatusIcon(selectedLog.level)}
                                         <span className={`text-sm font-semibold ${
                                             selectedLog.level === 'INFO' ? 'text-blue-700' :
-                                            selectedLog.level === 'WARNING' ? 'text-yellow-700' :
+                                            selectedLog.level === 'WARN' ? 'text-yellow-700' :
                                             'text-red-700'
                                         }`}>
                                             {selectedLog.level}

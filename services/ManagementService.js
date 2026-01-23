@@ -27,6 +27,30 @@ class ManagementService {
     }
 
     /**
+     * Get all courses
+     * @returns {Promise} API response
+     */
+    static async getAllCoursesList() {
+        try {
+            const response = await API.get("/dashboard/courses/list");
+            return {
+                success: true,
+                data: response.data.data || [],
+                message: response.data.message || 'Success',
+                pagination: response.data.pagination
+            };
+        } catch (error) {
+            console.error('ManagementService.getAllCoursesList Error:', error);
+            return {
+                success: false,
+                data: [],
+                message: error.response?.data?.message || 'Failed to fetch courses',
+                pagination: null
+            };
+        }
+    }
+
+    /**
      * Get all content types
      * @returns {Promise} API response
      */
@@ -131,6 +155,38 @@ class ManagementService {
                 headers: {
                     'Content-Type': 'multipart/form-data'
                 }
+            });
+            return {
+                success: true,
+                data: response.data.data,
+                message: response.data.message || 'Course created successfully'
+            };
+        } catch (error) {
+            console.error('ManagementService.createCourse Error:', error);
+            return {
+                success: false,
+                data: null,
+                message: error.response?.data?.message || 'Failed to create course'
+            };
+        }
+    }
+
+    /**
+     * Create new course
+     * @param {FormData} formData - Course form data
+     * @returns {Promise} API response
+     */
+    static async updateCourse(formData) {
+
+        try {
+            const courseId = formData.get('id_course');
+            const payload = {
+                is_active: formData.get('is_active') === 'true',
+                updated_by: formData.get('updated_by'),
+                updated_device: formData.get('updated_device')
+            };
+            const response = await API.post(`/trainer/course/${courseId}/status`, payload, {
+                headers: { 'Content-Type': 'application/json' }
             });
             return {
                 success: true,
@@ -406,7 +462,31 @@ class ManagementService {
         }
     }
 
-    
+    /**
+     * Create new course
+     * @param {FormData} formData - Course form data
+     * @returns {Promise} API response
+     */
+    static async updateEnrollmentStatus(enrollmentId, payload) {
+
+        try {
+            const response = await API.post(`/trainer/course/enrollment/${enrollmentId}/status`, payload, {
+                headers: { 'Content-Type': 'application/json' }
+            });
+            return {
+                success: true,
+                data: response.data.data,
+                message: response.data.message || 'Course created successfully'
+            };
+        } catch (error) {
+            console.error('ManagementService.createCourse Error:', error);
+            return {
+                success: false,
+                data: null,
+                message: error.response?.data?.message || 'Failed to create course'
+            };
+        }
+    }
 
     /**
      * Get all employees with pagination

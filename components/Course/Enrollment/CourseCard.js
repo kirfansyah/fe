@@ -12,12 +12,13 @@ import {
     Globe,
     EyeOff,
     Clock,
+    XCircle,
     Calendar as CalendarIcon
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import EnrollmentFormModal from "./EnrollmentForm";
 import Swal from 'sweetalert2';
-
+import { getDeviceInfo } from '@/lib/deviceHelper';
 export default function CourseCard({
     course,
     index,
@@ -32,7 +33,10 @@ export default function CourseCard({
     onDuplicate,
     onSave,
     onDeleteEnrollment,
-    permissions
+    onUpdateEnrollmentStatus,
+    permissions,
+    created_by,
+    onSuccess
 }) {
     const [modalState, setModalState] = useState({
         isOpen: false,
@@ -88,6 +92,84 @@ export default function CourseCard({
     const handleSaveEnrollment = async (courseId, enrollmentIndex) => {
         const result = await onSave(courseId, enrollmentIndex);
         return result;
+    };
+
+    // ✅ NEW: Handler untuk toggle enrollment status
+    const handleToggleEnrollmentStatus = async (enrollment, idx) => {
+        // Check permission
+        if (!permissions?.can_edit) {
+            await Swal.fire({
+                icon: 'error',
+                title: 'Permission Denied',
+                text: 'You do not have permission to update enrollment status',
+                confirmButtonColor: '#1e3a8a'
+            });
+            return;
+        }
+
+        const newStatus = !enrollment.is_active;
+        
+        const result = await Swal.fire({
+            title: `${newStatus ? 'Activate' : 'inactivate'} Enrollment?`,
+            html: `
+                <p class="text-gray-700 mb-2">Are you sure you want to ${newStatus ? 'activate' : 'inactivate'} this enrollment?</p>
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-3">
+                    <p class="font-semibold text-gray-900">${enrollment.company_name || 'Incomplete'}</p>
+                    <p class="text-sm text-gray-600 mt-1">
+                        ${newStatus ? '✓ Students will be able to access this course' : '✗ Students will lose access to this course'}
+                    </p>
+                </div>
+            `,
+            icon: 'question',
+            showCloseButton: true,
+            showCancelButton: true,
+            confirmButtonText: `Yes, ${newStatus ? 'Activate' : 'inactivate'}`,
+            cancelButtonText: "Cancel",
+            confirmButtonColor: newStatus ? "#059669" : "#dc2626",
+            cancelButtonColor: "#1e3a8a",
+            customClass: {
+                cancelButton: "swal-cancel-style",
+                confirmButton: "swal-confirm-style",
+            }
+        });
+        
+        if (!result.isConfirmed) return;
+
+        const deviceInfo = getDeviceInfo();
+            
+        // ✅ Payload sesuai backend
+        const payload = {
+            is_active: newStatus,
+            updated_by: created_by || 'System',
+            updated_device: deviceInfo.device || 'Web'
+        };
+        
+        // Trigger save
+        const saveResult = await onUpdateEnrollmentStatus(
+            enrollment.id_course_enrollment, 
+                payload
+        );
+        
+        if (saveResult.success) {
+            await onSuccess();
+            await Swal.fire({
+                icon: 'success',
+                toast: true,
+                position: 'top-end',
+                title: `Enrollment ${newStatus ? 'Activated' : 'inactivated'}!`,
+                text: saveResult.message,
+                showConfirmButton: false,
+                timer: 2000,
+                timerProgressBar: true
+            });
+        } else {
+            await Swal.fire({
+                icon: 'error',
+                title: 'Failed!',
+                text: saveResult.message,
+                confirmButtonColor: '#1e3a8a'
+            });
+        }
     };
 
     const handleDelete = async (enrollment, idx) => {
@@ -197,29 +279,19 @@ export default function CourseCard({
             year: 'numeric' 
         });
     };
-
-    // ✅ Helper function to get enrollment status
     const getEnrollmentStatus = (enrollment) => {
-        if (!enrollment.publish_date || !enrollment.end_date) {
-            return { status: 'draft', label: 'Draft', color: 'gray' };
-        }
-
-        const now = new Date();
-        const publishDate = new Date(enrollment.publish_date);
-        const endDate = new Date(enrollment.end_date);
-
-        // Scheduled (belum publish)
-        if (now < publishDate) {
+        // ✅ Unpublished (dari backend)
+        if (enrollment.is_unpublish) {
             return { 
-                status: 'scheduled', 
-                label: 'Scheduled', 
-                color: 'blue',
-                icon: Clock 
+                status: 'unpublished', 
+                label: 'Unpublished', 
+                color: 'red',
+                icon: EyeOff 
             };
         }
 
-        // Active (sedang publish)
-        if (now >= publishDate && now <= endDate) {
+        // ✅ Published (dari backend)
+        if (enrollment.publish_date && enrollment.end_date) {
             return { 
                 status: 'published', 
                 label: 'Published', 
@@ -228,17 +300,13 @@ export default function CourseCard({
             };
         }
 
-        // Expired (sudah lewat end_date)
-        if (now > endDate) {
-            return { 
-                status: 'expired', 
-                label: 'Expired', 
-                color: 'red',
-                icon: EyeOff 
-            };
-        }
-
-        return { status: 'draft', label: 'Draft', color: 'gray' };
+        // ✅ Draft (belum ada tanggal)
+        return { 
+            status: 'draft', 
+            label: 'Draft', 
+            color: 'gray',
+            icon: AlertCircle 
+        };
     };
 
     const canInteract = permissions?.can_create || permissions?.can_edit || permissions?.can_delete;
@@ -383,10 +451,10 @@ export default function CourseCard({
 
                                 // Color mapping for status
                                 const statusColorMap = {
-                                    'scheduled': { bg: 'bg-blue-100', text: 'text-blue-700', border: 'border-blue-200' },
                                     'published': { bg: 'bg-green-100', text: 'text-green-700', border: 'border-green-200' },
-                                    'expired': { bg: 'bg-red-100', text: 'text-red-700', border: 'border-red-200' },
-                                    'draft': { bg: 'bg-gray-100', text: 'text-gray-600', border: 'border-gray-200' }
+                                    'unpublished': { bg: 'bg-red-100', text: 'text-red-700', border: 'border-red-200' },
+                                    'draft': { bg: 'bg-gray-100', text: 'text-gray-600', border: 'border-gray-200' },
+                                    'inactive': { bg: 'bg-gray-100', text: 'text-gray-600', border: 'border-gray-200' },
                                 };
 
                                 const statusColors = statusColorMap[enrollStatus.status] || statusColorMap.draft;
@@ -474,6 +542,26 @@ export default function CourseCard({
                                                     title="View Details"
                                                 >
                                                     <Eye className="w-4 h-4" />
+                                                </button>
+                                            )}
+
+                                            {/* ✅ NEW: Toggle Active/Inactive Button */}
+                                            {isExisting && permissions?.can_edit && (
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleToggleEnrollmentStatus(enrollment, idx);
+                                                    }}
+                                                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-all
+                                                        ${
+                                                        enrollment.is_active
+                                                            ? 'text-green-600 bg-green-50'
+                                                            : 'text-red-600 bg-gray-100'
+                                                    }`}
+                                                    title={`Click to ${enrollment.is_active ? 'inactivate' : 'activate'}`}
+                                                >
+                                                     <span>{enrollment.is_active ? 'Active' : 'Inactive'}</span>
                                                 </button>
                                             )}
 

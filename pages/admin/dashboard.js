@@ -1,3 +1,4 @@
+import React from 'react';
 import { useState, useEffect, useRef } from 'react';
 import { 
     BookOpen, 
@@ -13,14 +14,20 @@ import {
     ChevronDown,
     BookMarked,
     Clock,
-    Calendar
+    Calendar,
+    Lock,
+    Award
 } from 'lucide-react';
 import Admin from "layouts/Admin.js";
 import { useRoles } from "@/hooks/useRoles";
 import { useCourses } from "@/hooks/useCourses";
+import { useMenuPermissions } from "@/hooks/useMenuPermissions";
 
 export default function DashboardAnalytics() {
-    const { fetchAnalytics, fetchEmployeeCourseResult,fetchOverallPassPercentage  } = useRoles();
+    // ✅ ADD PERMISSION CHECK
+    const permissions = useMenuPermissions();
+    
+    const { fetchAnalytics, fetchEmployeeCourseResult, fetchOverallPassPercentage } = useRoles();
     const { companies } = useCourses();
     
     const [employeeCourseData, setEmployeeCourseData] = useState(null);
@@ -38,6 +45,12 @@ export default function DashboardAnalytics() {
 
     
     const loadPassPercentage = async () => {
+        // ✅ CHECK PERMISSION
+        if (!permissions.can_view) {
+            console.log('No permission to view pass percentage');
+            return;
+        }
+
         try {
             setLoadingPassPercentage(true);
             
@@ -47,9 +60,8 @@ export default function DashboardAnalytics() {
                 filters.company_id = companyFilter;
             }
             
-            // ✅ Kirim id_course kalau bukan "All"
             if (courseFilterPassPercentage !== 'All') {
-                filters.id_course = courseFilterPassPercentage; // Ini sudah ID, bukan name
+                filters.id_course = courseFilterPassPercentage;
             }
             
             if (yearFilter !== 'All') {
@@ -63,13 +75,12 @@ export default function DashboardAnalytics() {
                 }
             }
             
-            console.log('Sending filters:', filters); // ✅ Debug
+            console.log('Sending filters:', filters);
             
             const result = await fetchOverallPassPercentage(filters);
             console.log('Pass Percentage Result:', result);
             
             if (result?.data && Array.isArray(result.data) && result.data.length > 0) {
-                // Aggregate semua data dari array
                 const totals = result.data.reduce((acc, course) => ({
                     in_progress: acc.in_progress + (course.in_progress || 0),
                     passed: acc.passed + (course.passed || 0),
@@ -91,43 +102,34 @@ export default function DashboardAnalytics() {
     // Get current year and month
     const currentDate = new Date();
     const currentYear = currentDate.getFullYear();
-    const currentMonthIndex = currentDate.getMonth() + 1; // 0-11 to 1-12
+    const currentMonthIndex = currentDate.getMonth() + 1;
     const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
                         'July', 'August', 'September', 'October', 'November', 'December'];
     const currentMonthName = monthNames[currentDate.getMonth()];
     
-    // Filter states - Set to current year and month
     const [yearFilter, setYearFilter] = useState(currentYear);
     const [monthFilter, setMonthFilter] = useState(currentMonthName);
     const [companyFilter, setCompanyFilter] = useState('All');
     const [courseFilterPassPercentage, setCourseFilterPassPercentage] = useState('All');
     
-    // Lists for dropdowns
-    
     const [companiesList, setCompaniesList] = useState([{ id: 'All', company_name: 'All' }]);
     
-    // Dropdown states
     const [showYearDropdown, setShowYearDropdown] = useState(false);
     const [showMonthDropdown, setShowMonthDropdown] = useState(false);
     const [showCompanyDropdown, setShowCompanyDropdown] = useState(false);
     const [showCoursePassDropdown, setShowCoursePassDropdown] = useState(false);
     
-    // Refs for click outside
     const yearDropdownRef = useRef(null);
     const monthDropdownRef = useRef(null);
     const companyDropdownRef = useRef(null);
     const coursePassDropdownRef = useRef(null);
     
-    // Data states
     const [analyticsData, setAnalyticsData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    // Year options (you can make this dynamic)
-    // const currentYear = new Date().getFullYear();
     const yearOptions = ['All', ...Array.from({length: 5}, (_, i) => currentYear - i)];
 
-    // Month options
     const monthOptions = [
         'All',
         'January',
@@ -144,7 +146,6 @@ export default function DashboardAnalytics() {
         'December'
     ];
 
-    // Populate companies list when companies data is available
     useEffect(() => {
         if (companies && companies.length > 0) {
             const formattedCompanies = [
@@ -156,13 +157,16 @@ export default function DashboardAnalytics() {
     }, [companies]);
 
     useEffect(() => {
-        loadPassPercentage();
-    }, [companyFilter, courseFilterPassPercentage, yearFilter, monthFilter]);
+        if (permissions.can_view) {
+            loadPassPercentage();
+        }
+    }, [companyFilter, courseFilterPassPercentage, yearFilter, monthFilter, permissions.can_view]);
 
-    // Fetch data when filters change
     useEffect(() => {
-        loadAnalyticsData();
-    }, [yearFilter, monthFilter, companyFilter]);
+        if (permissions.can_view) {
+            loadAnalyticsData();
+        }
+    }, [yearFilter, monthFilter, companyFilter, permissions.can_view]);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -186,8 +190,13 @@ export default function DashboardAnalytics() {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    // Tambah function untuk fetch employee course result
     const loadEmployeeCourseResult = async () => {
+        // ✅ CHECK PERMISSION
+        if (!permissions.can_view) {
+            console.log('No permission to view employee course result');
+            return;
+        }
+
         try {
             setLoadingEmployeeCourse(true);
             
@@ -201,12 +210,10 @@ export default function DashboardAnalytics() {
                 filters.id_course = courseFilterEmployee;
             }
             
-            // ✅ TAMBAH YEAR FILTER
             if (yearFilter !== 'All') {
                 filters.year = yearFilter;
             }
             
-            // ✅ TAMBAH MONTH FILTER
             if (monthFilter !== 'All') {
                 const monthIndex = monthOptions.indexOf(monthFilter);
                 if (monthIndex > 0) {
@@ -214,7 +221,7 @@ export default function DashboardAnalytics() {
                 }
             }
             
-            console.log('Employee Course Filters:', filters); // Debug
+            console.log('Employee Course Filters:', filters);
             
             const result = await fetchEmployeeCourseResult(filters);
             console.log('Employee Course Result:', result);
@@ -233,8 +240,10 @@ export default function DashboardAnalytics() {
     };
     
     useEffect(() => {
-        loadEmployeeCourseResult();
-    }, [companyFilter, courseFilterEmployee, yearFilter, monthFilter]); // ✅ TAMBAH yearFilter & monthFilter
+        if (permissions.can_view) {
+            loadEmployeeCourseResult();
+        }
+    }, [companyFilter, courseFilterEmployee, yearFilter, monthFilter, permissions.can_view]);
 
     const handleCourseEmployeeSelect = (courseId) => {
         setCourseFilterEmployee(courseId);
@@ -242,6 +251,13 @@ export default function DashboardAnalytics() {
     };
 
     const loadAnalyticsData = async () => {
+        // ✅ CHECK PERMISSION
+        if (!permissions.can_view) {
+            setLoading(false);
+            setError('You do not have permission to view this page');
+            return;
+        }
+
         try {
             setLoading(true);
             setError(null);
@@ -265,17 +281,14 @@ export default function DashboardAnalytics() {
             if (result.data) {
                 const apiData = result.data;
                 
-                // ✅ Extract courses list dengan ID untuk dropdown
                 if (apiData.most_accessed_courses && Array.isArray(apiData.most_accessed_courses)) {
                     const coursesWithId = apiData.most_accessed_courses.map(c => ({
                         id: c.id_course,
                         name: c.course_title
                     }));
                     
-                    // Untuk dropdown yang butuh ID
                     setCoursesListWithId([{ id: 'All', name: 'All' }, ...coursesWithId]);
                     
-                    // Untuk dropdown yang cuma butuh name (Employee x Course)
                     const courseNames = apiData.most_accessed_courses.map(c => c.course_title);
                     setCoursesList(['All', ...courseNames]);
                 }
@@ -294,6 +307,7 @@ export default function DashboardAnalytics() {
         }
     };
 
+    // ... (rest of the helper functions remain the same: getEmptyData, transformApiData, etc.)
     const getEmptyData = () => {
         return {
             stats: [
@@ -375,14 +389,12 @@ export default function DashboardAnalytics() {
             average_ebook_read_month: 0
         };
 
-        // ✅ Helper to get trend from direction
         const getTrend = (direction) => {
             if (direction === 'up') return 'up';
             if (direction === 'down') return 'down';
             return 'neutral';
         };
 
-        // ✅ Helper to format growth text
         const formatGrowth = (growth) => {
             if (!growth) return '0% this month';
             
@@ -401,7 +413,6 @@ export default function DashboardAnalytics() {
             }
         };
 
-        // ✅ Build stats from API data
         const stats = [
             {
                 id: 1,
@@ -460,7 +471,6 @@ export default function DashboardAnalytics() {
             }
         ];
 
-        // ✅ Transform Most Accessed Courses
         const colors = ['bg-teal-600', 'bg-amber-500', 'bg-blue-500', 'bg-purple-500', 'bg-pink-500'];
         const transformedMostAccessed = mostAccessed
             .filter(course => course && course.percentage > 0)
@@ -471,7 +481,6 @@ export default function DashboardAnalytics() {
                 color: colors[index % colors.length]
             }));
 
-        // ✅ Transform Average Results
         const transformedAvgResults = avgResults
             .filter(result => result && result.avg_score !== null && result.avg_score !== undefined)
             .map(result => ({
@@ -503,7 +512,7 @@ export default function DashboardAnalytics() {
     };
 
     const handleCoursePassSelect = (courseId) => {
-        setCourseFilterPassPercentage(courseId); // Simpan ID, bukan name
+        setCourseFilterPassPercentage(courseId);
         setShowCoursePassDropdown(false);
     };
 
@@ -518,6 +527,21 @@ export default function DashboardAnalytics() {
         setMonthFilter(currentMonthName);
         setCompanyFilter('All');
     };
+
+    // ✅ HANDLE NO PERMISSION STATE
+    if (!permissions.can_view) {
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-gray-50">
+                <div className="text-center bg-white p-8 rounded-lg shadow-lg max-w-md">
+                    <Lock className="w-16 h-16 text-red-500 mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">Access Denied</h3>
+                    <p className="text-gray-600 mb-4">
+                        You don't have permission to view this dashboard. Please contact your administrator for access.
+                    </p>
+                </div>
+            </div>
+        );
+    }
 
     if (loading) {
         return (
@@ -1122,6 +1146,19 @@ export default function DashboardAnalytics() {
                         
                         {showCourseEmployeeDropdown && (
                             <div className="absolute top-full right-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                                {/* ✅ TAMBAH: All Courses option */}
+                                <button
+                                    onClick={() => handleCourseEmployeeSelect('All')}
+                                    className={`w-full text-left px-3 py-2 hover:bg-gray-50 transition-colors text-xs border-b border-gray-100 ${
+                                        courseFilterEmployee === 'All' ? 'bg-indigo-50 text-indigo-600 font-medium' : 'text-gray-700'
+                                    }`}
+                                >
+                                    <span className="flex items-center gap-2">
+                                        <BarChart3 className="w-3 h-3" />
+                                        All Courses
+                                    </span>
+                                </button>
+                                
                                 {coursesListWithId.length > 0 ? (
                                     coursesListWithId.map((course) => (
                                         <button
@@ -1151,13 +1188,37 @@ export default function DashboardAnalytics() {
                     </div>
                 ) : employeeCourseData && employeeCourseData.employee_groups?.length > 0 ? (
                     <>
-                        {/* Summary Stats */}
-                        <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                            <div className="flex items-center gap-4">
+                        {/* ✅ IMPROVED: Enhanced Summary Stats */}
+                        <div className="mb-6 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg border border-indigo-100">
+                            <div className="flex items-center gap-6 flex-wrap">
                                 <div className="flex items-center gap-2">
                                     <Users className="w-5 h-5 text-indigo-600" />
                                     <span className="text-sm text-gray-600">Total Employees:</span>
                                     <span className="text-lg font-bold text-gray-900">{employeeCourseData.total_employee}</span>
+                                </div>
+                                
+                                {/* ✅ NEW: Total unique courses */}
+                                <div className="flex items-center gap-2">
+                                    <BookOpen className="w-5 h-5 text-purple-600" />
+                                    <span className="text-sm text-gray-600">Unique Courses:</span>
+                                    <span className="text-lg font-bold text-gray-900">
+                                        {(() => {
+                                            const allCourses = new Set();
+                                            employeeCourseData.employee_groups.forEach(group => {
+                                                Object.keys(group.employees_by_course || {}).forEach(course => {
+                                                    allCourses.add(course);
+                                                });
+                                            });
+                                            return allCourses.size;
+                                        })()}
+                                    </span>
+                                </div>
+                                
+                                {/* ✅ NEW: Total score groups */}
+                                <div className="flex items-center gap-2">
+                                    <BarChart3 className="w-5 h-5 text-teal-600" />
+                                    <span className="text-sm text-gray-600">Score Groups:</span>
+                                    <span className="text-lg font-bold text-gray-900">{employeeCourseData.employee_groups.length}</span>
                                 </div>
                             </div>
                         </div>
@@ -1175,10 +1236,10 @@ export default function DashboardAnalytics() {
                             const colors = ['bg-pink-400', 'bg-purple-400', 'bg-indigo-500', 'bg-teal-400', 'bg-amber-400', 'bg-green-400'];
                             
                             return (
-                                <div className="flex items-center justify-center gap-4 mb-6 flex-wrap">
+                                <div className="flex items-center justify-center gap-4 mb-6 flex-wrap p-3 bg-gray-50 rounded-lg">
                                     {courseArray.map((course, index) => (
                                         <div key={course} className="flex items-center gap-2">
-                                            <div className={`w-3 h-3 rounded ${colors[index % colors.length]}`}></div>
+                                            <div className={`w-3 h-3 rounded ${colors[index % colors.length]} shadow-sm`}></div>
                                             <span className="text-xs text-gray-600 max-w-[150px] truncate" title={course}>
                                                 {course}
                                             </span>
@@ -1188,8 +1249,8 @@ export default function DashboardAnalytics() {
                             );
                         })()}
 
-                        {/* Chart */}
-                        <div className="relative h-80 overflow-x-auto">
+                        {/* ✅ IMPROVED: Chart with better interaction */}
+                        <div className="relative h-80 overflow-x-auto bg-gray-50 rounded-lg p-4">
                             {(() => {
                                 // Collect all unique course names
                                 const allCourses = new Set();
@@ -1209,7 +1270,12 @@ export default function DashboardAnalytics() {
                                 });
                                 maxValue = Math.max(maxValue, 10); // Minimum scale of 10
                                 
-                                const chartWidth = Math.max(600, employeeCourseData.employee_groups.length * 80 + 100);
+                                // ✅ Filter empty groups
+                                const validGroups = employeeCourseData.employee_groups.filter(group => 
+                                    Object.keys(group.employees_by_course || {}).length > 0
+                                );
+                                
+                                const chartWidth = Math.max(600, validGroups.length * 80 + 100);
                                 
                                 return (
                                     <svg className="w-full h-full" viewBox={`0 0 ${chartWidth} 300`} preserveAspectRatio="xMinYMid meet">
@@ -1219,7 +1285,7 @@ export default function DashboardAnalytics() {
                                             const y = 20 + i * 60;
                                             return (
                                                 <g key={i}>
-                                                    <text x="25" y={y + 5} fontSize="11" fill="#9ca3af" textAnchor="end">
+                                                    <text x="25" y={y + 5} fontSize="11" fill="#9ca3af" textAnchor="end" fontWeight="500">
                                                         {value}
                                                     </text>
                                                     <line x1="40" y1={y} x2={chartWidth - 20} y2={y} stroke="#e5e7eb" strokeWidth="1" strokeDasharray={i > 0 ? "3,3" : "0"} />
@@ -1228,12 +1294,12 @@ export default function DashboardAnalytics() {
                                         })}
                                         
                                         {/* X-axis line */}
-                                        <line x1="40" y1="260" x2={chartWidth - 20} y2="260" stroke="#e5e7eb" strokeWidth="1" />
+                                        <line x1="40" y1="260" x2={chartWidth - 20} y2="260" stroke="#9ca3af" strokeWidth="2" />
                                         
                                         {/* Bars */}
-                                        {employeeCourseData.employee_groups.map((group, groupIndex) => {
+                                        {validGroups.map((group, groupIndex) => {
                                             const barWidth = 50;
-                                            const x = 60 + groupIndex * 70;
+                                            const x = 60 + groupIndex * 80;
                                             const scale = 220 / maxValue;
                                             let currentY = 260;
                                             
@@ -1249,22 +1315,31 @@ export default function DashboardAnalytics() {
                                                         
                                                         return (
                                                             <g key={`${groupIndex}-${courseIndex}`}>
+                                                                {/* ✅ IMPROVED: Better hover effect */}
                                                                 <rect
                                                                     x={x}
                                                                     y={currentY}
                                                                     width={barWidth}
                                                                     height={barHeight}
                                                                     fill={colors[courseIndex % colors.length]}
-                                                                    rx="2"
-                                                                />
+                                                                    rx="3"
+                                                                    className="cursor-pointer transition-opacity hover:opacity-80"
+                                                                    style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))' }}
+                                                                >
+                                                                    {/* ✅ IMPROVED: Native SVG tooltip */}
+                                                                    <title>{`${course}: ${value} employee${value > 1 ? 's' : ''} (Score: ${group.best_score})`}</title>
+                                                                </rect>
+                                                                
                                                                 {/* Value label inside bar if space allows */}
-                                                                {barHeight > 15 && (
+                                                                {barHeight > 18 && (
                                                                     <text
                                                                         x={x + barWidth / 2}
-                                                                        y={currentY + barHeight / 2 + 4}
-                                                                        fontSize="10"
+                                                                        y={currentY + barHeight / 2 + 5}
+                                                                        fontSize="11"
                                                                         fill="white"
                                                                         textAnchor="middle"
+                                                                        fontWeight="bold"
+                                                                        style={{ pointerEvents: 'none' }}
                                                                     >
                                                                         {value}
                                                                     </text>
@@ -1277,9 +1352,10 @@ export default function DashboardAnalytics() {
                                                     <text
                                                         x={x + barWidth / 2}
                                                         y="278"
-                                                        fontSize="10"
-                                                        fill="#6b7280"
+                                                        fontSize="11"
+                                                        fill="#4b5563"
                                                         textAnchor="middle"
+                                                        fontWeight="600"
                                                     >
                                                         Score: {group.best_score}
                                                     </text>
@@ -1291,40 +1367,14 @@ export default function DashboardAnalytics() {
                             })()}
                         </div>
                         
-                        {/* Data Table */}
-                        <div className="mt-6 overflow-x-auto">
-                            <table className="w-full text-sm">
-                                <thead>
-                                    <tr className="border-b border-gray-200">
-                                        <th className="text-left py-2 px-3 font-semibold text-gray-700">Best Score</th>
-                                        <th className="text-left py-2 px-3 font-semibold text-gray-700">Course</th>
-                                        <th className="text-right py-2 px-3 font-semibold text-gray-700">Employees</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {employeeCourseData.employee_groups.map((group, groupIndex) => (
-                                        Object.entries(group.employees_by_course || {}).map(([course, count], courseIndex) => (
-                                            <tr key={`${groupIndex}-${courseIndex}`} className="border-b border-gray-100 hover:bg-gray-50">
-                                                {courseIndex === 0 && (
-                                                    <td 
-                                                        className="py-2 px-3 font-medium text-gray-900"
-                                                        rowSpan={Object.keys(group.employees_by_course || {}).length}
-                                                    >
-                                                        {group.best_score}
-                                                    </td>
-                                                )}
-                                                <td className="py-2 px-3 text-gray-600">{course}</td>
-                                                <td className="py-2 px-3 text-right font-medium text-gray-900">{count}</td>
-                                            </tr>
-                                        ))
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
                     </>
                 ) : (
-                    <div className="flex items-center justify-center h-80">
-                        <p className="text-gray-400 text-sm">No employee course data available</p>
+                    <div className="flex flex-col items-center justify-center h-80">
+                        <div className="bg-gray-100 p-6 rounded-full mb-4">
+                            <BarChart3 className="w-12 h-12 text-gray-300" />
+                        </div>
+                        <p className="text-gray-400 text-sm font-medium">No employee course data available</p>
+                        <p className="text-gray-400 text-xs mt-1">Try selecting a different course filter</p>
                     </div>
                 )}
             </div>
