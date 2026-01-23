@@ -35,7 +35,7 @@ export default function Course({
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState('all');
     const [viewMode, setViewMode] = useState('list');
-   
+    const [selectedCourseForModal, setSelectedCourseForModal] = useState(null);
     const router = useRouter();
     const { showLoading, showSuccess, showError, showWarning, confirmAction } = useSweetAlert();
     const { dataKaryawan } = useContext(ProfileContext);
@@ -757,31 +757,33 @@ export default function Course({
                                 
                                 {/* ✅ Updated Badge - Active/Inactive */}
                                 <div className="absolute top-3 right-3">
-                                    <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
-                                        course.is_active
-                                            ? 'bg-green-600 text-white'
-                                            : 'bg-gray-700 text-white'
-                                    }`}>
-                                        {course.is_active ? (
-                                            <>
-                                                <Check className="w-3 h-3" />
-                                                <span>Active</span>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <XCircle className="w-3 h-3" />
-                                                <span>Inactive</span>
-                                            </>
-                                        )}
-                                    </div>
+                                    {permissions?.can_edit && (
+                                        <button
+                                            onClick={() => handleToggleActiveStatus(course)}
+                                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${
+                                                course.is_active
+                                                    ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
+                                                    : 'bg-gray-100 text-gray-600 border-gray-300 hover:bg-gray-200'
+                                            }`}
+                                            title={`Click to ${course.is_active ? 'deactivate' : 'activate'}`}
+                                        >
+                                            <div className={`w-2 h-2 rounded-full ${course.is_active ? 'bg-green-600' : 'bg-gray-400'}`} />
+                                            <span>{course.is_active ? 'Active' : 'Inactive'}</span>
+                                        </button>
+                                    )}
+                                    
                                 </div>
 
                                 {course.contents && course.contents.length > 0 && (
                                     <div className="absolute top-3 left-3">
-                                        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white rounded-full text-xs font-semibold text-gray-700 shadow-sm">
+                                        <button 
+                                            onClick={() => setSelectedCourseForModal(course)}
+                                            className="flex items-center justify-center gap-1.5 px-2.5 py-1 text-purple-600 
+                                                    hover:bg-purple-50 rounded-lg transition-colors border border-purple-200 font-medium text-sm"
+                                        >
                                             <FileText className="w-3 h-3" />
-                                            <span>{course.contents.length}</span>
-                                        </div>
+                                            <span>View Contents ({course.contents.length})</span>
+                                        </button>
                                     </div>
                                 )}
                             </div>
@@ -1005,6 +1007,214 @@ export default function Course({
                                 ) : (
                                     <span>Create Course</span>
                                 )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* Course Contents Modal */}
+            {selectedCourseForModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg shadow-lg max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+                        {/* Modal Header */}
+                        <div className="flex items-center justify-between p-5 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-purple-50">
+                            <div className="flex items-center gap-3">
+                                <div className="w-12 h-12 rounded-lg overflow-hidden bg-blue-100 flex-shrink-0">
+                                    {selectedCourseForModal.thumbnail ? (
+                                        <img 
+                                            src={selectedCourseForModal.thumbnail} 
+                                            alt={selectedCourseForModal.course_title}
+                                            className="w-full h-full object-cover"
+                                        />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center">
+                                            <FileText className="w-6 h-6 text-blue-500" />
+                                        </div>
+                                    )}
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-bold text-gray-900">
+                                        {selectedCourseForModal.course_title}
+                                    </h3>
+                                    <p className="text-sm text-gray-600">
+                                        {selectedCourseForModal.contents?.length || 0} content items
+                                    </p>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => setSelectedCourseForModal(null)}
+                                className="text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-white rounded-lg"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {/* Modal Body - Scrollable */}
+                        <div className="flex-1 overflow-y-auto p-5">
+                            {selectedCourseForModal.contents && selectedCourseForModal.contents.length > 0 ? (
+                                <div className="space-y-3">
+                                    {selectedCourseForModal.contents.map((content, index) => (
+                                        <div
+                                            key={content.id_course_content}
+                                            className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:shadow-md transition-all"
+                                        >
+                                            <div className="flex items-center gap-3 flex-1">
+                                                <div className="flex items-center justify-center w-8 h-8 text-gray-400 cursor-move hover:text-gray-600 hover:bg-gray-100 rounded">
+                                                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                                        <circle cx="8" cy="6" r="1.5"/>
+                                                        <circle cx="8" cy="12" r="1.5"/>
+                                                        <circle cx="8" cy="18" r="1.5"/>
+                                                        <circle cx="16" cy="6" r="1.5"/>
+                                                        <circle cx="16" cy="12" r="1.5"/>
+                                                        <circle cx="16" cy="18" r="1.5"/>
+                                                    </svg>
+                                                </div>
+
+                                                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center flex-shrink-0 shadow-md">
+                                                    <span className="text-sm font-bold text-white">
+                                                        {index + 1}
+                                                    </span>
+                                                </div>
+
+                                                <div className={`flex items-center justify-center w-10 h-10 rounded-lg ${getContentColor(content.content_type_name)} shadow-sm`}>
+                                                    {getContentIcon(content.content_type_name)}
+                                                </div>
+
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <span className="text-sm font-semibold text-gray-900">
+                                                            {content.content_name || content.content_type_name}
+                                                        </span>
+                                                        {content.is_mandatory && (
+                                                            <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-medium rounded-full">
+                                                                Required
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex items-center gap-3">
+                                                        <span className="text-xs text-gray-500 font-medium">
+                                                            {content.content_type_name}
+                                                        </span>
+                                                        {content.duration && (
+                                                            <>
+                                                                <span className="text-gray-300">•</span>
+                                                                <span className="text-xs text-gray-500">
+                                                                    {content.duration} mins
+                                                                </span>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-center gap-2">
+                                                {permissions?.can_view && (
+                                                    <button
+                                                        onClick={() => {
+                                                            handleViewContent(selectedCourseForModal.id_course, content.id_course_content, content.id_content_type);
+                                                            setSelectedCourseForModal(null);
+                                                        }}
+                                                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                        title="View content"
+                                                    >
+                                                        <Eye className="w-4 h-4" />
+                                                    </button>
+                                                )}
+
+                                                {permissions?.can_edit && (
+                                                    <button
+                                                        onClick={() => {
+                                                            handleEditContent(selectedCourseForModal.id_course, content.id_course_content, content.id_content_type);
+                                                            setSelectedCourseForModal(null);
+                                                        }}
+                                                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                        title="Edit content"
+                                                    >
+                                                        <Edit className="w-4 h-4" />
+                                                    </button>
+                                                )}
+
+                                                {permissions?.can_create && (content.id_content_type === 3 || content.id_content_type === 8) && (
+                                                    <button
+                                                        onClick={() => {
+                                                            handleDuplicateTest(
+                                                                selectedCourseForModal.id_course, 
+                                                                content.id_course_content,
+                                                                content.id_content_type,
+                                                                content.content_type_name
+                                                            );
+                                                            setSelectedCourseForModal(null);
+                                                        }}
+                                                        className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors border border-green-200"
+                                                        title={`Duplicate as ${content.id_content_type === 3 ? 'Posttest' : 'Pretest'}`}
+                                                    >
+                                                        <Copy className="w-4 h-4" />
+                                                    </button>
+                                                )}
+                                                
+                                                {permissions?.can_delete && (
+                                                    <button 
+                                                        onClick={() => handleDeleteContent(content.id_course_content)}
+                                                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                        title="Delete content"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-12">
+                                    <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                                        <FileText className="w-8 h-8 text-gray-400" />
+                                    </div>
+                                    <h4 className="text-base font-semibold text-gray-900 mb-2">
+                                        No content yet
+                                    </h4>
+                                    <p className="text-sm text-gray-600 mb-6 max-w-sm mx-auto">
+                                        Start building your course by adding videos, documents, or quizzes
+                                    </p>
+                                    
+                                    {permissions?.can_create && (
+                                        <button 
+                                            onClick={() => {
+                                                handleAddContent(selectedCourseForModal.id_course);
+                                                setSelectedCourseForModal(null);
+                                            }}
+                                            className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white text-sm 
+                                                    font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                                        >
+                                            <Plus className="w-5 h-5" />
+                                            Add Content
+                                        </button>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div className="border-t border-gray-200 p-4 bg-gray-50 flex items-center justify-end gap-3">
+                            {(permissions?.can_create || permissions?.can_edit) && (
+                                <button 
+                                    onClick={() => {
+                                        handleAddContent(selectedCourseForModal.id_course);
+                                        setSelectedCourseForModal(null);
+                                    }}
+                                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg 
+                                            hover:bg-blue-700 transition-colors font-medium text-sm shadow-sm"
+                                >
+                                    <Plus className="w-5 h-5" />
+                                    Add Content
+                                </button>
+                            )}
+                            <button
+                                onClick={() => setSelectedCourseForModal(null)}
+                                className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg
+                                        hover:bg-gray-50 transition-colors font-medium text-sm"
+                            >
+                                Close
                             </button>
                         </div>
                     </div>

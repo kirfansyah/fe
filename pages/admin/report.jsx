@@ -111,18 +111,7 @@ export default function Report() {
     expired: offlineLearning?.filter(l => l.status === "Expired")?.length || 0,
   };
 
-  // ✅ Show error state for master data
-  if (errorOnline) {
-    return (
-      <div className="min-h-screen bg-gray-50 p-6">
-        <ErrorMessage 
-          message={errorOnline} 
-          onRetry={refetch}
-          fullScreen 
-        />
-      </div>
-    );
-  }
+  
   const router = useRouter();
   
   if (!permissions.can_view) {
