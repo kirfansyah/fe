@@ -196,6 +196,7 @@ export default function RatingFeedback() {
                   loading={courseLoading}
                   error={courseError}
                   onRefresh={fetchCourseRatings}
+                  permissions={permissions}
                 />
               )}
 
@@ -205,6 +206,7 @@ export default function RatingFeedback() {
                   loading={courseLoading}
                   error={courseError}
                   onRefresh={fetchCourseFeedbacks}
+                  permissions={permissions}
                 />
               )}
             </>
@@ -219,6 +221,7 @@ export default function RatingFeedback() {
                   loading={ebookLoading}
                   error={ebookError}
                   onRefresh={fetchEbookRatings}
+                  permissions={permissions}
                 />
               )}
 
@@ -228,6 +231,7 @@ export default function RatingFeedback() {
                   loading={ebookLoading}
                   error={ebookError}
                   onRefresh={fetchEbookFeedbacks}
+                  permissions={permissions}
                 />
               )}
             </>
@@ -236,6 +240,19 @@ export default function RatingFeedback() {
       </div>
     </div>
   );
+
+  if (permissions.isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="max-w-md text-center p-6">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Lock className="w-8 h-8 text-red-600" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Loading</h2>
+        </div>
+      </div>
+    );
+  }
 
   // ✅ Check view permission - Access Denied if no view permission
   if (!permissions.can_view) {
