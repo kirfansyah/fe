@@ -1,47 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import API from "../services/EbookService";
 
-// Dummy data
-const DUMMY_EBOOKS = [
-  {
-    id_ebook: 1,
-    title: "Panduan Belajar React (dummy data)",
-    author: "John Doe",
-    description: "Belajar React dari dasar",
-    category_id: 1,
-    subcategory_id: 1,
-    company_id: 1,
-    contents: [
-      { id_ebook_content: 1, content_type_name: "Introduction to React" },
-      { id_ebook_content: 2, content_type_name: "Components & Props" },
-    ],
-  },
-  {
-    id_ebook: 2,
-    title: "Belajar HTML Dasar (dummy data)",
-    author: "Jane Smith",
-    description: "HTML untuk pemula",
-    category_id: 2,
-    subcategory_id: 3,
-    company_id: 1,
-    contents: [
-      {
-        id_ebook_content: 3,
-        content_type_name: "Introducing to HTML (dummy data)",
-      },
-    ],
-  },
-  {
-    id_ebook: 3,
-    title: "Belajar Next.js (dummy data)",
-    company_id: 2,
-    contents: [
-      { id_ebook_content: 4, content_type_name: "Introduction to Next.js" },
-      { id_ebook_content: 5, content_type_name: "Components" },
-    ],
-  },
-];
-
 export function useEbooks() {
   const [ebooks, setEbooks] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -59,15 +18,13 @@ export function useEbooks() {
     try {
       const res = await API.getAllEbook();
       setEbooks(res.data);
-      // setEbooks(DUMMY_EBOOKS);
     } catch (err) {
       setError(err.message || "Failed to fetch ebooks");
       console.error("Error fetching ebooks:", err);
       // Jika error 401, gunakan dummy data
       if (err.message.includes("401") || err.message.includes("Unauthorized")) {
-        console.warn("⚠️ Using dummy data due to authentication error");
-        setEbooks(DUMMY_EBOOKS);
-        setError("Using demo data (not authenticated)");
+        console.warn("⚠️ authentication error");
+        setError("not authenticated");
       } else {
         setError(err.message);
       }
@@ -88,11 +45,6 @@ export function useEbooks() {
       setError(err.message || "Failed to fetch ebook");
       console.error("Error fetching ebook:", err);
 
-      // Return dummy data jika error
-      const dummyEbook = DUMMY_EBOOKS.find((e) => e.id_ebook === parseInt(id));
-      if (dummyEbook) {
-        return dummyEbook;
-      }
       throw err;
     } finally {
       setLoading(false);
@@ -111,11 +63,6 @@ export function useEbooks() {
       setError(err.message || "Failed to fetch ebook");
       console.error("Error fetching ebook:", err);
 
-      // Return dummy data jika error
-      const dummyEbook = DUMMY_EBOOKS.find((e) => e.id_ebook === parseInt(id));
-      if (dummyEbook) {
-        return dummyEbook;
-      }
       throw err;
     } finally {
       setLoading(false);
@@ -147,7 +94,7 @@ export function useEbooks() {
         setLoading(false);
       }
     },
-    [fetchEbooks]
+    [fetchEbooks],
   );
 
   // Update ebook
@@ -174,7 +121,7 @@ export function useEbooks() {
         setLoading(false);
       }
     },
-    [fetchEbooks]
+    [fetchEbooks],
   );
 
   // Delete ebook
@@ -201,7 +148,7 @@ export function useEbooks() {
         setLoading(false);
       }
     },
-    [fetchEbooks]
+    [fetchEbooks],
   );
 
   //  get all data Category

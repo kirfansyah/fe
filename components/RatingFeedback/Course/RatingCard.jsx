@@ -1,10 +1,11 @@
-import { Star } from "lucide-react";
+import { Star, Building } from "lucide-react";
 
 export default function RatingCard({ rating }) {
   const {
     course_title,
     rating_average,
     total_reviewer,
+    company_name,
     star_5,
     star_4,
     star_3,
@@ -54,9 +55,22 @@ export default function RatingCard({ rating }) {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-all duration-300">
       {/* Course Title */}
-      <h3 className="text-lg font-bold text-gray-800 mb-4 line-clamp-2 min-h-[3.5rem]">
+      <h2 className="text-lg font-bold text-gray-800 line-clamp-2 min-h-[2rem]">
         {course_title}
-      </h3>
+      </h2>
+      <div className="flex flex-wrap gap-2 mb-1">
+        {company_name && (
+          <span className="flex items-center gap-1 px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700 rounded-full">
+            <Building className="w-3 h-3" />
+            {company_name}
+          </span>
+        )}
+        {company_name === null && (
+          <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-600 rounded-full">
+            All Companies
+          </span>
+        )}
+      </div>
 
       <div className="text-sm text-gray-600 mb-6">
         <p>Rating are verified and are from employee based on</p>

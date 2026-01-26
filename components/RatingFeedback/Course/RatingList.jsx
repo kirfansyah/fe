@@ -1,4 +1,4 @@
-import { Star } from "lucide-react";
+import { Star, Building } from "lucide-react";
 
 export default function RatingList({ ratings }) {
   const renderStars = (rating) => {
@@ -74,6 +74,20 @@ export default function RatingList({ ratings }) {
                 <p className="font-semibold text-gray-800 line-clamp-2">
                   {rating.course_title}
                 </p>
+
+                <div className="flex flex-wrap gap-2 mb-1">
+                  {rating.company_name && (
+                    <span className="flex items-center gap-1 px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700 rounded-full">
+                      <Building className="w-3 h-3" />
+                      {rating.company_name}
+                    </span>
+                  )}
+                  {rating.company_name === null && (
+                    <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-600 rounded-full">
+                      All Companies
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* Average Rating */}

@@ -135,15 +135,15 @@ export default function ViewEbook({ onBack, ebookId }) {
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
       document.removeEventListener(
         "webkitfullscreenchange",
-        handleFullscreenChange
+        handleFullscreenChange,
       );
       document.removeEventListener(
         "mozfullscreenchange",
-        handleFullscreenChange
+        handleFullscreenChange,
       );
       document.removeEventListener(
         "MSFullscreenChange",
-        handleFullscreenChange
+        handleFullscreenChange,
       );
     };
   }, []);
@@ -365,14 +365,14 @@ export default function ViewEbook({ onBack, ebookId }) {
                         Publication Date
                       </p>
                       <p className="text-base font-medium text-gray-900">
-                        {ebook.created_at
-                          ? new Date(ebook.created_at).toLocaleDateString(
+                        {ebook.upload_date
+                          ? new Date(ebook.upload_date).toLocaleDateString(
                               "en-US",
                               {
                                 year: "numeric",
                                 month: "long",
                                 day: "numeric",
-                              }
+                              },
                             )
                           : "N/A"}
                       </p>
@@ -387,7 +387,7 @@ export default function ViewEbook({ onBack, ebookId }) {
                                 year: "numeric",
                                 month: "long",
                                 day: "numeric",
-                              }
+                              },
                             )
                           : "N/A"}
                       </p>
@@ -522,7 +522,7 @@ export default function ViewEbook({ onBack, ebookId }) {
                 {ebook.file_url ? (
                   <PdfViewer
                     file={`/api/pdf-proxy?url=${encodeURIComponent(
-                      ebook.file_url
+                      ebook.file_url,
                     )}`}
                     currentPage={currentPage}
                     initialPage={1}

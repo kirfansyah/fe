@@ -58,7 +58,7 @@ export default function EbookEmployee() {
   ];
   const sub_categories = [
     ...new Set(
-      ebooks.map((e) => e.subcategory_name || e.sub_category).filter(Boolean)
+      ebooks.map((e) => e.subcategory_name || e.sub_category).filter(Boolean),
     ),
   ];
   const company_units = [
@@ -69,7 +69,7 @@ export default function EbookEmployee() {
   // Filter ebooks
   const filteredEbooks = ebooks.filter((ebook) => {
     const matchSearch = (ebook.title?.toLowerCase() || "").includes(
-      searchQuery.toLowerCase()
+      searchQuery.toLowerCase(),
     );
 
     const matchCategory =
@@ -179,7 +179,7 @@ export default function EbookEmployee() {
       console.error("❌ Failed to open ebook:", err);
       // Still open reader even if logging fails
       alert(
-        `Warning: Failed to log reading session. You can still read the book.\n\nError: ${err.message}`
+        `Warning: Failed to log reading session. You can still read the book.\n\nError: ${err.message}`,
       );
       setSelectedEbook({
         ...ebook,
@@ -194,7 +194,7 @@ export default function EbookEmployee() {
   const handleCloseReader = async (
     lastPage,
     totalPages,
-    shouldRefresh = false
+    shouldRefresh = false,
   ) => {
     if (currentLogId && lastPage) {
       try {
@@ -796,14 +796,14 @@ export default function EbookEmployee() {
       {/* Footer - Page Size Selector */}
       {paginatedEbooks.length > 0 && (
         <div className="mt-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div className="bg-white rounded-lg shadow-sm px-4 py-3 flex items-center gap-3">
-            <span className="text-sm text-gray-600 font-medium">
+          <div className="bg-white rounded-lg shadow-sm px-4 py-3 flex items-center gap-3 w-fit">
+            <span className="text-sm text-gray-600 font-medium w-fit">
               Rows per page:
             </span>
             <select
               value={pageSize}
               onChange={(e) => handlePageSizeChange(e.target.value)}
-              className="rounded border border-gray-300 text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none py-1.5 px-3 font-medium"
+              className="rounded border border-gray-300 text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none py-1.5 px-3 font-medium w-20"
             >
               <option value={10}>10</option>
               <option value={20}>20</option>

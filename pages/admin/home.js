@@ -702,10 +702,12 @@ export default function HomeAdmin() {
                                                                     </div>
                                                                 </div>
                                                             </div>
+                                                            <div className="absolute top-6 right-3 z-10">
                                                             <span className="px-3 py-1.5 bg-green-400 text-green-900 rounded-lg font-bold text-xs shadow-lg flex items-center gap-1 flex-shrink-0 ml-2">
                                                                 <div className="w-2 h-2 bg-green-900 rounded-full animate-pulse" />
                                                                 Online
                                                             </span>
+                                                            </div>
                                                         </div>
                                                         
                                                         <div className="grid grid-cols-2 gap-3 bg-white/10 rounded-lg p-3 backdrop-blur-sm">

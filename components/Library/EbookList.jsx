@@ -200,12 +200,10 @@ export default function EbookList({
                     <h3 className="text-sm sm:text-base font-medium text-gray-900 truncate">
                       {ebook.title}
                     </h3>
-                    {ebook.company_name && (
-                      <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
-                        <Building2 className="w-3 h-3" />
-                        {ebook.company_name}
-                      </p>
-                    )}
+                    <span className="flex items-center gap-1 px-2 py-1 text-xs font-medium bg-blue-50 text-blue-700 rounded-full w-fit">
+                      <Building2 className="w-3 h-3" />
+                      {ebook.company_name || "All Company Unit"}
+                    </span>
                   </div>
                 </div>
 
@@ -243,7 +241,7 @@ export default function EbookList({
                       setMobileMenuOpen(
                         mobileMenuOpen === ebook.id_ebook
                           ? null
-                          : ebook.id_ebook
+                          : ebook.id_ebook,
                       )
                     }
                     className="p-2 hover:bg-gray-100 rounded-lg transition-colors"

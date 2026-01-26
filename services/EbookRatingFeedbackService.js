@@ -13,10 +13,6 @@ class EbookRatingFeedbackService {
         params: { page, limit },
       });
 
-      console.log("📍 Response:", response);
-
-      console.log("✅ Success! Response:", response.data);
-
       return {
         success: response.data.success,
         data: response.data.data || [],
@@ -25,7 +21,7 @@ class EbookRatingFeedbackService {
       };
     } catch (error) {
       throw new Error(
-        error.response?.data?.message || "Failed to fetch ebook ratings"
+        error.response?.data?.message || "Failed to fetch ebook ratings",
       );
     }
   }
@@ -46,7 +42,7 @@ class EbookRatingFeedbackService {
     } catch (error) {
       console.error("EbookRatingFeedbackService.getRatingById Error:", error);
       throw new Error(
-        error.response?.data?.message || "Failed to fetch ebook rating"
+        error.response?.data?.message || "Failed to fetch ebook rating",
       );
     }
   }
@@ -65,8 +61,6 @@ class EbookRatingFeedbackService {
 
       const response = await API.get("/ebook/feedback", { params });
 
-      console.log("✅ Success! Response:", response.data);
-
       return {
         success: response.data.success,
         data: response.data.data || [],
@@ -82,7 +76,7 @@ class EbookRatingFeedbackService {
       };
     } catch (error) {
       throw new Error(
-        error.response?.data?.message || "Failed to fetch ebook feedbacks"
+        error.response?.data?.message || "Failed to fetch ebook feedbacks",
       );
     }
   }
@@ -103,7 +97,7 @@ class EbookRatingFeedbackService {
     } catch (error) {
       console.error("EbookRatingFeedbackService.getFeedbackById Error:", error);
       throw new Error(
-        error.response?.data?.message || "Failed to fetch ebook feedback"
+        error.response?.data?.message || "Failed to fetch ebook feedback",
       );
     }
   }
@@ -133,10 +127,10 @@ class EbookRatingFeedbackService {
     } catch (error) {
       console.error(
         "EbookRatingFeedbackService.getFeedbacksByEbook Error:",
-        error
+        error,
       );
       throw new Error(
-        error.response?.data?.message || "Failed to fetch feedbacks by ebook"
+        error.response?.data?.message || "Failed to fetch feedbacks by ebook",
       );
     }
   }
@@ -166,10 +160,10 @@ class EbookRatingFeedbackService {
     } catch (error) {
       console.error(
         "EbookRatingFeedbackService.getFeedbacksByCompany Error:",
-        error
+        error,
       );
       throw new Error(
-        error.response?.data?.message || "Failed to fetch feedbacks by company"
+        error.response?.data?.message || "Failed to fetch feedbacks by company",
       );
     }
   }
@@ -194,11 +188,11 @@ class EbookRatingFeedbackService {
     } catch (error) {
       console.error(
         "EbookRatingFeedbackService.getFeedbacksByDateRange Error:",
-        error
+        error,
       );
       throw new Error(
         error.response?.data?.message ||
-          "Failed to fetch feedbacks by date range"
+          "Failed to fetch feedbacks by date range",
       );
     }
   }
