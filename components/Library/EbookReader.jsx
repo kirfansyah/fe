@@ -250,24 +250,38 @@ export default function EbookReader({
     onClose(currentPage, totalPages, true);
   };
 
-  // ✅ Toggle fullscreen - CSS-based only (FIXED & iOS Compatible)
+  // ✅ Toggle fullscreen - Native API untuk hide browser UI (Desktop/Android), CSS untuk iOS
   const toggleFullscreen = () => {
     if (!isFullscreen) {
       // ENTER fullscreen
       setIsFullscreen(true);
       document.body.style.overflow = "hidden";
 
-      // iOS specific - prevent body scroll
       if (isIOS()) {
+        // iOS tidak support Fullscreen API, gunakan CSS-based
         document.body.style.position = "fixed";
         document.body.style.width = "100%";
         document.body.style.height = "100%";
 
-        // Hide Safari UI on iOS
         if (window.scrollTo) {
           setTimeout(() => {
             window.scrollTo(0, 1);
           }, 100);
+        }
+      } else {
+        // Desktop/Android - Native Fullscreen API untuk hide browser UI
+        const element = readerContainerRef.current || document.documentElement;
+
+        if (element.requestFullscreen) {
+          element.requestFullscreen().catch((err) => {
+            console.error("Fullscreen error:", err);
+          });
+        } else if (element.webkitRequestFullscreen) {
+          element.webkitRequestFullscreen();
+        } else if (element.mozRequestFullScreen) {
+          element.mozRequestFullScreen();
+        } else if (element.msRequestFullscreen) {
+          element.msRequestFullscreen();
         }
       }
     } else {
@@ -275,16 +289,61 @@ export default function EbookReader({
       setIsFullscreen(false);
       document.body.style.overflow = "";
 
-      // iOS specific - restore body
       if (isIOS()) {
+        // iOS - restore body styles
         document.body.style.position = "";
         document.body.style.width = "";
         document.body.style.height = "";
+      } else {
+        // Desktop/Android - exit native fullscreen
+        if (document.fullscreenElement || document.webkitFullscreenElement) {
+          if (document.exitFullscreen) {
+            document.exitFullscreen().catch((err) => {
+              console.error("Exit fullscreen error:", err);
+            });
+          } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+          } else if (document.mozCancelFullScreen) {
+            document.mozCancelFullScreen();
+          } else if (document.msExitFullscreen) {
+            document.msExitFullscreen();
+          }
+        }
       }
     }
   };
 
-  // ❌ REMOVED: useEffect fullscreenchange listener yang menyebabkan bug
+  // ❌ REMOVED: fullscreenchange listener - tidak diperlukan untuk CSS-based fullscreen
+
+  // ✅ Safe listener: sync state ketika browser auto-exit (ESC key)
+  useEffect(() => {
+    if (isIOS()) return; // iOS tidak perlu listener ini
+
+    const handleFullscreenChange = () => {
+      const isNowFullscreen = !!(
+        document.fullscreenElement || document.webkitFullscreenElement
+      );
+
+      // Sync state hanya jika berbeda
+      if (isNowFullscreen !== isFullscreen) {
+        setIsFullscreen(isNowFullscreen);
+        if (!isNowFullscreen) {
+          document.body.style.overflow = "";
+        }
+      }
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      document.removeEventListener(
+        "webkitfullscreenchange",
+        handleFullscreenChange
+      );
+    };
+  }, [isFullscreen]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -307,10 +366,8 @@ export default function EbookReader({
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      // Restore body styles on unmount
+      // Restore body styles on unmount untuk semua platform
       document.body.style.overflow = "";
-
-      // iOS specific cleanup
       if (isIOS()) {
         document.body.style.position = "";
         document.body.style.width = "";
