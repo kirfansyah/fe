@@ -15,14 +15,15 @@ import EbookDescription from "./EbookDescription";
 export default function EbookEmployee() {
   const {
     ebooks,
+    ebookDescription,
     loading,
     error,
     fetchEbooks,
+    fetchEbookDescription,
     startReading,
     updateProgress,
     completeReading,
     submitReview,
-    fetchEbookDetail,
   } = useEbookEmployee();
 
   const [selectedEbooks, setSelectedEbooks] = useState([]);
@@ -46,6 +47,7 @@ export default function EbookEmployee() {
   // description state
   const [showDescription, setShowDescription] = useState(false);
   const [selectedEbookForDesc, setSelectedEbookForDesc] = useState(null);
+  const [originalEbook, setOriginalEbook] = useState(null); // Store original ebook with PDF URL
 
   // Fetch ebooks on mount
   useEffect(() => {
@@ -156,18 +158,8 @@ export default function EbookEmployee() {
           isResume: response.is_resume || false,
         });
         setShowReader(true);
-
-        // Show notification if resuming
-        // if (response.is_resume) {
-        //   console.log(`📖 Resuming from page ${response.last_page}`);
-        // } else {
-        //   console.log(
-        //     `📖 Started new reading session with log ID: ${response.id_log}`
-        //   );
-        // }
       } else {
         // If API failed but we still want to open reader
-        // console.warn("⚠️ No log ID received, but opening reader anyway");
         setSelectedEbook({
           ...ebook,
           resumePage: 1,
@@ -227,18 +219,23 @@ export default function EbookEmployee() {
   };
 
   // Handle open description
-  const handleOpenDescription = async (ebook) => {
+  const handleOpenDescription = async (ebooks) => {
+    setOriginalEbook(ebooks); // Save original ebook data (includes PDF URL)
     try {
       // Fetch full detail with progress
-      const response = await fetchEbookDetail(ebook.id_ebook);
+      const response = await fetchEbookDescription(ebooks.id_ebook);
       if (response.success) {
-        setSelectedEbookForDesc(response.data);
+        // Merge original data with detail to preserve all fields including PDF URL
+        setSelectedEbookForDesc({
+          ...ebookDescription, // Original data (with PDF URL and cover)
+          ...response.data, // Detail data (description, stats, etc.)
+        });
         setShowDescription(true);
       }
     } catch (err) {
       console.error("Failed to fetch ebook detail:", err);
       // Fallback to basic info
-      setSelectedEbookForDesc(ebook);
+      setSelectedEbookForDesc(ebookDescription);
       setShowDescription(true);
     }
   };
@@ -247,13 +244,19 @@ export default function EbookEmployee() {
   const handleCloseDescription = () => {
     setShowDescription(false);
     setSelectedEbookForDesc(null);
+    setOriginalEbook(null); // Clear original reference
   };
 
   // Handle read from description
   const handleReadFromDescription = () => {
     if (selectedEbookForDesc) {
       setShowDescription(false);
-      handleOpenEbook(selectedEbookForDesc);
+      // Merge original ebook data (with PDF URL) and detail data
+      const mergedEbook = originalEbook
+        ? { ...originalEbook, ...selectedEbookForDesc }
+        : selectedEbookForDesc;
+
+      handleOpenEbook(mergedEbook);
     }
   };
 
@@ -282,7 +285,7 @@ export default function EbookEmployee() {
   if (showDescription && selectedEbookForDesc) {
     return (
       <EbookDescription
-        ebook={selectedEbookForDesc}
+        ebookDescription={selectedEbookForDesc}
         onClose={handleCloseDescription}
         onReadEbook={handleReadFromDescription}
       />
@@ -760,13 +763,13 @@ export default function EbookEmployee() {
                             onClick={() => handleOpenEbook(ebook)}
                             className="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition-colors"
                           >
-                            Open
+                            Open eBook
                           </button>
                           <button
                             onClick={() => handleOpenDescription(ebook)}
                             className="px-3 py-1.5 bg-gray-100 text-gray-700 text-sm font-medium rounded hover:bg-gray-200 transition-colors"
                           >
-                            Details
+                            Description
                           </button>
                         </div>
                       </td>

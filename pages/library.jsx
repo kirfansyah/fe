@@ -1,11 +1,10 @@
 import { useState } from "react";
-import CourseLayout from "@/layouts/CourseLayout";
+import LibraryLayout from "@/layouts/LibraryLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
 import { ChevronRight, Lock } from "lucide-react";
 
 import EbookEmployeeView from "../components/Library/EbookEmployee";
-import { useEbooks } from "../hooks/useEbooks";
 // import { useMenuPermissions } from "@/hooks/useMenuPermissions";
 
 export default function Library() {
@@ -13,7 +12,6 @@ export default function Library() {
   const [activeTab, setActiveTab] = useState("ebooks-list");
   const [currentPage, setCurrentPage] = useState("main");
   const [selectedEbookId, setSelectedEbookId] = useState("");
-  const { ebooks } = useEbooks();
 
   //   if (!permissions.can_view) {
   //     return (
@@ -40,7 +38,7 @@ export default function Library() {
   //   }
 
   return (
-    <CourseLayout>
+    <LibraryLayout>
       <div className="p-6 space-y-0">
         {/* Breadcrumb */}
         <Card className="rounded-lg shadow-md bg-gradient-to-r from-blue-900 to-blue-500 text-white">
@@ -63,8 +61,7 @@ export default function Library() {
               <div>
                 {activeTab === "ebooks-list" && (
                   <EbookEmployeeView
-                    ebooks={ebooks}
-                    // permissions={permissions}
+                  // permissions={permissions}
                   />
                 )}
               </div>
@@ -72,6 +69,6 @@ export default function Library() {
           )}
         </div>
       </div>
-    </CourseLayout>
+    </LibraryLayout>
   );
 }
