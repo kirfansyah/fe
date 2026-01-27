@@ -4,6 +4,8 @@ import EbookServiceEmployee from "../services/EbookServiceEmployee";
 const useEbookEmployee = () => {
   const [ebooks, setEbooks] = useState([]);
   const [selectedEbook, setSelectedEbook] = useState(null);
+  const [ebookDescription, setEbookDescription] = useState(null);
+
   const [readingHistory, setReadingHistory] = useState([]);
   const [readingProgress, setReadingProgress] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -122,7 +124,7 @@ const useEbookEmployee = () => {
         setLoading(false);
       }
     },
-    [checkReadingProgress]
+    [checkReadingProgress],
   );
 
   /**
@@ -153,7 +155,7 @@ const useEbookEmployee = () => {
         setLoading(false);
       }
     },
-    []
+    [],
   );
 
   /**
@@ -182,7 +184,7 @@ const useEbookEmployee = () => {
         setLoading(false);
       }
     },
-    []
+    [],
   );
 
   /**
@@ -272,7 +274,7 @@ const useEbookEmployee = () => {
         setLoading(false);
       }
     },
-    []
+    [],
   );
 
   /**
@@ -317,10 +319,32 @@ const useEbookEmployee = () => {
     }
   }, []);
 
+  /**
+   * Fetch ebook detail by ID (with reading progress)
+   */
+  const fetchEbookDescription = useCallback(async (id) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await EbookServiceEmployee.getEbookDescription(id);
+      if (response.success) {
+        setEbookDescription(response.data);
+      }
+      return response;
+    } catch (err) {
+      setError(err.message);
+      console.error("useEbookEmployee.fetchEbookDescription Error:", err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   return {
     // State
     ebooks,
     selectedEbook,
+    ebookDescription,
     readingHistory,
     readingProgress,
     reviews,
@@ -340,6 +364,7 @@ const useEbookEmployee = () => {
     submitReview,
     fetchEbookReviews,
     fetchEbookDetail,
+    fetchEbookDescription,
     clearError,
     reset,
   };
@@ -354,7 +379,7 @@ const getDeviceInfo = () => {
 
   if (
     /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-      userAgent
+      userAgent,
     )
   ) {
     deviceType = "Mobile";
