@@ -182,7 +182,7 @@ export default function CalendarPage() {
         const [startMonth, startDay, startYear] = startDatePart.split("/");
         const eventStartStr = `${startYear}-${startMonth.padStart(
           2,
-          "0"
+          "0",
         )}-${startDay.padStart(2, "0")}`;
 
         // Parse end date
@@ -190,7 +190,7 @@ export default function CalendarPage() {
         const [endMonth, endDay, endYear] = endDatePart.split("/");
         const eventEndStr = `${endYear}-${endMonth.padStart(
           2,
-          "0"
+          "0",
         )}-${endDay.padStart(2, "0")}`;
 
         // Check if dateStr is within range (inclusive)
@@ -233,7 +233,7 @@ export default function CalendarPage() {
     if (!dateStr) return false;
     const today = new Date();
     const todayStr = `${today.getFullYear()}-${String(
-      today.getMonth() + 1
+      today.getMonth() + 1,
     ).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
     return dateStr === todayStr;
   };
@@ -253,14 +253,14 @@ export default function CalendarPage() {
 
   const handlePrevMonth = () => {
     setCalendarDate(
-      (prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1)
+      (prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1),
     );
     setSelectedDate(null); // optional
   };
 
   const handleNextMonth = () => {
     setCalendarDate(
-      (prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1)
+      (prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1),
     );
     setSelectedDate(null); // optional
   };
@@ -280,14 +280,14 @@ export default function CalendarPage() {
       const [startMonth, startDay, startYear] = startDatePart.split("/");
       const eventStartStr = `${startYear}-${startMonth.padStart(
         2,
-        "0"
+        "0",
       )}-${startDay.padStart(2, "0")}`;
 
       const [endDatePart] = event.end_date.split(" ");
       const [endMonth, endDay, endYear] = endDatePart.split("/");
       const eventEndStr = `${endYear}-${endMonth.padStart(
         2,
-        "0"
+        "0",
       )}-${endDay.padStart(2, "0")}`;
 
       const isStart = dateStr === eventStartStr;
@@ -324,7 +324,7 @@ export default function CalendarPage() {
 
     for (let i = 1; i <= daysInMonth; i++) {
       const fullDate = `${year}-${String(month + 1).padStart(2, "0")}-${String(
-        i
+        i,
       ).padStart(2, "0")}`;
       days.push({
         date: i,
@@ -432,7 +432,7 @@ export default function CalendarPage() {
                         >
                           {day}
                         </div>
-                      )
+                      ),
                     )}
                   </div>
 
@@ -441,7 +441,7 @@ export default function CalendarPage() {
                       const dateStr = day
                         ? `${year}-${String(month + 1).padStart(
                             2,
-                            "0"
+                            "0",
                           )}-${String(day).padStart(2, "0")}`
                         : null;
                       const events = getEventsForDate(day.fullDate);
@@ -455,7 +455,7 @@ export default function CalendarPage() {
                       if (hasEvents && events.length > 0) {
                         const position = getEventPosition(
                           day.fullDate,
-                          events[0]
+                          events[0],
                         );
                         isEventStart = position.isStart;
                         isEventEnd = position.isEnd;
@@ -480,20 +480,20 @@ export default function CalendarPage() {
                                                               !day.isCurrentMonth
                                                                 ? "text-gray-300 opacity-50"
                                                                 : isTodayDate
-                                                                ? "bg-blue-500 text-white font-bold shadow-lg scale-105 ring-2 ring-blue-300 hover:scale-110"
-                                                                : isEventStart
-                                                                ? "bg-gradient-to-br from-orange-500 to-orange-400 text-white font-bold shadow-lg ring-2 ring-orange-600 hover:scale-110"
-                                                                : isEventEnd
-                                                                ? "bg-gradient-to-br from-orange-400 to-orange-500 text-white font-bold shadow-lg ring-2 ring-orange-600 hover:scale-110"
-                                                                : isEventMiddle
-                                                                ? "bg-orange-50 text-orange-800 border-2 border-orange-200 hover:bg-orange-100 hover:scale-105"
-                                                                : hasEvents
-                                                                ? "bg-orange-100 text-orange-700 font-semibold border-2 border-orange-300 hover:bg-orange-200 hover:scale-105"
-                                                                : !hasEvent &&
-                                                                  (isHoliday ||
-                                                                    isSunday)
-                                                                ? "text-red-500 hover:bg-red-50 hover:scale-105 bg-red-100 border-red-200"
-                                                                : "hover:bg-gray-100 text-gray-700 hover:scale-105"
+                                                                  ? "bg-blue-500 text-white font-bold shadow-lg scale-105 ring-2 ring-blue-300 hover:scale-110"
+                                                                  : isEventStart
+                                                                    ? "bg-gradient-to-br from-orange-500 to-orange-400 text-white font-bold shadow-lg ring-2 ring-orange-600 hover:scale-110"
+                                                                    : isEventEnd
+                                                                      ? "bg-gradient-to-br from-orange-400 to-orange-500 text-white font-bold shadow-lg ring-2 ring-orange-600 hover:scale-110"
+                                                                      : isEventMiddle
+                                                                        ? "bg-orange-50 text-orange-800 border-2 border-orange-200 hover:bg-orange-100 hover:scale-105"
+                                                                        : hasEvents
+                                                                          ? "bg-orange-100 text-orange-700 font-semibold border-2 border-orange-300 hover:bg-orange-200 hover:scale-105"
+                                                                          : !hasEvent &&
+                                                                              (isHoliday ||
+                                                                                isSunday)
+                                                                            ? "text-red-500 hover:bg-red-50 hover:scale-105 bg-red-100 border-red-200"
+                                                                            : "hover:bg-gray-100 text-gray-700 hover:scale-105"
                                                             }
                                                         `}
                         >
@@ -543,8 +543,8 @@ export default function CalendarPage() {
                                                                       isLeftEdge
                                                                         ? "left-0"
                                                                         : isRightEdge
-                                                                        ? "right-0"
-                                                                        : "left-1/2 -translate-x-1/2"
+                                                                          ? "right-0"
+                                                                          : "left-1/2 -translate-x-1/2"
                                                                     }
                                                                 `}
                             >
@@ -610,8 +610,8 @@ export default function CalendarPage() {
                                                                               isLeftEdge
                                                                                 ? "left-4"
                                                                                 : isRightEdge
-                                                                                ? "right-4"
-                                                                                : "left-1/2 -translate-x-1/2"
+                                                                                  ? "right-4"
+                                                                                  : "left-1/2 -translate-x-1/2"
                                                                             }
                                                                         `}
                                 >
@@ -695,7 +695,7 @@ export default function CalendarPage() {
                           const endDate = new Date(schedule.end_date);
                           const today = new Date();
                           const daysRemaining = Math.ceil(
-                            (endDate - today) / (1000 * 60 * 60 * 24)
+                            (endDate - today) / (1000 * 60 * 60 * 24),
                           );
                           const isUrgent =
                             daysRemaining > 0 && daysRemaining <= 7;
@@ -714,7 +714,7 @@ export default function CalendarPage() {
                                 <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent" />
                               </div>
 
-                              {isUrgent && (
+                              {/* {isUrgent && (
                                 <div className="absolute top-3 right-3 z-10">
                                   <div className="bg-yellow-400 text-yellow-900 px-3 py-1.5 rounded-lg text-xs font-bold shadow-lg flex items-center gap-1 animate-pulse">
                                     <Clock className="w-3 h-3" />
@@ -722,7 +722,7 @@ export default function CalendarPage() {
                                     {daysRemaining === 1 ? "day" : "days"} left!
                                   </div>
                                 </div>
-                              )}
+                              )} */}
 
                               <div className="relative z-10">
                                 <div className="flex items-start justify-between mb-4">
@@ -754,8 +754,18 @@ export default function CalendarPage() {
                                       </div>
                                     </div>
                                   </div>
+
+                                  {isUrgent && (
+                                    <span className="bg-yellow-400 text-yellow-900 px-3 py-1.5 rounded-lg text-xs font-bold shadow-lg flex items-center gap-1 animate-pulse">
+                                      <Clock className="w-3 h-3" />
+                                      {daysRemaining}{" "}
+                                      {daysRemaining === 1 ? "day" : "days"}{" "}
+                                      left!
+                                    </span>
+                                  )}
+
                                   <span className="px-3 py-1.5 bg-green-400 text-green-900 rounded-lg font-bold text-xs shadow-lg flex items-center gap-1 flex-shrink-0 ml-2">
-                                    <div className="w-2 h-2 bg-green-900 rounded-full animate-pulse" />
+                                    <span className="w-2 h-2 bg-green-900 rounded-full animate-pulse" />
                                     Online
                                   </span>
                                 </div>
@@ -771,7 +781,8 @@ export default function CalendarPage() {
                                       </p>
                                       <p className="text-sm font-semibold">
                                         {formatScheduleDate(
-                                          schedule.publish_date || schedule.date
+                                          schedule.publish_date ||
+                                            schedule.date,
                                         )}
                                       </p>
                                     </div>
@@ -793,7 +804,7 @@ export default function CalendarPage() {
                               </div>
                             </div>
                           );
-                        }
+                        },
                       )}
                     </div>
                   ) : (
@@ -836,13 +847,13 @@ export default function CalendarPage() {
                                 : "bg-gray-300 hover:bg-gray-400"
                             }`}
                           />
-                        )
+                        ),
                       )}
                     </div>
                     <button
                       onClick={() =>
                         setSchedulePage((prev) =>
-                          Math.min(getTotalPages(schedules, 2), prev + 1)
+                          Math.min(getTotalPages(schedules, 2), prev + 1),
                         )
                       }
                       disabled={schedulePage === getTotalPages(schedules, 2)}
@@ -866,8 +877,12 @@ export default function CalendarPage() {
                     {schedules.map((schedule, index) => {
                       const endDate = new Date(schedule.end_date);
                       const daysRemaining = Math.ceil(
-                        (endDate - new Date()) / (1000 * 60 * 60 * 24)
+                        (endDate - new Date()) / (1000 * 60 * 60 * 24),
                       );
+                      const urgentClass =
+                        daysRemaining <= 3
+                          ? "bg-red-400 text-red-900"
+                          : "bg-yellow-400 text-yellow-900";
 
                       return (
                         <div
@@ -912,10 +927,14 @@ export default function CalendarPage() {
                           </div>
 
                           {daysRemaining > 0 && daysRemaining <= 7 && (
-                            <div className="mt-3 text-xs font-semibold text-red-600">
-                              ⏰ {daysRemaining} day{daysRemaining > 1 && "s"}{" "}
-                              left
-                            </div>
+                            <span
+                              className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full 
+                                bg-yellow-400/90 text-yellow-900 text-[11px] font-semibold shadow-md
+                                animate-bounce"
+                            >
+                              <Clock className="w-3 h-3" />
+                              {daysRemaining}d left
+                            </span>
                           )}
                         </div>
                       );
