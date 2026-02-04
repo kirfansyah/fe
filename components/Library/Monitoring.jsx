@@ -1,14 +1,5 @@
 import { useState } from "react";
-import {
-  Search,
-  ChevronLeft,
-  ChevronRight,
-  FileSpreadsheet,
-  Filter,
-  X,
-  ChevronDown,
-  ChevronUp,
-} from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, FileSpreadsheet, Filter, X, IdCardLanyard } from "lucide-react";
 import * as XLSX from "xlsx";
 import { useSweetAlert } from "@/hooks/useSweetAlert";
 
@@ -40,32 +31,15 @@ export default function Monitoring({ employees }) {
   };
 
   // Get unique values for filters
-  const company_names = [
-    ...new Set(employees.map((e) => e.company_name).filter(Boolean)),
-  ];
-  const dept_abbrs = [
-    ...new Set(employees.map((e) => e.dept_abbr).filter(Boolean)),
-  ];
+  const company_names = [...new Set(employees.map((e) => e.company_name).filter(Boolean))];
+  const dept_abbrs = [...new Set(employees.map((e) => e.dept_abbr).filter(Boolean))];
   const ebooks = [...new Set(employees.map((e) => e.title).filter(Boolean))];
-  const categories = [
-    ...new Set(employees.map((e) => e.category_name).filter(Boolean)),
-  ];
-  const subCategories = [
-    ...new Set(employees.map((e) => e.subcategory_name).filter(Boolean)),
-  ];
+  const categories = [...new Set(employees.map((e) => e.category_name).filter(Boolean))];
+  const subCategories = [...new Set(employees.map((e) => e.subcategory_name).filter(Boolean))];
   const statuses = [...new Set(employees.map((e) => e.status).filter(Boolean))];
 
   // Count active filters
-  const activeFilterCount = [
-    selectedCompanyUnit,
-    selectedDepartment,
-    selectedEbook,
-    selectedCategory,
-    selectedSubCategory,
-    selectedStatus,
-    startDate,
-    endDate,
-  ].filter(Boolean).length;
+  const activeFilterCount = [selectedCompanyUnit, selectedDepartment, selectedEbook, selectedCategory, selectedSubCategory, selectedStatus, startDate, endDate].filter(Boolean).length;
 
   // Clear all filters
   const clearAllFilters = () => {
@@ -82,32 +56,19 @@ export default function Monitoring({ employees }) {
 
   // Filter employees
   const filteredEmployees = employees.filter((employee) => {
-    const matchSearch =
-      (employee.nama?.toLowerCase() || "").includes(
-        searchQuery.toLowerCase()
-      ) ||
-      (employee.employee_id || "").includes(searchQuery) ||
-      (employee.position_name?.toLowerCase() || "").includes(
-        searchQuery.toLowerCase()
-      );
+    const matchSearch = (employee.nama?.toLowerCase() || "").includes(searchQuery.toLowerCase()) || (employee.employee_id || "").includes(searchQuery) || (employee.position_name?.toLowerCase() || "").includes(searchQuery.toLowerCase());
 
-    const matchCompanyUnit =
-      !selectedCompanyUnit || employee.company_name === selectedCompanyUnit;
-    const matchDepartment =
-      !selectedDepartment || employee.dept_abbr === selectedDepartment;
+    const matchCompanyUnit = !selectedCompanyUnit || employee.company_name === selectedCompanyUnit;
+    const matchDepartment = !selectedDepartment || employee.dept_abbr === selectedDepartment;
     const matchEbook = !selectedEbook || employee.title === selectedEbook;
-    const matchCategory =
-      !selectedCategory || employee.category_name === selectedCategory;
-    const matchSubCategory =
-      !selectedSubCategory || employee.subcategory_name === selectedSubCategory;
+    const matchCategory = !selectedCategory || employee.category_name === selectedCategory;
+    const matchSubCategory = !selectedSubCategory || employee.subcategory_name === selectedSubCategory;
     const matchStatus = !selectedStatus || employee.status === selectedStatus;
 
     // Date range filter
     let matchDate = true;
     if (startDate || endDate) {
-      const employeeDate = employee.start_time
-        ? new Date(employee.start_time)
-        : null;
+      const employeeDate = employee.start_time ? new Date(employee.start_time) : null;
       if (employeeDate) {
         if (startDate) {
           const start = new Date(startDate);
@@ -124,16 +85,7 @@ export default function Monitoring({ employees }) {
       }
     }
 
-    return (
-      matchSearch &&
-      matchCompanyUnit &&
-      matchDepartment &&
-      matchEbook &&
-      matchCategory &&
-      matchSubCategory &&
-      matchStatus &&
-      matchDate
-    );
+    return matchSearch && matchCompanyUnit && matchDepartment && matchEbook && matchCategory && matchSubCategory && matchStatus && matchDate;
   });
 
   // Pagination logic
@@ -197,9 +149,7 @@ export default function Monitoring({ employees }) {
 
     try {
       // Get selected employees data
-      const selectedData = employees.filter((emp) =>
-        selectedEmployees.includes(emp.id)
-      );
+      const selectedData = employees.filter((emp) => selectedEmployees.includes(emp.id));
 
       // Prepare data for Excel
       const excelData = selectedData.map((emp, index) => ({
@@ -216,9 +166,7 @@ export default function Monitoring({ employees }) {
         "Status Read": emp.status || "",
         "Total Time": emp.total_time?.split(".")[0] || "-",
         "Average (min)": emp.average_minutes || "-",
-        Date: emp.start_time
-          ? new Date(emp.start_time).toLocaleDateString("id-ID")
-          : "",
+        Date: emp.start_time ? new Date(emp.start_time).toLocaleDateString("id-ID") : "",
       }));
 
       // Create workbook and worksheet
@@ -249,17 +197,13 @@ export default function Monitoring({ employees }) {
 
       // Generate filename with date
       const today = new Date();
-      const dateStr = `${today.getFullYear()}${String(
-        today.getMonth() + 1
-      ).padStart(2, "0")}${String(today.getDate()).padStart(2, "0")}`;
+      const dateStr = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, "0")}${String(today.getDate()).padStart(2, "0")}`;
       const filename = `eBook_Reading_Report_${dateStr}.xlsx`;
 
       // Export file
       XLSX.writeFile(workbook, filename);
 
-      showSuccess(
-        `Successfully exported ${selectedData.length} records to Excel`
-      );
+      showSuccess(`Successfully exported ${selectedData.length} records to Excel`);
     } catch (error) {
       console.error("Error exporting to Excel:", error);
       showError("Failed to export to Excel. Please try again.");
@@ -272,10 +216,7 @@ export default function Monitoring({ employees }) {
       <div className="flex items-center justify-between mb-4 gap-4">
         {/* Search Bar */}
         <div className="relative flex-1 min-w-0 max-w-md">
-          <Search
-            className="absolute left-3 top-1/4 transform -translate-y-1/2 text-gray-400"
-            size={20}
-          />
+          <Search className="absolute left-3 top-1/4 transform -translate-y-1/2 text-gray-400" size={20} />
           <input
             type="text"
             placeholder="Search name, ID, or position..."
@@ -292,11 +233,7 @@ export default function Monitoring({ employees }) {
           {/* Filter Toggle Button */}
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors font-medium text-sm ${
-              showFilters
-                ? "bg-blue-100 text-blue-700 hover:bg-blue-200"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-            }`}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors font-medium text-sm ${showFilters ? "bg-blue-100 text-blue-700 hover:bg-blue-200" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
           >
             {showFilters ? (
               <>
@@ -307,11 +244,7 @@ export default function Monitoring({ employees }) {
               <>
                 <Filter className="w-4 h-4" />
                 <span>Show Filters</span>
-                {activeFilterCount > 0 && (
-                  <span className="bg-blue-600 text-white px-2 py-0.5 rounded-full text-xs">
-                    {activeFilterCount}
-                  </span>
-                )}
+                {activeFilterCount > 0 && <span className="bg-blue-600 text-white px-2 py-0.5 rounded-full text-xs">{activeFilterCount}</span>}
               </>
             )}
           </button>
@@ -324,11 +257,7 @@ export default function Monitoring({ employees }) {
           >
             <FileSpreadsheet size={16} />
             <span>Export Excel</span>
-            {selectedEmployees.length > 0 && (
-              <span className="bg-white text-green-600 px-2 py-0.5 rounded-full text-xs font-semibold">
-                {selectedEmployees.length}
-              </span>
-            )}
+            {selectedEmployees.length > 0 && <span className="bg-white text-green-600 px-2 py-0.5 rounded-full text-xs font-semibold">{selectedEmployees.length}</span>}
           </button>
         </div>
       </div>
@@ -342,10 +271,7 @@ export default function Monitoring({ employees }) {
               <span className="font-medium text-gray-700 text-sm">Filters</span>
             </div>
             {activeFilterCount > 0 && (
-              <button
-                onClick={clearAllFilters}
-                className="text-sm text-red-600 hover:text-red-700 font-medium"
-              >
+              <button onClick={clearAllFilters} className="text-sm text-red-600 hover:text-red-700 font-medium">
                 Clear All
               </button>
             )}
@@ -460,9 +386,7 @@ export default function Monitoring({ employees }) {
             {/* Column 4: Date Range */}
             <div className="space-y-3">
               <div className="flex items-center gap-2">
-                <label className="text-xs font-medium text-gray-600 whitespace-nowrap w-16">
-                  Start Date
-                </label>
+                <label className="text-xs font-medium text-gray-600 whitespace-nowrap w-16">Start Date</label>
                 <input
                   type="date"
                   value={startDate}
@@ -475,9 +399,7 @@ export default function Monitoring({ employees }) {
               </div>
 
               <div className="flex items-center gap-2">
-                <label className="text-xs font-medium text-gray-600 whitespace-nowrap w-16">
-                  End Date
-                </label>
+                <label className="text-xs font-medium text-gray-600 whitespace-nowrap w-16">End Date</label>
                 <input
                   type="date"
                   value={endDate}
@@ -495,23 +417,13 @@ export default function Monitoring({ employees }) {
       )}
 
       {/* Active Filters Display */}
-      {(selectedCompanyUnit ||
-        selectedDepartment ||
-        selectedEbook ||
-        selectedCategory ||
-        selectedSubCategory ||
-        selectedStatus ||
-        startDate ||
-        endDate) && (
+      {(selectedCompanyUnit || selectedDepartment || selectedEbook || selectedCategory || selectedSubCategory || selectedStatus || startDate || endDate) && (
         <div className="mb-4 flex items-center gap-2 flex-wrap">
           <span className="text-sm text-gray-600">Active filters:</span>
           {selectedCompanyUnit && (
             <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm flex items-center gap-2">
               {selectedCompanyUnit}
-              <button
-                onClick={() => setSelectedCompanyUnit("")}
-                className="hover:text-blue-900"
-              >
+              <button onClick={() => setSelectedCompanyUnit("")} className="hover:text-blue-900">
                 ×
               </button>
             </span>
@@ -519,10 +431,7 @@ export default function Monitoring({ employees }) {
           {selectedDepartment && (
             <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm flex items-center gap-2">
               {selectedDepartment}
-              <button
-                onClick={() => setSelectedDepartment("")}
-                className="hover:text-green-900"
-              >
+              <button onClick={() => setSelectedDepartment("")} className="hover:text-green-900">
                 ×
               </button>
             </span>
@@ -530,10 +439,7 @@ export default function Monitoring({ employees }) {
           {selectedEbook && (
             <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm flex items-center gap-2">
               {selectedEbook}
-              <button
-                onClick={() => setSelectedEbook("")}
-                className="hover:text-purple-900"
-              >
+              <button onClick={() => setSelectedEbook("")} className="hover:text-purple-900">
                 ×
               </button>
             </span>
@@ -541,10 +447,7 @@ export default function Monitoring({ employees }) {
           {selectedCategory && (
             <span className="px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-sm flex items-center gap-2">
               {selectedCategory}
-              <button
-                onClick={() => setSelectedCategory("")}
-                className="hover:text-indigo-900"
-              >
+              <button onClick={() => setSelectedCategory("")} className="hover:text-indigo-900">
                 ×
               </button>
             </span>
@@ -552,10 +455,7 @@ export default function Monitoring({ employees }) {
           {selectedSubCategory && (
             <span className="px-3 py-1 bg-cyan-100 text-cyan-800 rounded-full text-sm flex items-center gap-2">
               {selectedSubCategory}
-              <button
-                onClick={() => setSelectedSubCategory("")}
-                className="hover:text-cyan-900"
-              >
+              <button onClick={() => setSelectedSubCategory("")} className="hover:text-cyan-900">
                 ×
               </button>
             </span>
@@ -563,10 +463,7 @@ export default function Monitoring({ employees }) {
           {selectedStatus && (
             <span className="px-3 py-1 bg-orange-100 text-orange-800 rounded-full text-sm flex items-center gap-2">
               {selectedStatus}
-              <button
-                onClick={() => setSelectedStatus("")}
-                className="hover:text-orange-900"
-              >
+              <button onClick={() => setSelectedStatus("")} className="hover:text-orange-900">
                 ×
               </button>
             </span>
@@ -574,12 +471,10 @@ export default function Monitoring({ employees }) {
           {(startDate || endDate) && (
             <span className="px-3 py-1 bg-pink-100 text-pink-800 rounded-full text-sm flex items-center gap-2">
               {startDate && endDate
-                ? `${new Date(startDate).toLocaleDateString(
-                    "id-ID"
-                  )} - ${new Date(endDate).toLocaleDateString("id-ID")}`
+                ? `${new Date(startDate).toLocaleDateString("id-ID")} - ${new Date(endDate).toLocaleDateString("id-ID")}`
                 : startDate
-                ? `From ${new Date(startDate).toLocaleDateString("id-ID")}`
-                : `Until ${new Date(endDate).toLocaleDateString("id-ID")}`}
+                  ? `From ${new Date(startDate).toLocaleDateString("id-ID")}`
+                  : `Until ${new Date(endDate).toLocaleDateString("id-ID")}`}
               <button
                 onClick={() => {
                   setStartDate("");
@@ -602,131 +497,56 @@ export default function Monitoring({ employees }) {
               <th className="w-12 px-3 py-3">
                 <input
                   type="checkbox"
-                  checked={
-                    selectedEmployees.length === paginatedEmployees.length &&
-                    paginatedEmployees.length > 0
-                  }
+                  checked={selectedEmployees.length === paginatedEmployees.length && paginatedEmployees.length > 0}
                   onChange={(e) => handleSelectAll(e.target.checked)}
                   className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
               </th>
-              <th className="text-left px-3 py-3 font-medium text-gray-700 text-sm">
-                Name
-              </th>
-              <th className="text-left px-3 py-3 font-medium text-gray-700 text-sm">
-                Employee ID
-              </th>
-              <th className="text-left px-3 py-3 font-medium text-gray-700 text-sm">
-                Position
-              </th>
-              <th className="text-left px-3 py-3 font-medium text-gray-700 text-sm">
-                Department
-              </th>
-              <th className="text-left px-3 py-3 font-medium text-gray-700 text-sm">
-                Company Unit
-              </th>
-              <th className="text-left px-3 py-3 font-medium text-gray-700 text-sm">
-                eBook Title
-              </th>
-              <th className="text-left px-3 py-3 font-medium text-gray-700 text-sm">
-                Author
-              </th>
-              <th className="text-left px-3 py-3 font-medium text-gray-700 text-sm">
-                Category
-              </th>
-              <th className="text-left px-3 py-3 font-medium text-gray-700 text-sm">
-                Sub Category
-              </th>
-              <th className="text-left px-3 py-3 font-medium text-gray-700 text-sm">
-                Status
-              </th>
-              <th className="text-left px-3 py-3 font-medium text-gray-700 text-sm">
-                Total Time
-              </th>
-              <th className="text-left px-3 py-3 font-medium text-gray-700 text-sm">
-                Average
-              </th>
-              <th className="text-left px-3 py-3 font-medium text-gray-700 text-sm">
-                Date
-              </th>
+              <th className="text-left px-3 py-3 font-medium text-gray-700 text-sm">Name</th>
+              <th className="text-left px-3 py-3 font-medium text-gray-700 text-sm">Employee ID</th>
+              <th className="text-left px-3 py-3 font-medium text-gray-700 text-sm">Position</th>
+              <th className="text-left px-3 py-3 font-medium text-gray-700 text-sm">Department</th>
+              <th className="text-left px-3 py-3 font-medium text-gray-700 text-sm">Company Unit</th>
+              <th className="text-left px-3 py-3 font-medium text-gray-700 text-sm">eBook Title</th>
+              <th className="text-left px-3 py-3 font-medium text-gray-700 text-sm">Author</th>
+              <th className="text-left px-3 py-3 font-medium text-gray-700 text-sm">Category</th>
+              <th className="text-left px-3 py-3 font-medium text-gray-700 text-sm">Sub Category</th>
+              <th className="text-left px-3 py-3 font-medium text-gray-700 text-sm">Status</th>
+              <th className="text-left px-3 py-3 font-medium text-gray-700 text-sm">Total Time</th>
+              <th className="text-left px-3 py-3 font-medium text-gray-700 text-sm">Average</th>
+              <th className="text-left px-3 py-3 font-medium text-gray-700 text-sm">Date</th>
             </tr>
           </thead>
           <tbody>
             {paginatedEmployees.length > 0 ? (
               paginatedEmployees.map((employee) => (
-                <tr
-                  key={`employee-${employee.id}`}
-                  className="border-t border-gray-200 hover:bg-gray-50"
-                >
+                <tr key={`employee-${employee.id}`} className="border-t border-gray-200 hover:bg-gray-50">
                   <td className="px-3 py-3">
-                    <input
-                      type="checkbox"
-                      checked={selectedEmployees.includes(employee.id)}
-                      onChange={(e) =>
-                        handleSelectEmployee(employee.id, e.target.checked)
-                      }
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
+                    <input type="checkbox" checked={selectedEmployees.includes(employee.id)} onChange={(e) => handleSelectEmployee(employee.id, e.target.checked)} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
                   </td>
-                  <td className="px-3 py-3 text-gray-900 font-medium text-sm">
-                    {employee.nama}
-                  </td>
-                  <td className="px-3 py-3 text-gray-600 text-sm">
-                    {employee.employee_id}
-                  </td>
-                  <td className="px-3 py-3 text-gray-900 text-sm">
-                    {employee.position_name || "-"}
-                  </td>
-                  <td className="px-3 py-3 text-gray-600 text-sm">
-                    {employee.dept_abbr}
-                  </td>
-                  <td className="px-3 py-3 text-gray-600 text-sm">
-                    {employee.company_name}
-                  </td>
-                  <td className="px-3 py-3 text-gray-600 text-sm">
-                    {employee.title}
-                  </td>
-                  <td className="px-3 py-3 text-gray-600 text-sm">
-                    {employee.author || "-"}
-                  </td>
-                  <td className="px-3 py-3 text-gray-600 text-sm">
-                    {employee.category_name || "-"}
-                  </td>
-                  <td className="px-3 py-3 text-gray-600 text-sm">
-                    {employee.subcategory_name || "-"}
-                  </td>
+                  <td className="px-3 py-3 text-gray-900 font-medium text-sm">{employee.nama}</td>
+                  <td className="px-3 py-3 text-gray-600 text-sm">{employee.employee_id}</td>
+                  <td className="px-3 py-3 text-gray-900 text-sm">{employee.position_name || "-"}</td>
+                  <td className="px-3 py-3 text-gray-600 text-sm">{employee.dept_abbr}</td>
+                  <td className="px-3 py-3 text-gray-600 text-sm">{employee.company_name}</td>
+                  <td className="px-3 py-3 text-gray-600 text-sm">{employee.title}</td>
+                  <td className="px-3 py-3 text-gray-600 text-sm">{employee.author || "-"}</td>
+                  <td className="px-3 py-3 text-gray-600 text-sm">{employee.category_name || "-"}</td>
+                  <td className="px-3 py-3 text-gray-600 text-sm">{employee.subcategory_name || "-"}</td>
                   <td className="px-3 py-3">
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                        employee.status
-                      )}`}
-                    >
-                      {employee.status}
-                    </span>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(employee.status)}`}>{employee.status}</span>
                   </td>
-                  <td className="px-3 py-3 text-gray-600 font-mono text-sm">
-                    {employee.total_time?.split(".")[0] || "-"}
-                  </td>
-                  <td className="px-3 py-3 text-gray-600 text-sm">
-                    {employee.average_minutes
-                      ? `${employee.average_minutes} min`
-                      : "-"}
-                  </td>
-                  <td className="px-3 py-3 text-gray-600 text-sm">
-                    {employee.start_time
-                      ? new Date(employee.start_time).toLocaleDateString(
-                          "id-ID"
-                        )
-                      : "-"}
-                  </td>
+                  <td className="px-3 py-3 text-gray-600 font-mono text-sm">{employee.total_time?.split(".")[0] || "-"}</td>
+                  <td className="px-3 py-3 text-gray-600 text-sm">{employee.average_minutes ? `${employee.average_minutes} min` : "-"}</td>
+                  <td className="px-3 py-3 text-gray-600 text-sm">{employee.start_time ? new Date(employee.start_time).toLocaleDateString("id-ID") : "-"}</td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td
-                  colSpan="14"
-                  className="px-4 py-8 text-center text-gray-500"
-                >
+                <td colSpan="14" className="px-4 py-8 text-center text-gray-500">
+                  <div className="w-16 h-16 bg-100 text-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <IdCardLanyard className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                  </div>
                   No employees found
                 </td>
               </tr>
@@ -739,11 +559,7 @@ export default function Monitoring({ employees }) {
       <div className="flex items-center justify-between mt-4">
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-600 w-full">Rows per page:</span>
-          <select
-            value={pageSize}
-            onChange={(e) => handlePageSizeChange(e.target.value)}
-            className="rounded border border-gray-300 text-gray-600 focus:ring-blue-500 focus:outline-none py-1 px-2 w-full"
-          >
+          <select value={pageSize} onChange={(e) => handlePageSizeChange(e.target.value)} className="rounded border border-gray-300 text-gray-600 focus:ring-blue-500 focus:outline-none py-1 px-2 w-full">
             <option value={5}>5</option>
             <option value={10}>10</option>
             <option value={25}>25</option>
@@ -753,17 +569,11 @@ export default function Monitoring({ employees }) {
 
         <div className="flex items-center gap-4">
           <div className="text-sm text-gray-600">
-            Showing {filteredEmployees.length > 0 ? startIndex + 1 : 0} to{" "}
-            {Math.min(endIndex, filteredEmployees.length)} of{" "}
-            {filteredEmployees.length}
+            Showing {filteredEmployees.length > 0 ? startIndex + 1 : 0} to {Math.min(endIndex, filteredEmployees.length)} of {filteredEmployees.length}
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-              className="p-2 rounded border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
+            <button onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1} className="p-2 rounded border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
               <ChevronLeft size={16} />
             </button>
 
