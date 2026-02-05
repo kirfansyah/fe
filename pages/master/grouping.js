@@ -17,10 +17,13 @@ import { useMenuPermissions } from '@/hooks/useMenuPermissions'; // ✅ Import
 import { getDeviceInfo } from '@/lib/deviceHelper';
 export default function MasterGrouping() {
     // ✅ ALL HOOKS FIRST
+    useEffect(() => {
+        setLoading(false);
+    }, []);
     const permissions = useMenuPermissions();
-    const { getKaryawan, dataKaryawan } = useContext(ProfileContext);
+    const { dataKaryawan } = useContext(ProfileContext);
     const { showLoading, showSuccess, showError, confirmAction } = useSweetAlert();
-    const { groupEnroll, addGroupEnroll } = useCourses();
+    const { groupEnroll, addGroupEnroll, deleteGroupEnroll } = useCourses();
     
     const [loading, setLoading] = useState(true);
     const [entriesPerPage, setEntriesPerPage] = useState(10);
@@ -33,10 +36,6 @@ export default function MasterGrouping() {
     
     const groups = groupEnroll || [];
     const deviceInfo = getDeviceInfo();
-    useEffect(() => {
-        setLoading(false);
-        getKaryawan();
-    }, []);
 
     // Filter data
     const filteredData = groups.filter(group =>
@@ -110,6 +109,9 @@ export default function MasterGrouping() {
         }
 
         setSelectedGroup(group);
+        setFormData({ 
+            id: group.id 
+        });
         setModalMode('delete');
         setShowModal(true);
     };
@@ -180,7 +182,7 @@ export default function MasterGrouping() {
                 showError('You do not have permission to delete groups');
                 return;
             }
-
+            const groupId = formData.id;
             const result = await confirmAction({
                 title: 'Delete Group',
                 text: 'Are you sure you want to delete this group?',
@@ -190,18 +192,9 @@ export default function MasterGrouping() {
             
             showLoading('Deleting group...');
             try {
-                const response = await fetch(`/api/master/grouping/${selectedGroup.id}`, {
-                    method: "DELETE"
-                });
-
-                const responseData = await response.json();
-
-                if (responseData.success) {
-                    showSuccess('Group deleted successfully');
-                    setShowModal(false);
-                } else {
-                    showError('Failed to delete group');
-                }
+                await deleteGroupEnroll(groupId);
+                showSuccess('Group deleted successfully');
+                setShowModal(false);
             } catch (error) {
                 showError(`Failed to delete group: ${error.message}`);
             }

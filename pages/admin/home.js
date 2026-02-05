@@ -136,7 +136,6 @@ export default function HomeAdmin() {
     useEffect(() => {
         if (coursesList && coursesList.length > 0) {
             setCoursesListData(coursesList); // ✅ Langsung set, sudah flat dari backend
-            console.log('Courses from API:', coursesList);
         }
     }, [coursesList]);
 

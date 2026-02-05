@@ -27,11 +27,13 @@ const FileUploadForm = ({
     onBack, 
     addToast, 
     createdBy = "System",
+    deviceInfo = null,
     contentData = null,
     isEditMode = false,
     permissions // ✅ Receive permissions
 }) => {
     // ==================== CONSTANTS ====================
+    console.log('Device Info:', createdBy);
     const FILE_CONFIG = {
         '4': {
             accept: '.pdf',
@@ -281,7 +283,7 @@ const FileUploadForm = ({
             id_content_type: contentTypeId,
             content_title: title,
             content_body: description,
-            time_duration: uploadedFile && uploadedFile.duration ? uploadedFile.duration : "00:00:00",
+            time_duration: uploadedFile && uploadedFile.duration ? uploadedFile.duration : null,
             content_url: contentUrl,
             ...(isEditMode ? {
                 id_course_content: contentData.id_course_content,
