@@ -209,12 +209,12 @@ class ManagementService {
      * @param {string} deletedBy - User who deleted
      * @returns {Promise} API response
      */
-    static async deleteCourse(courseId, deletedBy) {
+    static async deleteCourse(courseId, deletedBy, deletedDevice) {
         try {
             const payload = {
                 id_course: courseId,
                 deleted_by: deletedBy,
-                deleted_device: "web"
+                deleted_device: deletedDevice
             };
             const response = await API.delete("/trainer/course/delete", { 
                 data: payload,
@@ -234,17 +234,48 @@ class ManagementService {
     }
 
     /**
+     * Delete group enroll
+     * @param {number} groupId - Group ID
+     * @param {string} deletedBy - User who deleted
+     * @param {string} deletedDevice - Device who deleted
+     * @returns {Promise} API response
+     */
+    static async deleteGroupEnroll(groupId, deletedBy, deletedDevice) {
+        try {
+            const payload = {
+                id: groupId,
+                deleted_by: deletedBy,
+                deleted_device: deletedDevice
+            };
+            const response = await API.delete("/master/course/grouping/delete", { 
+                data: payload,
+                headers: { 'Content-Type': 'application/json' }
+            });
+            return {
+                success: true,
+                message: response.data.message || 'Group enroll deleted successfully'
+            };
+        } catch (error) {
+            console.error('ManagementService.deleteGroupEnroll Error:', error);
+            return {
+                success: false,
+                message: error.response?.data?.message || `Failed to delete group enroll ${groupId}`
+            };
+        }
+    }
+
+    /**
      * Delete content
      * @param {number} contentId - Content ID
      * @param {string} deletedBy - User who deleted
      * @returns {Promise} API response
      */
-    static async deleteContent(contentId, deletedBy) {
+    static async deleteContent(contentId, deletedBy, deletedDevice) {
         try {
             const payload = {
                 id_course_content: contentId,
                 deleted_by: deletedBy,
-                deleted_device: "web"
+                deleted_device: deletedDevice
             };
             const response = await API.delete("/trainer/course/content/delete", { 
                 data: payload,
@@ -269,13 +300,13 @@ class ManagementService {
      * @param {string} deletedBy - User who deleted
      * @returns {Promise} API response
      */
-    static async deleteEnrolls(enrollmentId, deletedBy) {
+    static async deleteEnrolls(enrollmentId, deletedBy, deletedDevice) {
         
         try {
             const payload = {
                 id_course_enrollment: enrollmentId,
                 deleted_by: deletedBy,
-                deleted_device: "web"
+                deleted_device: deletedDevice
             };
             const response = await API.delete("/trainer/course/enrollment/delete", { 
                 data: payload,
