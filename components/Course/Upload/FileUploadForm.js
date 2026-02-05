@@ -33,7 +33,6 @@ const FileUploadForm = ({
     permissions // ✅ Receive permissions
 }) => {
     // ==================== CONSTANTS ====================
-    console.log('Device Info:', createdBy);
     const FILE_CONFIG = {
         '4': {
             accept: '.pdf',
@@ -288,10 +287,10 @@ const FileUploadForm = ({
             ...(isEditMode ? {
                 id_course_content: contentData.id_course_content,
                 updated_by: createdBy,
-                updated_device: "system"
+                updated_device: deviceInfo.device
             } : {
                 created_by: createdBy,
-                created_device: "system"
+                created_device: deviceInfo.device
             })
         };
 
