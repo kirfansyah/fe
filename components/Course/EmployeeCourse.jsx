@@ -59,7 +59,7 @@ export default function CoursePage({ link }) {
           itemsPerPage,
           searchQuery,
           filterStatus,
-          filterCategory
+          filterCategory,
         );
         setCourses(res.data || []);
         setCourseData(res.result || []);
@@ -192,7 +192,7 @@ export default function CoursePage({ link }) {
                     >
                       {cat}
                     </DropdownMenuItem>
-                  )
+                  ),
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
@@ -255,7 +255,8 @@ export default function CoursePage({ link }) {
                 //   ? "flex flex-wrap gap-5 mt-5 justify-start"
                 //   : "flex flex-col gap-3 mt-5"
                 viewMode === "tiles"
-                  ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-5"
+                  ? //   ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-5"
+                    "flex flex-wrap gap-5 mt-5 justify-start"
                   : "flex flex-col gap-3 mt-5"
               }
             >
@@ -303,7 +304,7 @@ export default function CoursePage({ link }) {
                                       <Badge key={i} variant="secondary">
                                         {cat}
                                       </Badge>
-                                    )
+                                    ),
                                   )}
                                 </div>
                               </div>
