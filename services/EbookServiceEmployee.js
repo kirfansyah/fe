@@ -17,7 +17,7 @@ class EbookServiceEmployee {
     } catch (error) {
       console.error("EbookServiceEmployee.getAllEbook Error:", error);
       throw new Error(
-        error.response?.data?.message || "Failed to fetch ebooks"
+        error.response?.data?.message || "Failed to fetch ebooks",
       );
     }
   }
@@ -38,7 +38,7 @@ class EbookServiceEmployee {
     } catch (error) {
       console.error("EbookServiceEmployee.getEbookById Error:", error);
       throw new Error(
-        error.response?.data?.message || "Failed to fetch ebook detail"
+        error.response?.data?.message || "Failed to fetch ebook detail",
       );
     }
   }
@@ -52,7 +52,7 @@ class EbookServiceEmployee {
     try {
       const response = await apiEbookEmployee.post(
         "/learner/ebook/reading/open",
-        payload
+        payload,
       );
       return {
         success: response.data.success || true,
@@ -64,7 +64,7 @@ class EbookServiceEmployee {
       console.error("EbookServiceEmployee.openEbook Error:", error);
       throw new Error(
         error.response?.data?.message ||
-          `Failed to start reading log: ${error.message}`
+          `Failed to start reading log: ${error.message}`,
       );
     }
   }
@@ -78,7 +78,7 @@ class EbookServiceEmployee {
     try {
       const response = await apiEbookEmployee.patch(
         "/learner/ebook/reading/update",
-        payload
+        payload,
       );
 
       return {
@@ -90,7 +90,7 @@ class EbookServiceEmployee {
       console.error("EbookServiceEmployee.updateProgress Error:", error);
       throw new Error(
         error.response?.data?.message ||
-          `Failed to update reading progress: ${error.message}`
+          `Failed to update reading progress: ${error.message}`,
       );
     }
   }
@@ -104,7 +104,7 @@ class EbookServiceEmployee {
     try {
       const response = await apiEbookEmployee.post(
         "/learner/ebook/reading/close",
-        payload
+        payload,
       );
 
       return {
@@ -116,7 +116,7 @@ class EbookServiceEmployee {
       console.error("EbookServiceEmployee.completeReading Error:", error);
       throw new Error(
         error.response?.data?.message ||
-          `Failed to complete reading progress: ${error.message}`
+          `Failed to complete reading progress: ${error.message}`,
       );
     }
   }
@@ -145,7 +145,7 @@ class EbookServiceEmployee {
       }
       console.error("EbookServiceEmployee.getReadingProgress Error:", error);
       throw new Error(
-        error.response?.data?.message || "Failed to fetch reading progress"
+        error.response?.data?.message || "Failed to fetch reading progress",
       );
     }
   }
@@ -157,7 +157,7 @@ class EbookServiceEmployee {
   static async getReadingHistory() {
     try {
       const response = await apiEbookEmployee.get(
-        "/learner/ebook/reading/history"
+        "/learner/ebook/reading/history",
       );
 
       return {
@@ -168,7 +168,7 @@ class EbookServiceEmployee {
     } catch (error) {
       console.error("EbookServiceEmployee.getReadingHistory Error:", error);
       throw new Error(
-        error.response?.data?.message || "Failed to fetch reading history"
+        error.response?.data?.message || "Failed to fetch reading history",
       );
     }
   }
@@ -187,7 +187,7 @@ class EbookServiceEmployee {
     try {
       const response = await apiEbookEmployee.post(
         "/learner/ebook/review",
-        payload
+        payload,
       );
 
       return {
@@ -199,7 +199,7 @@ class EbookServiceEmployee {
       console.error("EbookServiceEmployee.submitReview Error:", error);
       throw new Error(
         error.response?.data?.message ||
-          `Failed to submit review: ${error.message}`
+          `Failed to submit review: ${error.message}`,
       );
     }
   }
@@ -212,7 +212,7 @@ class EbookServiceEmployee {
   static async getEbookReviews(ebookId) {
     try {
       const response = await apiEbookEmployee.get(
-        `/learner/ebook/review/${ebookId}`
+        `/learner/ebook/review/${ebookId}`,
       );
 
       return {
@@ -223,7 +223,7 @@ class EbookServiceEmployee {
     } catch (error) {
       console.error("EbookServiceEmployee.getEbookReviews Error:", error);
       throw new Error(
-        error.response?.data?.message || "Failed to fetch ebook reviews"
+        error.response?.data?.message || "Failed to fetch ebook reviews",
       );
     }
   }
@@ -244,7 +244,28 @@ class EbookServiceEmployee {
     } catch (error) {
       console.error("EbookServiceEmployee.getEbookDetail Error:", error);
       throw new Error(
-        error.response?.data?.message || "Failed to fetch ebook detail"
+        error.response?.data?.message || "Failed to fetch ebook detail",
+      );
+    }
+  }
+
+  /**
+   * Get ebook detail by ID (for description page)
+   * @param {number} id - Ebook ID
+   * @returns {Promise} API response
+   */
+  static async getEbookDescription(id) {
+    try {
+      const response = await apiEbookEmployee.get(`/ebook/${id}`);
+      return {
+        success: response.data.success,
+        data: response.data.data,
+        message: response.data.message,
+      };
+    } catch (error) {
+      console.error("EbookServiceEmployee.getEbookDescription Error:", error);
+      throw new Error(
+        error.response?.data?.message || "Failed to fetch ebook description",
       );
     }
   }

@@ -15,7 +15,7 @@ const Dashboard = () => {
   }, []);
   
   const profileData = dataKaryawan || {};
-  console.log(profileData);
+  
   const getMenuLabel = (menuCode, defaultLabel) => {
     const languageMap = {
       "HDR_TRAINER_PORTAL": listLanguage.training_portal || "Training Portal",

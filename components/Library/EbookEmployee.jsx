@@ -1,29 +1,11 @@
 import { useState, useEffect } from "react";
-import {
-  Search,
-  ChevronLeft,
-  ChevronRight,
-  Grid,
-  List,
-  Filter,
-  X,
-} from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Grid, List, Filter, X, Library } from "lucide-react";
 import useEbookEmployee from "../../hooks/useEbookEmployee";
 import EbookReader from "./EbookReader";
 import EbookDescription from "./EbookDescription";
 
 export default function EbookEmployee() {
-  const {
-    ebooks,
-    loading,
-    error,
-    fetchEbooks,
-    startReading,
-    updateProgress,
-    completeReading,
-    submitReview,
-    fetchEbookDetail,
-  } = useEbookEmployee();
+  const { ebooks, ebookDescription, loading, error, fetchEbooks, fetchEbookDescription, startReading, updateProgress, completeReading, submitReview } = useEbookEmployee();
 
   const [selectedEbooks, setSelectedEbooks] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -46,6 +28,7 @@ export default function EbookEmployee() {
   // description state
   const [showDescription, setShowDescription] = useState(false);
   const [selectedEbookForDesc, setSelectedEbookForDesc] = useState(null);
+  const [originalEbook, setOriginalEbook] = useState(null); // Store original ebook with PDF URL
 
   // Fetch ebooks on mount
   useEffect(() => {
@@ -53,41 +36,21 @@ export default function EbookEmployee() {
   }, [fetchEbooks]);
 
   // Get unique values for filters
-  const category_names = [
-    ...new Set(ebooks.map((e) => e.category_name).filter(Boolean)),
-  ];
-  const sub_categories = [
-    ...new Set(
-      ebooks.map((e) => e.subcategory_name || e.sub_category).filter(Boolean),
-    ),
-  ];
-  const company_units = [
-    ...new Set(ebooks.map((e) => e.company_name).filter(Boolean)),
-  ];
+  const category_names = [...new Set(ebooks.map((e) => e.category_name).filter(Boolean))];
+  const sub_categories = [...new Set(ebooks.map((e) => e.subcategory_name || e.sub_category).filter(Boolean))];
+  const company_units = [...new Set(ebooks.map((e) => e.company_name).filter(Boolean))];
   const authors = [...new Set(ebooks.map((e) => e.author).filter(Boolean))];
 
   // Filter ebooks
   const filteredEbooks = ebooks.filter((ebook) => {
-    const matchSearch = (ebook.title?.toLowerCase() || "").includes(
-      searchQuery.toLowerCase(),
-    );
+    const matchSearch = (ebook.title?.toLowerCase() || "").includes(searchQuery.toLowerCase());
 
-    const matchCategory =
-      !selectedCategory || ebook.category_name === selectedCategory;
-    const matchSubCategory =
-      !selectedSubCategory ||
-      (ebook.subcategory_name || ebook.sub_category) === selectedSubCategory;
-    const matchCompanyUnit =
-      !selectedCompanyUnit || ebook.company_name === selectedCompanyUnit;
+    const matchCategory = !selectedCategory || ebook.category_name === selectedCategory;
+    const matchSubCategory = !selectedSubCategory || (ebook.subcategory_name || ebook.sub_category) === selectedSubCategory;
+    const matchCompanyUnit = !selectedCompanyUnit || ebook.company_name === selectedCompanyUnit;
     const matchAuthor = !selectedAuthor || ebook.author === selectedAuthor;
 
-    return (
-      matchSearch &&
-      matchCategory &&
-      matchSubCategory &&
-      matchCompanyUnit &&
-      matchAuthor
-    );
+    return matchSearch && matchCategory && matchSubCategory && matchCompanyUnit && matchAuthor;
   });
 
   // Pagination logic
@@ -156,18 +119,8 @@ export default function EbookEmployee() {
           isResume: response.is_resume || false,
         });
         setShowReader(true);
-
-        // Show notification if resuming
-        // if (response.is_resume) {
-        //   console.log(`📖 Resuming from page ${response.last_page}`);
-        // } else {
-        //   console.log(
-        //     `📖 Started new reading session with log ID: ${response.id_log}`
-        //   );
-        // }
       } else {
         // If API failed but we still want to open reader
-        // console.warn("⚠️ No log ID received, but opening reader anyway");
         setSelectedEbook({
           ...ebook,
           resumePage: 1,
@@ -178,9 +131,7 @@ export default function EbookEmployee() {
     } catch (err) {
       console.error("❌ Failed to open ebook:", err);
       // Still open reader even if logging fails
-      alert(
-        `Warning: Failed to log reading session. You can still read the book.\n\nError: ${err.message}`,
-      );
+      alert(`Warning: Failed to log reading session. You can still read the book.\n\nError: ${err.message}`);
       setSelectedEbook({
         ...ebook,
         resumePage: 1,
@@ -191,11 +142,7 @@ export default function EbookEmployee() {
   };
 
   // handleCloseReader dengan refresh
-  const handleCloseReader = async (
-    lastPage,
-    totalPages,
-    shouldRefresh = false,
-  ) => {
+  const handleCloseReader = async (lastPage, totalPages, shouldRefresh = false) => {
     if (currentLogId && lastPage) {
       try {
         const isCompleted = lastPage >= totalPages;
@@ -227,18 +174,23 @@ export default function EbookEmployee() {
   };
 
   // Handle open description
-  const handleOpenDescription = async (ebook) => {
+  const handleOpenDescription = async (ebooks) => {
+    setOriginalEbook(ebooks); // Save original ebook data (includes PDF URL)
     try {
       // Fetch full detail with progress
-      const response = await fetchEbookDetail(ebook.id_ebook);
+      const response = await fetchEbookDescription(ebooks.id_ebook);
       if (response.success) {
-        setSelectedEbookForDesc(response.data);
+        // Merge original data with detail to preserve all fields including PDF URL
+        setSelectedEbookForDesc({
+          ...ebookDescription, // Original data (with PDF URL and cover)
+          ...response.data, // Detail data (description, stats, etc.)
+        });
         setShowDescription(true);
       }
     } catch (err) {
       console.error("Failed to fetch ebook detail:", err);
       // Fallback to basic info
-      setSelectedEbookForDesc(ebook);
+      setSelectedEbookForDesc(ebookDescription);
       setShowDescription(true);
     }
   };
@@ -247,63 +199,37 @@ export default function EbookEmployee() {
   const handleCloseDescription = () => {
     setShowDescription(false);
     setSelectedEbookForDesc(null);
+    setOriginalEbook(null); // Clear original reference
   };
 
   // Handle read from description
   const handleReadFromDescription = () => {
     if (selectedEbookForDesc) {
       setShowDescription(false);
-      handleOpenEbook(selectedEbookForDesc);
+      // Merge original ebook data (with PDF URL) and detail data
+      const mergedEbook = originalEbook ? { ...originalEbook, ...selectedEbookForDesc } : selectedEbookForDesc;
+
+      handleOpenEbook(mergedEbook);
     }
   };
 
   // Check if any filter is active
-  const hasActiveFilters =
-    selectedCategory ||
-    selectedSubCategory ||
-    selectedCompanyUnit ||
-    selectedAuthor;
+  const hasActiveFilters = selectedCategory || selectedSubCategory || selectedCompanyUnit || selectedAuthor;
 
   // If reader is open, show reader component
   if (showReader && selectedEbook) {
-    return (
-      <EbookReader
-        ebook={selectedEbook}
-        logId={currentLogId}
-        onClose={handleCloseReader}
-        updateProgressFn={updateProgress}
-        completeReadingFn={completeReading}
-        submitReviewFn={submitReview}
-      />
-    );
+    return <EbookReader ebook={selectedEbook} logId={currentLogId} onClose={handleCloseReader} updateProgressFn={updateProgress} completeReadingFn={completeReading} submitReviewFn={submitReview} />;
   }
 
   // If description is open
   if (showDescription && selectedEbookForDesc) {
-    return (
-      <EbookDescription
-        ebook={selectedEbookForDesc}
-        onClose={handleCloseDescription}
-        onReadEbook={handleReadFromDescription}
-      />
-    );
+    return <EbookDescription ebookDescription={selectedEbookForDesc} onClose={handleCloseDescription} onReadEbook={handleReadFromDescription} />;
   }
 
   return (
     <div className="w-full bg-gray-50 min-h-screen">
       {/* Loading Indicator */}
-      {loading && (
-        <div className="fixed top-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg z-50">
-          Loading ebooks...
-        </div>
-      )}
-
-      {/* Error Message */}
-      {error && (
-        <div className="fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-50">
-          {error}
-        </div>
-      )}
+      {loading && <div className="fixed top-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg z-50">Loading ebooks...</div>}
 
       {/* Header */}
       <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
@@ -311,10 +237,7 @@ export default function EbookEmployee() {
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
           {/* Left Side - Search */}
           <div className="relative flex-1 w-full lg:w-auto lg:min-w-[250px] lg:max-w-md">
-            <Search
-              className="absolute left-3 top-1/4 transform -translate-y-1/2 text-gray-400"
-              size={20}
-            />
+            <Search className="absolute left-3 top-1/4 transform -translate-y-1/2 text-gray-400" size={20} />
             <input
               type="text"
               placeholder="Search Title..."
@@ -333,9 +256,7 @@ export default function EbookEmployee() {
             <button
               onClick={() => setShowFilters(!showFilters)}
               className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors whitespace-nowrap ${
-                showFilters
-                  ? "bg-blue-100 text-blue-700 hover:bg-blue-200"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                showFilters ? "bg-blue-100 text-blue-700 hover:bg-blue-200" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
               }`}
             >
               {showFilters ? (
@@ -347,18 +268,7 @@ export default function EbookEmployee() {
                 <>
                   <Filter className="w-4 h-4" />
                   <span>Show Filters</span>
-                  {hasActiveFilters && (
-                    <span className="ml-1 px-1.5 py-0.5 bg-blue-600 text-white text-xs rounded-full">
-                      {
-                        [
-                          selectedCategory,
-                          selectedSubCategory,
-                          selectedCompanyUnit,
-                          selectedAuthor,
-                        ].filter(Boolean).length
-                      }
-                    </span>
-                  )}
+                  {hasActiveFilters && <span className="ml-1 px-1.5 py-0.5 bg-blue-600 text-white text-xs rounded-full">{[selectedCategory, selectedSubCategory, selectedCompanyUnit, selectedAuthor].filter(Boolean).length}</span>}
                 </>
               )}
             </button>
@@ -367,8 +277,7 @@ export default function EbookEmployee() {
             <div className="text-sm text-gray-600 font-medium px-3">
               {filteredEbooks.length > 0 ? (
                 <>
-                  {startIndex + 1}-{Math.min(endIndex, filteredEbooks.length)} /{" "}
-                  {filteredEbooks.length}
+                  {startIndex + 1}-{Math.min(endIndex, filteredEbooks.length)} / {filteredEbooks.length}
                 </>
               ) : (
                 "0 results"
@@ -377,35 +286,17 @@ export default function EbookEmployee() {
 
             {/* View Mode Toggle */}
             <div className="flex items-center gap-1 border border-gray-300 rounded-lg p-1">
-              <button
-                onClick={() => setViewMode("grid")}
-                className={`p-2 rounded transition-colors ${
-                  viewMode === "grid"
-                    ? "bg-blue-500 text-white"
-                    : "text-gray-600 hover:bg-gray-100"
-                }`}
-              >
+              <button onClick={() => setViewMode("grid")} className={`p-2 rounded transition-colors ${viewMode === "grid" ? "bg-blue-500 text-white" : "text-gray-600 hover:bg-gray-100"}`}>
                 <Grid size={18} />
               </button>
-              <button
-                onClick={() => setViewMode("list")}
-                className={`p-2 rounded transition-colors ${
-                  viewMode === "list"
-                    ? "bg-blue-500 text-white"
-                    : "text-gray-600 hover:bg-gray-100"
-                }`}
-              >
+              <button onClick={() => setViewMode("list")} className={`p-2 rounded transition-colors ${viewMode === "list" ? "bg-blue-500 text-white" : "text-gray-600 hover:bg-gray-100"}`}>
                 <List size={18} />
               </button>
             </div>
 
             {/* Pagination Controls */}
             <div className="flex items-center gap-1 border border-gray-300 rounded-lg">
-              <button
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-                className="p-2 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors rounded-l-lg"
-              >
+              <button onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1} className="p-2 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors rounded-l-lg">
                 <ChevronLeft size={18} />
               </button>
               <button
@@ -425,9 +316,7 @@ export default function EbookEmployee() {
             <div className="grid lg:grid-cols-4 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-3 mb-4">
               {/* Company Unit Filter */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                  Company Unit
-                </label>
+                <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Company Unit</label>
                 <select
                   value={selectedCompanyUnit}
                   onChange={(e) => {
@@ -447,9 +336,7 @@ export default function EbookEmployee() {
 
               {/* Category Filter */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                  Category
-                </label>
+                <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Category</label>
                 <select
                   value={selectedCategory}
                   onChange={(e) => {
@@ -469,9 +356,7 @@ export default function EbookEmployee() {
 
               {/* Sub Category Filter */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                  Sub Category
-                </label>
+                <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Sub Category</label>
                 <select
                   value={selectedSubCategory}
                   onChange={(e) => {
@@ -491,9 +376,7 @@ export default function EbookEmployee() {
 
               {/* Author Filter */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                  Author
-                </label>
+                <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Author</label>
                 <select
                   value={selectedAuthor}
                   onChange={(e) => {
@@ -515,10 +398,7 @@ export default function EbookEmployee() {
             {/* Clear Filters Button */}
             {hasActiveFilters && (
               <div className="mt-4">
-                <button
-                  onClick={handleClearFilters}
-                  className="px-4 py-2 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 font-medium rounded-lg transition-colors border border-red-200"
-                >
+                <button onClick={handleClearFilters} className="px-4 py-2 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 font-medium rounded-lg transition-colors border border-red-200">
                   Clear All Filters
                 </button>
               </div>
@@ -529,16 +409,11 @@ export default function EbookEmployee() {
         {/* Active Filters Tags */}
         {hasActiveFilters && (
           <div className="mt-4 flex items-center gap-2 flex-wrap">
-            <span className="text-sm text-gray-600 font-medium">
-              Active filters:
-            </span>
+            <span className="text-sm text-gray-600 font-medium">Active filters:</span>
             {selectedCompanyUnit && (
               <span className="px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-sm flex items-center gap-2 font-medium">
                 Unit: {selectedCompanyUnit}
-                <button
-                  onClick={() => setSelectedCompanyUnit("")}
-                  className="hover:text-indigo-900 font-bold"
-                >
+                <button onClick={() => setSelectedCompanyUnit("")} className="hover:text-indigo-900 font-bold">
                   ×
                 </button>
               </span>
@@ -546,10 +421,7 @@ export default function EbookEmployee() {
             {selectedCategory && (
               <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm flex items-center gap-2 font-medium">
                 Category: {selectedCategory}
-                <button
-                  onClick={() => setSelectedCategory("")}
-                  className="hover:text-blue-900 font-bold"
-                >
+                <button onClick={() => setSelectedCategory("")} className="hover:text-blue-900 font-bold">
                   ×
                 </button>
               </span>
@@ -557,10 +429,7 @@ export default function EbookEmployee() {
             {selectedSubCategory && (
               <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm flex items-center gap-2 font-medium">
                 Sub: {selectedSubCategory}
-                <button
-                  onClick={() => setSelectedSubCategory("")}
-                  className="hover:text-green-900 font-bold"
-                >
+                <button onClick={() => setSelectedSubCategory("")} className="hover:text-green-900 font-bold">
                   ×
                 </button>
               </span>
@@ -568,10 +437,7 @@ export default function EbookEmployee() {
             {selectedAuthor && (
               <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm flex items-center gap-2 font-medium">
                 Author: {selectedAuthor}
-                <button
-                  onClick={() => setSelectedAuthor("")}
-                  className="hover:text-purple-900 font-bold"
-                >
+                <button onClick={() => setSelectedAuthor("")} className="hover:text-purple-900 font-bold">
                   ×
                 </button>
               </span>
@@ -591,18 +457,11 @@ export default function EbookEmployee() {
         >
           {paginatedEbooks.length > 0 ? (
             paginatedEbooks.map((ebook) => (
-              <div
-                key={ebook.id_ebook}
-                className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow overflow-hidden"
-              >
+              <div key={ebook.id_ebook} className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow overflow-hidden">
                 {/* Ebook Cover */}
                 <div className="relative aspect-[2/3] bg-gradient-to-br from-blue-100 to-blue-200 overflow-hidden group">
                   {ebook.cover_image_url ? (
-                    <img
-                      src={ebook.cover_image_url}
-                      alt={ebook.title}
-                      className="w-full h-full object-cover"
-                    />
+                    <img src={ebook.cover_image_url} alt={ebook.title} className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
                       <div className="text-center text-gray-400">
@@ -615,38 +474,22 @@ export default function EbookEmployee() {
                   {/* Status Badge - Simple Inline Condition */}
                   {ebook.status && ebook.status !== "Not Started" && (
                     <div className="absolute top-2 left-2">
-                      {ebook.status === "In Progress" && (
-                        <span className="inline-block px-2 py-1 bg-orange-100 text-orange-700 text-xs font-medium rounded">
-                          Reading
-                        </span>
-                      )}
-                      {ebook.status === "Done" && (
-                        <span className="inline-block px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded">
-                          Done
-                        </span>
-                      )}
+                      {ebook.status === "In Progress" && <span className="inline-block px-2 py-1 bg-orange-100 text-orange-700 text-xs font-medium rounded">Reading</span>}
+                      {ebook.status === "Done" && <span className="inline-block px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded">Done</span>}
                     </div>
                   )}
                 </div>
 
                 {/* Ebook Info */}
                 <div className="p-3">
-                  <h3 className="font-semibold text-gray-900 text-sm mb-2 line-clamp-2 min-h-[40px]">
-                    {ebook.title}
-                  </h3>
+                  <h3 className="font-semibold text-gray-900 text-sm mb-2 line-clamp-2 min-h-[40px]">{ebook.title}</h3>
 
                   {/* Action Buttons */}
                   <div className="flex flex-col sm:flex-row gap-2">
-                    <button
-                      onClick={() => handleOpenEbook(ebook)}
-                      className="flex-1 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 transition-colors"
-                    >
+                    <button onClick={() => handleOpenEbook(ebook)} className="flex-1 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 transition-colors">
                       Open eBook
                     </button>
-                    <button
-                      onClick={() => handleOpenDescription(ebook)}
-                      className="flex-1 px-3 py-1.5 bg-gray-100 text-gray-700 text-xs font-medium rounded hover:bg-gray-200 transition-colors"
-                    >
+                    <button onClick={() => handleOpenDescription(ebook)} className="flex-1 px-3 py-1.5 bg-gray-100 text-gray-700 text-xs font-medium rounded hover:bg-gray-200 transition-colors">
                       Description
                     </button>
                   </div>
@@ -655,11 +498,11 @@ export default function EbookEmployee() {
             ))
           ) : (
             <div className="col-span-full py-16 text-center text-gray-500">
-              <div className="text-6xl mb-4">📚</div>
-              <div className="text-lg font-medium">No ebooks found</div>
-              <div className="text-sm mt-2">
-                Try adjusting your search or filters
+              <div className="w-16 h-16 bg-red-100 text-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Library className="w-8 h-8 text-600" />
               </div>
+              <div className="text-lg font-medium">No ebooks found</div>
+              <div className="text-sm mt-2">Try adjusting your search or filters</div>
             </div>
           )}
         </div>
@@ -670,103 +513,56 @@ export default function EbookEmployee() {
             <table className="w-full min-w-[800px]">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="w-14 px-4 py-3 text-center font-semibold text-gray-700 text-sm">
-                    No
-                  </th>
-                  <th className="w-16 px-4 py-3 text-left font-semibold text-gray-700 text-sm">
-                    Cover
-                  </th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-700 text-sm min-w-[200px]">
-                    Title
-                  </th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-700 text-sm">
-                    Author
-                  </th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-700 text-sm">
-                    Company Unit
-                  </th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-700 text-sm">
-                    Category
-                  </th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-700 text-sm">
-                    Sub Category
-                  </th>
-                  <th className="text-center px-4 py-3 font-semibold text-gray-700 text-sm min-w-[140px]">
-                    Actions
-                  </th>
+                  <th className="w-14 px-4 py-3 text-center font-semibold text-gray-700 text-sm">No</th>
+                  <th className="w-16 px-4 py-3 text-left font-semibold text-gray-700 text-sm">Cover</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-700 text-sm min-w-[200px]">Title</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-700 text-sm">Author</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-700 text-sm">Company Unit</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-700 text-sm">Category</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-700 text-sm">Sub Category</th>
+                  <th className="text-center px-4 py-3 font-semibold text-gray-700 text-sm min-w-[140px]">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {paginatedEbooks.length > 0 ? (
                   paginatedEbooks.map((ebook, index) => (
-                    <tr
-                      key={ebook.id_ebook}
-                      className="hover:bg-gray-50 transition-colors"
-                    >
+                    <tr key={ebook.id_ebook} className="hover:bg-gray-50 transition-colors">
                       <td className="px-4 py-3 text-center">
-                        <span className="inline-flex items-center justify-center w-8 h-8 bg-gray-100 text-gray-700 text-sm font-medium rounded-full">
-                          {startIndex + index + 1}
-                        </span>
+                        <span className="inline-flex items-center justify-center w-8 h-8 bg-gray-100 text-gray-700 text-sm font-medium rounded-full">{startIndex + index + 1}</span>
                       </td>
                       <td className="px-4 py-3">
                         <div className="w-12 h-16 bg-gradient-to-br from-blue-100 to-blue-200 rounded overflow-hidden flex-shrink-0">
                           {ebook.cover_image_url ? (
-                            <img
-                              src={ebook.cover_image_url}
-                              alt={ebook.title}
-                              className="w-full h-full object-cover"
-                            />
+                            <img src={ebook.cover_image_url} alt={ebook.title} className="w-full h-full object-cover" />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
-                              📚
-                            </div>
+                            <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">📚</div>
                           )}
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <div className="font-medium text-gray-900 line-clamp-2">
-                          {ebook.title}
-                        </div>
+                        <div className="font-medium text-gray-900 line-clamp-2">{ebook.title}</div>
                       </td>
-                      <td className="px-4 py-3 text-gray-700">
-                        {ebook.author || "-"}
+                      <td className="px-4 py-3 text-gray-700">{ebook.author || "-"}</td>
+                      <td className="px-4 py-3">
+                        {ebook.company_name ? <span className="inline-block px-2 py-1 bg-indigo-50 text-indigo-700 text-xs font-medium rounded">{ebook.company_name}</span> : <span className="text-gray-400">-</span>}
                       </td>
                       <td className="px-4 py-3">
-                        {ebook.company_name ? (
-                          <span className="inline-block px-2 py-1 bg-indigo-50 text-indigo-700 text-xs font-medium rounded">
-                            {ebook.company_name}
-                          </span>
-                        ) : (
-                          <span className="text-gray-400">-</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="inline-block px-2 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded">
-                          {ebook.category_name || "-"}
-                        </span>
+                        <span className="inline-block px-2 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded">{ebook.category_name || "-"}</span>
                       </td>
                       <td className="px-4 py-3">
                         {ebook.subcategory_name || ebook.sub_category ? (
-                          <span className="inline-block px-2 py-1 bg-green-50 text-green-700 text-xs font-medium rounded">
-                            {ebook.subcategory_name || ebook.sub_category}
-                          </span>
+                          <span className="inline-block px-2 py-1 bg-green-50 text-green-700 text-xs font-medium rounded">{ebook.subcategory_name || ebook.sub_category}</span>
                         ) : (
                           <span className="text-gray-400">-</span>
                         )}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex gap-2 justify-center">
-                          <button
-                            onClick={() => handleOpenEbook(ebook)}
-                            className="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition-colors"
-                          >
-                            Open
+                          <button onClick={() => handleOpenEbook(ebook)} className="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition-colors">
+                            Open eBook
                           </button>
-                          <button
-                            onClick={() => handleOpenDescription(ebook)}
-                            className="px-3 py-1.5 bg-gray-100 text-gray-700 text-sm font-medium rounded hover:bg-gray-200 transition-colors"
-                          >
-                            Details
+                          <button onClick={() => handleOpenDescription(ebook)} className="px-3 py-1.5 bg-gray-100 text-gray-700 text-sm font-medium rounded hover:bg-gray-200 transition-colors">
+                            Description
                           </button>
                         </div>
                       </td>
@@ -777,12 +573,8 @@ export default function EbookEmployee() {
                     <td colSpan="8" className="px-4 py-16 text-center">
                       <div className="text-gray-500">
                         <div className="text-5xl mb-4">📚</div>
-                        <div className="text-lg font-medium">
-                          No ebooks found
-                        </div>
-                        <div className="text-sm mt-2">
-                          Try adjusting your search or filters
-                        </div>
+                        <div className="text-lg font-medium">No ebooks found</div>
+                        <div className="text-sm mt-2">Try adjusting your search or filters</div>
                       </div>
                     </td>
                   </tr>
@@ -797,14 +589,8 @@ export default function EbookEmployee() {
       {paginatedEbooks.length > 0 && (
         <div className="mt-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="bg-white rounded-lg shadow-sm px-4 py-3 flex items-center gap-3 w-fit">
-            <span className="text-sm text-gray-600 font-medium w-fit">
-              Rows per page:
-            </span>
-            <select
-              value={pageSize}
-              onChange={(e) => handlePageSizeChange(e.target.value)}
-              className="rounded border border-gray-300 text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none py-1.5 px-3 font-medium w-20"
-            >
+            <span className="text-sm text-gray-600 font-medium w-fit">Rows per page:</span>
+            <select value={pageSize} onChange={(e) => handlePageSizeChange(e.target.value)} className="rounded border border-gray-300 text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none py-1.5 px-3 font-medium w-20">
               <option value={10}>10</option>
               <option value={20}>20</option>
               <option value={30}>30</option>

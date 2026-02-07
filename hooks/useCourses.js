@@ -22,7 +22,7 @@ export function useCourses(contentId = null) {
     
     const router = useRouter();
     const { dataKaryawan } = useContext(ProfileContext);
-    
+    const deviceInfo = getDeviceInfo();
 
     // ✅ GET all courses
     const fetchCourses = useCallback(async () => {
@@ -156,7 +156,8 @@ export function useCourses(contentId = null) {
         setError(null);
         
         const deletedBy = dataKaryawan?.nama || "System";
-        const result = await ManagementService.deleteCourse(courseId, deletedBy);
+        const deletedDevice = deviceInfo.device;
+        const result = await ManagementService.deleteCourse(courseId, deletedBy, deletedDevice);
         
         if (result.success) {
             setCourses((prev) => prev.filter((c) => c.id_course !== courseId));
@@ -168,13 +169,33 @@ export function useCourses(contentId = null) {
         return result;
     }, [dataKaryawan]);
 
+    // DELETE GROUP ENROLL
+    const deleteGroupEnroll = useCallback(async (groupId) => {
+        setIsDeleting(groupId);
+        setError(null);
+
+        const deletedBy = dataKaryawan?.nama || "System";
+        const deletedDevice = deviceInfo.device;
+        const result = await ManagementService.deleteGroupEnroll(groupId, deletedBy, deletedDevice);
+        
+        if (result.success) {
+            setGroupEnroll(prev => prev.filter(g => g.id !== groupId));
+        } else {
+            setError(result.message);
+        }
+        
+        setIsDeleting(null);
+        return result;
+    }, [dataKaryawan, deviceInfo]);
+
     // ✅ DELETE content
     const deleteContent= useCallback(async (courseId) => {
         setIsDeleting(courseId);
         setError(null);
         
         const deletedBy = dataKaryawan?.nama || "System";
-        const result = await ManagementService.deleteContent(courseId, deletedBy);
+        const deletedDevice = deviceInfo.device;
+        const result = await ManagementService.deleteContent(courseId, deletedBy, deletedDevice);
         
         if (result.success) {
             setCourses((prev) => prev.filter((c) => c.id_course !== courseId));
@@ -328,7 +349,8 @@ export function useCourses(contentId = null) {
         setError(null);
         
         const deletedBy = dataKaryawan?.nama || "System";
-        const result = await ManagementService.deleteEnrolls(enrollmentId, deletedBy);
+        
+        const result = await ManagementService.deleteEnrolls(enrollmentId, deletedBy, deviceInfo.device);
         
         if (result.success) {
             setEnrollData((prev) => prev.filter((c) => c.id_course_enrollment !== enrollmentId));
@@ -460,6 +482,7 @@ export function useCourses(contentId = null) {
         fetchEnrollData,
         addGroupEnroll,
         deleteContent,
-        duplicateTest
+        duplicateTest,
+        deleteGroupEnroll
     };
 }

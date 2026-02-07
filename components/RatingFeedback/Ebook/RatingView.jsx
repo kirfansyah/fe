@@ -1,13 +1,5 @@
 import { useState, useEffect } from "react";
-import {
-  Star,
-  LayoutGrid,
-  List,
-  Filter,
-  Search,
-  X,
-  Building2,
-} from "lucide-react";
+import { Star, LayoutGrid, List, Filter, Search, X, Building2, AlertCircle } from "lucide-react";
 import RatingCard from "./RatingCard";
 import RatingList from "./RatingList";
 
@@ -22,9 +14,7 @@ export default function RatingView({ ratings, loading, error, onRefresh }) {
   const [showFilters, setShowFilters] = useState(false);
 
   // Extract unique company units and ebooks for filter options
-  const uniqueCompanyUnits = [
-    ...new Set(ratings?.map((r) => r.company_name).filter(Boolean) || []),
-  ];
+  const uniqueCompanyUnits = [...new Set(ratings?.map((r) => r.company_name).filter(Boolean) || [])];
 
   const uniqueEbooks = [...new Set(ratings?.map((r) => r.ebook_title) || [])];
 
@@ -49,11 +39,7 @@ export default function RatingView({ ratings, loading, error, onRefresh }) {
 
     if (filters.searchText) {
       const searchLower = filters.searchText.toLowerCase();
-      filtered = filtered.filter(
-        (r) =>
-          r.ebook_title?.toLowerCase().includes(searchLower) ||
-          r.company_name?.toLowerCase().includes(searchLower)
-      );
+      filtered = filtered.filter((r) => r.ebook_title?.toLowerCase().includes(searchLower) || r.company_name?.toLowerCase().includes(searchLower));
     }
 
     setFilteredRatings(filtered);
@@ -79,15 +65,11 @@ export default function RatingView({ ratings, loading, error, onRefresh }) {
   if (error) {
     return (
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="text-center text-red-600">
-          <p className="text-lg font-semibold">Error loading data</p>
-          <p className="text-sm mt-2">{error}</p>
-          <button
-            onClick={onRefresh}
-            className="mt-4 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-          >
-            Try Again
-          </button>
+        <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+          <AlertCircle className="w-8 h-8 text-600" />
+        </div>
+        <div className="text-center text-600">
+          <p className="text-lg font-semibold">{error}</p>
         </div>
       </div>
     );
@@ -101,15 +83,10 @@ export default function RatingView({ ratings, loading, error, onRefresh }) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Filter className="w-5 h-5 text-gray-600" />
-              <span className="font-semibold text-gray-700">
-                Filters & Search
-              </span>
+              <span className="font-semibold text-gray-700">Filters & Search</span>
             </div>
             <div className="flex items-center gap-3">
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-              >
+              <button onClick={() => setShowFilters(!showFilters)} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-green-600 hover:bg-green-50 rounded-lg transition-colors">
                 {showFilters ? (
                   <>
                     <X className="w-4 h-4" />
@@ -125,26 +102,10 @@ export default function RatingView({ ratings, loading, error, onRefresh }) {
 
               {/* View Toggle */}
               <div className="flex bg-gray-100 rounded-lg p-1">
-                <button
-                  onClick={() => setViewMode("card")}
-                  className={`p-2 rounded-md transition-colors ${
-                    viewMode === "card"
-                      ? "bg-white text-green-600 shadow-sm"
-                      : "text-gray-600 hover:text-gray-900"
-                  }`}
-                  title="Card View"
-                >
+                <button onClick={() => setViewMode("card")} className={`p-2 rounded-md transition-colors ${viewMode === "card" ? "bg-white text-green-600 shadow-sm" : "text-gray-600 hover:text-gray-900"}`} title="Card View">
                   <LayoutGrid className="w-4 h-4" />
                 </button>
-                <button
-                  onClick={() => setViewMode("list")}
-                  className={`p-2 rounded-md transition-colors ${
-                    viewMode === "list"
-                      ? "bg-white text-green-600 shadow-sm"
-                      : "text-gray-600 hover:text-gray-900"
-                  }`}
-                  title="List View"
-                >
+                <button onClick={() => setViewMode("list")} className={`p-2 rounded-md transition-colors ${viewMode === "list" ? "bg-white text-green-600 shadow-sm" : "text-gray-600 hover:text-gray-900"}`} title="List View">
                   <List className="w-4 h-4" />
                 </button>
               </div>
@@ -161,9 +122,7 @@ export default function RatingView({ ratings, loading, error, onRefresh }) {
                 type="text"
                 placeholder="Search ebook or company..."
                 value={filters.searchText}
-                onChange={(e) =>
-                  handleFilterChange("searchText", e.target.value)
-                }
+                onChange={(e) => handleFilterChange("searchText", e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
               />
             </div>
@@ -179,9 +138,7 @@ export default function RatingView({ ratings, loading, error, onRefresh }) {
                 </label>
                 <select
                   value={filters.companyUnit}
-                  onChange={(e) =>
-                    handleFilterChange("companyUnit", e.target.value)
-                  }
+                  onChange={(e) => handleFilterChange("companyUnit", e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 >
                   <option value="">All Companies</option>
@@ -195,14 +152,8 @@ export default function RatingView({ ratings, loading, error, onRefresh }) {
 
               {/* eBook Filter - SECOND */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  eBook
-                </label>
-                <select
-                  value={filters.ebook}
-                  onChange={(e) => handleFilterChange("ebook", e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                >
+                <label className="block text-sm font-medium text-gray-700 mb-2">eBook</label>
+                <select value={filters.ebook} onChange={(e) => handleFilterChange("ebook", e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
                   <option value="">All eBooks</option>
                   {uniqueEbooks.map((ebook, index) => (
                     <option key={index} value={ebook}>
@@ -215,16 +166,10 @@ export default function RatingView({ ratings, loading, error, onRefresh }) {
 
             {/* Filter Actions */}
             <div className="flex justify-end gap-3 pt-2">
-              <button
-                onClick={resetFilters}
-                className="px-6 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-              >
+              <button onClick={resetFilters} className="px-6 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
                 Reset
               </button>
-              <button
-                onClick={applyFilters}
-                className="px-6 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
-              >
+              <button onClick={applyFilters} className="px-6 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors">
                 Apply Filters
               </button>
             </div>

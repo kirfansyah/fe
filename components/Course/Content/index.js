@@ -16,6 +16,7 @@ export default function PreTestForm({
     onBack, 
     onSave,
     createdBy = "System",
+    deviceInfo = null,
     contentData = null,
     isEditMode = false
 }) {
@@ -142,17 +143,17 @@ export default function PreTestForm({
             time_duration: testConfig.timeDuration || '00:00:00',
             ...(isEditMode ? {
                 updated_by: createdBy,
-                updated_device: "system"
+                updated_device: deviceInfo.device
             } : {
                 created_by: createdBy,
-                created_device: "system"
+                created_device: deviceInfo.device
             }),
             questions: questionsToSave.map((q, index) => ({
                 question_no: index + 1,
                 question_text: q.question,
                 correct_answer_points: parseInt(q.points) || 0,
                 created_by: createdBy,
-                created_device: "system",
+                created_device: deviceInfo.device,
                 options: q.options.map((opt, optIndex) => {
                     const label = String.fromCharCode(65 + optIndex); 
                     return {

@@ -5,7 +5,7 @@ import PreTestForm from "../../../components/Course/Upload/FileUploadForm";
 import { useCourses } from "../../../hooks/useCourses";
 import { ProfileContext } from "../../../contexts/profile/ProfileContext";
 import { useMenuPermissions } from '@/hooks/useMenuPermissions'; // ✅ Import
-
+import { getDeviceInfo } from '@/lib/deviceHelper';
 export default function CreateContentPage() {
     const router = useRouter();
     const { courseId, contentTypeId } = router.query;
@@ -42,8 +42,8 @@ export default function CreateContentPage() {
     };
 
     const { handleSavePreTest } = useCourses();
-    const { getKaryawan, dataKaryawan } = useContext(ProfileContext);
-
+    const { dataKaryawan } = useContext(ProfileContext);
+    const deviceInfo = getDeviceInfo();
     const handleSave = async (pretestData) => {
         // ✅ Check permission before save
         if (!permissions.can_create) {
@@ -61,10 +61,6 @@ export default function CreateContentPage() {
             addToast('Failed to save: ' + error.message, 'error');
         }
     };
-
-    useEffect(() => {
-        getKaryawan();
-    }, []);
 
     // ✅ Loading state
     if (!courseId) {
@@ -123,6 +119,7 @@ export default function CreateContentPage() {
                 onSave={handleSave}
                 addToast={addToast}
                 createdBy={dataKaryawan.nama}
+                deviceInfo={deviceInfo}
                 permissions={permissions} // ✅ Pass permissions to child
             />
         </>

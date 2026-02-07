@@ -254,9 +254,9 @@ export default function CoursePage({ link }) {
                 // viewMode === "tiles"
                 //   ? "flex flex-wrap gap-5 mt-5 justify-start"
                 //   : "flex flex-col gap-3 mt-5"
+                //   ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-5"
                 viewMode === "tiles"
-                  ? //   ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-5"
-                    "flex flex-wrap gap-5 mt-5 justify-start"
+                  ? "flex flex-wrap gap-5 mt-5 justify-start"
                   : "flex flex-col gap-3 mt-5"
               }
             >

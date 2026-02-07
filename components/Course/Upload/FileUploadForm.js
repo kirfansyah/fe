@@ -27,6 +27,7 @@ const FileUploadForm = ({
     onBack, 
     addToast, 
     createdBy = "System",
+    deviceInfo = null,
     contentData = null,
     isEditMode = false,
     permissions // ✅ Receive permissions
@@ -281,15 +282,15 @@ const FileUploadForm = ({
             id_content_type: contentTypeId,
             content_title: title,
             content_body: description,
-            time_duration: uploadedFile && uploadedFile.duration ? uploadedFile.duration : "00:00:00",
+            time_duration: uploadedFile && uploadedFile.duration ? uploadedFile.duration : null,
             content_url: contentUrl,
             ...(isEditMode ? {
                 id_course_content: contentData.id_course_content,
                 updated_by: createdBy,
-                updated_device: "system"
+                updated_device: deviceInfo.device
             } : {
                 created_by: createdBy,
-                created_device: "system"
+                created_device: deviceInfo.device
             })
         };
 

@@ -6,12 +6,12 @@ import { useCourses } from "../../../hooks/useCourses";
 import { ProfileContext } from "../../../contexts/profile/ProfileContext";
 import { useMenuPermissions } from '@/hooks/useMenuPermissions';
 import Swal from 'sweetalert2'; // ✅ Import SweetAlert2
-
+import { getDeviceInfo } from '@/lib/deviceHelper';
 export default function PreTestPage() {
     const router = useRouter();
     const { courseId, contentTypeId } = router.query;
     const permissions = useMenuPermissions();
-
+    const deviceInfo = getDeviceInfo();
     // ✅ Course ID validation dengan SweetAlert2
     useEffect(() => {
         if (router.isReady && !courseId) {
@@ -47,7 +47,7 @@ export default function PreTestPage() {
     };
 
     const { handleSavePreTest } = useCourses();
-    const { getKaryawan, dataKaryawan } = useContext(ProfileContext);
+    const { dataKaryawan } = useContext(ProfileContext);
     
     // ✅ Save handler dengan SweetAlert2
     const handleSave = async (pretestData) => {
@@ -100,10 +100,6 @@ export default function PreTestPage() {
         }
     };
 
-    useEffect(() => {
-        getKaryawan();
-    }, []);
-
     // ✅ Loading state
     if (!courseId) {
         return (
@@ -143,6 +139,7 @@ export default function PreTestPage() {
             onBack={handleBack}
             onSave={handleSave}
             createdBy={dataKaryawan.nama}
+            deviceInfo={deviceInfo}
             permissions={permissions}
         />
     );

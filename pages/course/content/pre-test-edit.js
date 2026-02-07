@@ -5,14 +5,14 @@ import PreTestForm from "../../../components/Course/Content/index";
 import { useCourses } from "../../../hooks/useCourses";
 import { ProfileContext } from "../../../contexts/profile/ProfileContext";
 import { useMenuPermissions } from '@/hooks/useMenuPermissions'; // ✅ Import
-
+import { getDeviceInfo } from '@/lib/deviceHelper';
 export default function PreTestEdit() {
     const router = useRouter();
     const { courseId, contentTypeId, contentId } = router.query;
     
     // ✅ Get permissions
     const permissions = useMenuPermissions();
-
+    const deviceInfo = getDeviceInfo();
     useEffect(() => {
         if (router.isReady && !courseId) {
             alert('Course ID is required');
@@ -33,7 +33,7 @@ export default function PreTestEdit() {
     };
 
     const { contentData, handleSavePreTest } = useCourses(contentId);
-    const { getKaryawan, dataKaryawan } = useContext(ProfileContext);
+    const { dataKaryawan } = useContext(ProfileContext);
 
     const handleSave = async (pretestData) => {
         // ✅ Check permission before save
@@ -53,10 +53,6 @@ export default function PreTestEdit() {
         }
     };
     
-    useEffect(() => {
-        getKaryawan();
-    }, []);
-
     // ✅ Loading state
     if (!courseId) {
         return (
@@ -97,6 +93,7 @@ export default function PreTestEdit() {
             onSave={handleSave}
             createdBy={dataKaryawan.nama}
             contentData={contentData}
+            deviceInfo={deviceInfo}
             isEditMode={true}
             permissions={permissions} // ✅ Pass permissions to child
         />
