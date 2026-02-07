@@ -70,7 +70,7 @@ export default function CourseDetail({ ...props }) {
   const getCookie = (name) => {
     if (typeof document === "undefined") return null;
     const match = document.cookie.match(
-      new RegExp("(^| )" + name + "=([^;]+)")
+      new RegExp("(^| )" + name + "=([^;]+)"),
     );
     return match ? decodeURIComponent(match[2]) : null;
   };
@@ -147,8 +147,10 @@ export default function CourseDetail({ ...props }) {
         // id_course_enrollment: 8,
         id_course: courseData.id_course,
         progress_percentage: 0,
-        created_by: "system",
-        created_device: "web",
+        // created_by: "system",
+        // created_device: "web",
+        created_by: createdBy,
+        created_device: createdDevice,
       };
 
       if (!courseData?.id_user_enrollment) {
@@ -164,7 +166,7 @@ export default function CourseDetail({ ...props }) {
       console.error("❌ Gagal melakukan enrollment:", error);
       console.log(
         "error : ",
-        error.apiMessage || error.message || "Terjadi kesalahan"
+        error.apiMessage || error.message || "Terjadi kesalahan",
       );
       //   toast.warning(error);
     }
@@ -334,12 +336,12 @@ export default function CourseDetail({ ...props }) {
                     courseData.status === "Passed"
                       ? "bg-green-600"
                       : courseData.status === "Failed"
-                      ? "bg-red-500"
-                      : courseData.status === "Not Started"
-                      ? "bg-blue-500 text-white"
-                      : courseData.status === "In Progress"
-                      ? "bg-blue-500"
-                      : ""
+                        ? "bg-red-500"
+                        : courseData.status === "Not Started"
+                          ? "bg-blue-500 text-white"
+                          : courseData.status === "In Progress"
+                            ? "bg-blue-500"
+                            : ""
                   }`}
                 >
                   {courseData.status}
@@ -380,8 +382,8 @@ export default function CourseDetail({ ...props }) {
                     courseData.progress_percentage !== 100
                       ? "Continue Course"
                       : courseData.progress_percentage === 100
-                      ? "View Completed Course"
-                      : "Start Course"}{" "}
+                        ? "View Completed Course"
+                        : "Start Course"}{" "}
                   </Button>
                 </AlertDialogTrigger>
 

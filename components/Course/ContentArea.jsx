@@ -22,6 +22,7 @@ import dynamic from "next/dynamic";
 import { useEmployees } from "@/hooks/useEmployees";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { encodeId, decodeId } from "@/lib/id64";
 
 const VideoPlayer = dynamic(() => import("@/components/Course/VideoPlayer"), {
   ssr: false,
@@ -45,7 +46,7 @@ export default function ContentArea({ exitCourse }) {
 
   const allSteps = Object.entries(flow)
     .sort(
-      (a, b) => orderedKeys.indexOf(a[0]) - orderedKeys.indexOf(b[0]) // urut berdasarkan orderedKeys
+      (a, b) => orderedKeys.indexOf(a[0]) - orderedKeys.indexOf(b[0]), // urut berdasarkan orderedKeys
     )
     .flatMap(([key, items]) =>
       items.map((s) => {
@@ -74,7 +75,7 @@ export default function ContentArea({ exitCourse }) {
           type,
           section: key, // optional kalau mau track section origin
         };
-      })
+      }),
     );
   //   console.log("courseData content Area:", courseData);
 
@@ -101,6 +102,33 @@ export default function ContentArea({ exitCourse }) {
   const [videoFile, setVideoFile] = useState(null);
   const [pptFile, setPptFile] = useState(null);
   const [statusCourse, setStatusCourse] = useState(null);
+  const [createdDevice, setCreatedDevice] = useState("web");
+  const [createdBy, setCreatedBy] = useState("system");
+
+  const getCookie = (name) => {
+    if (typeof document === "undefined") return null;
+    const match = document.cookie.match(
+      new RegExp("(^| )" + name + "=([^;]+)"),
+    );
+    return match ? decodeURIComponent(match[2]) : null;
+  };
+
+  const getDeviceType = () => {
+    if (typeof navigator === "undefined") return "web";
+    const ua = navigator.userAgent.toLowerCase();
+    return /mobile|android|iphone|ipad/.test(ua) ? "mobile" : "web";
+  };
+
+  useEffect(() => {
+    const nama = getCookie("nama");
+    if (nama) {
+      setCreatedBy(nama);
+    }
+
+    setCreatedDevice(getDeviceType());
+  }, []);
+
+  //   console.log({ createdBy, createdDevice });
 
   //   const defaultPDF = "/uploads/pdf/default.pdf";
   //   const defaultPDF =
@@ -212,7 +240,7 @@ export default function ContentArea({ exitCourse }) {
     if (step.type !== "video") return;
 
     const videoUrl = `/api/video-proxy?url=${encodeURIComponent(
-      step.content_url_full
+      step.content_url_full,
     )}`;
 
     // ❗ Hindari preload ulang
@@ -346,7 +374,7 @@ export default function ContentArea({ exitCourse }) {
 
     // 4️⃣ Redirect setelah toast selesai
     setTimeout(() => {
-      router.push(`${exitCourse}${courseId}`);
+      router.push(`${exitCourse}${encodeId(courseId)}`);
     }, 3000);
   };
 
@@ -357,6 +385,10 @@ export default function ContentArea({ exitCourse }) {
     await submitQuiz(); // ⬅️ auto submit seperti Ruangguru
     setAutoSubmitting(false);
   };
+  //   console.log({
+  //     id_user_enrollment: courseData.id_user_enrollment,
+  //     // id_course_content: stepId,
+  //   });
 
   const handleCompleteContent = async (stepId) => {
     try {
@@ -366,8 +398,8 @@ export default function ContentArea({ exitCourse }) {
         // id_user_enrollment: 8,
         id_course_content: stepId,
         updated_at: new Date().toISOString(),
-        updated_by: "system",
-        updated_device: "web",
+        updated_by: createdBy,
+        updated_device: createdDevice,
       };
 
       const res = await completeCourse(payload);
@@ -427,7 +459,7 @@ export default function ContentArea({ exitCourse }) {
       const payload = step.questions.map((q) => {
         const selectedOptionId = answers[q.id_course_question];
         const selectedOption = q.options.find(
-          (opt) => opt.id_option === selectedOptionId
+          (opt) => opt.id_option === selectedOptionId,
         );
 
         const isCorrect = selectedOption ? selectedOption.is_correct : false;
@@ -443,8 +475,8 @@ export default function ContentArea({ exitCourse }) {
           max_points_possible: q.correct_answer_points,
           attempt_number: 1,
           is_final_attempt: true,
-          created_by: "system",
-          created_device: "web",
+          created_by: createdBy,
+          created_device: createdDevice,
         };
       });
 
@@ -456,7 +488,7 @@ export default function ContentArea({ exitCourse }) {
 
       const totalPoints = payload.reduce(
         (acc, q) => acc + q.max_points_possible,
-        0
+        0,
       );
       const earnedPoints = payload.reduce((acc, q) => acc + q.points_earned, 0);
       const finalScore = Math.round((earnedPoints / totalPoints) * 100);
@@ -482,7 +514,10 @@ export default function ContentArea({ exitCourse }) {
               {step.content_title}
             </h2>
             <div
-              className="text-gray-700 text-lg leading-relaxed whitespace-pre-line"
+              className="text-gray-700 text-lg leading-relaxed whitespace-pre-line [&_p]:mb-3
+             [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:mb-3
+             [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:mb-3
+             [&_li]:mb-1"
               dangerouslySetInnerHTML={{ __html: step.content_body }}
             />
           </div>
@@ -515,7 +550,7 @@ export default function ContentArea({ exitCourse }) {
             <div className="w-full flex justify-center ">
               <PdfViewer
                 file={`/api/pdf-proxy?url=${encodeURIComponent(
-                  step.content_url_full
+                  step.content_url_full,
                 )}`}
                 onPageChange={(isLastPage) => setPdfFinished(isLastPage)}
                 contentId={step.id}
@@ -729,7 +764,7 @@ export default function ContentArea({ exitCourse }) {
               >
                 {currentQuiz < step.questions.length - 1
                   ? "Next Soal"
-                  : "Selesai"}
+                  : "Selesai "}
               </Button>
             ) : null}
           </>
