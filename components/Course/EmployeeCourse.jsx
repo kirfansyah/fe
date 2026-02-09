@@ -333,7 +333,9 @@ export default function CoursePage({ link }) {
 
                             {/* Action */}
                             <div className="flex items-end">
-                              <Link href={`${link}${course.id_course}`}>
+                              <Link
+                                href={`${link}${encodeId(course.id_course)}`}
+                              >
                                 <Button className="bg-blue-900 hover:bg-blue-700">
                                   View
                                 </Button>
@@ -392,7 +394,9 @@ export default function CoursePage({ link }) {
 
                             <div className="flex justify-between items-center">
                               <Badge>{course.status}</Badge>
-                              <Link href={`${link}${course.id_course}`}>
+                              <Link
+                                href={`${link}${encodeId(course.id_course)}`}
+                              >
                                 <Button className="bg-blue-900 w-full">
                                   View
                                 </Button>
