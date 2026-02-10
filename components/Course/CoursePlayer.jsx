@@ -14,7 +14,19 @@ export default function CoursePlayer({ ...props }) {
   const { exitCourse, mainCourse } = props;
   const [idUserEnrollment, setIdUserEnrollment] = useState(null);
 
+  //   useEffect(() => {
+  //     if (document.fullscreenEnabled && !document.fullscreenElement) {
+  //       document.documentElement
+  //         .requestFullscreen()
+  //         .catch((err) => console.warn("Fullscreen error:", err));
+  //     }
+  //   }, []);
+
   useEffect(() => {
+    const isMobile = window.matchMedia("(pointer: coarse)").matches;
+
+    if (!isMobile) return;
+
     if (document.fullscreenEnabled && !document.fullscreenElement) {
       document.documentElement
         .requestFullscreen()

@@ -144,11 +144,8 @@ export default function CourseDetail({ ...props }) {
     try {
       const payload = {
         id_course_enrollment: courseData.id_course_enrollment,
-        // id_course_enrollment: 8,
         id_course: courseData.id_course,
         progress_percentage: 0,
-        // created_by: "system",
-        // created_device: "web",
         created_by: createdBy,
         created_device: createdDevice,
       };
@@ -382,7 +379,10 @@ export default function CourseDetail({ ...props }) {
                     courseData.progress_percentage !== 100
                       ? "Continue Course"
                       : courseData.progress_percentage === 100
-                        ? "View Completed Course"
+                        ? courseData.status == "Failed" &&
+                          courseData.remedial_limit
+                          ? "Course Remedial"
+                          : "View Completed Course"
                         : "Start Course"}{" "}
                   </Button>
                 </AlertDialogTrigger>
@@ -394,9 +394,18 @@ export default function CourseDetail({ ...props }) {
                     </AlertDialogTitle>
                     <AlertDialogDescription>
                       {courseData?.id_user_enrollment ? (
-                        <>
-                          Anda akan <strong>melanjutkan</strong> course ini?
-                        </>
+                        courseData?.status === "Failed" &&
+                        courseData?.remedial_limit ? (
+                          <>
+                            Anda akan melakukan <strong>pengulangan</strong>{" "}
+                            course ini, sisa pengulangan anda adalah{" "}
+                            {courseData?.remedial_limit} kali
+                          </>
+                        ) : (
+                          <>
+                            Anda akan <strong>melanjutkan</strong> course ini?
+                          </>
+                        )
                       ) : (
                         <>
                           Dengan menekan <strong>Mulai</strong>, Anda akan
